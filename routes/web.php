@@ -7,6 +7,7 @@ use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\BillPayController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CallbackController;
+use Illuminate\Http\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,15 +24,23 @@ Route::get('/', function () {
     return redirect()->route('dashboard.index');
 });
 
-// Dashboard Routes
-Route::prefix('dashboard')->name('dashboard.')->group(function () {
+// Authentication Routes - PIN Only
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
+});
+
+Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+
+// Dashboard Routes - Protected with PIN Only
+Route::prefix('dashboard')->name('dashboard.')->middleware(['admin.pin'])->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::get('/advanced', [DashboardController::class, 'advanced'])->name('advanced');
     Route::get('/live-status', [DashboardController::class, 'liveStatus'])->name('live-status');
 });
 
-// Payment Routes
-Route::prefix('payments')->name('payments.')->group(function () {
+// Payment Routes - Protected with PIN Only
+Route::prefix('payments')->name('payments.')->middleware(['admin.pin'])->group(function () {
     Route::get('/create', [PaymentController::class, 'create'])->name('create');
     Route::post('/', [PaymentController::class, 'store'])->name('store');
     Route::post('/store', [PaymentController::class, 'store'])->name('store.alt'); // Add explicit /store route
@@ -52,8 +61,11 @@ Route::get('/payment', function () {
     return view('public.swahili-payment');
 })->name('public.payment');
 
-// Payout Routes
-Route::prefix('payouts')->name('payouts.')->group(function () {
+// Public Payment Store Route - No PIN protection
+Route::post('/payment/store', [PaymentController::class, 'publicStore'])->name('public.payment.store');
+
+// Payout Routes - Protected with PIN Only
+Route::prefix('payouts')->name('payouts.')->middleware(['admin.pin'])->group(function () {
     Route::get('/create', [PayoutController::class, 'create'])->name('create');
     Route::post('/', [PayoutController::class, 'store'])->name('store');
     Route::get('/status', [PayoutController::class, 'status'])->name('status');

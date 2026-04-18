@@ -28,19 +28,25 @@ class LoginController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
+            'admin_pin' => ['required', 'string', 'size:4', 'regex:/^[0-9]{4}$/'],
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        // Check if PIN is correct (2026)
+        if ($request->input('admin_pin') === '2026') {
+            // Create admin session
+            session(['admin_authenticated' => true, 'admin_pin_time' => time()]);
+            
+            // Remember functionality
+            if ($request->has('remember')) {
+                session(['admin_remember' => true]);
+            }
 
             return redirect()->intended('/dashboard');
         }
 
         return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
+            'admin_pin' => 'PIN si sahihi. Tafadhali jaribu tena.',
+        ])->onlyInput('admin_pin', 'remember');
     }
 
     /**
@@ -51,12 +57,9 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
-        Auth::logout();
+        // Clear admin session
+        session()->forget(['admin_authenticated', 'admin_pin_time', 'admin_remember']);
 
-        $request->session()->invalidate();
-
-        $request->session()->regenerateToken();
-
-        return redirect('/');
+        return redirect('/login');
     }
 }

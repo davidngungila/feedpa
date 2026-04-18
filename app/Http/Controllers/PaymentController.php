@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Transaction;
 use App\Services\ClickPesaAPIService;
 use App\Services\MessagingServiceAPI;
 use Exception;
@@ -44,6 +45,12 @@ class PaymentController extends Controller
         ]);
 
         try {
+            // Check if ClickPesa API is configured
+            if (empty(config('clickpesa.api_key')) || empty(config('clickpesa.client_id'))) {
+                return back()->with('error', 'ClickPesa API haimewekwa. Tafadhali weka API key na Client ID kwenye .env file.');
+            }
+
+            // Normal API flow when configured
             $amount = $this->api->formatAmount($validated['amount']);
             $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);
             $payerName = $validated['payer_name'];
@@ -60,12 +67,33 @@ class PaymentController extends Controller
                 return back()->with('error', 'No active payment methods available for this phone number');
             }
 
+            // Save transaction to database first
+            $transaction = Transaction::create([
+                'order_reference' => $orderReference,
+                'status' => 'PROCESSING',
+                'amount' => $validated['amount'],
+                'currency' => 'TZS',
+                'phone' => $phoneNumber,
+                'payer_name' => $payerName,
+                'description' => $validated['description'] ?? null,
+                'type' => 'payment',
+                'callback_data' => null,
+            ]);
+
             // Initiate the payment with customer details
             $customerDetails = [
                 'customerName' => $payerName,
                 'description' => $validated['description'] ?? ''
             ];
             $payment = $this->api->initiateUSSDPush($amount, $orderReference, $phoneNumber, null, $customerDetails);
+            
+            // Update transaction with API response
+            if (isset($payment['transactionId'])) {
+                $transaction->update([
+                    'transaction_id' => $payment['transactionId'],
+                    'status' => 'PENDING',
+                ]);
+            }
             
             // Send SMS notification for payment initiation
             $this->sendPaymentInitiationNotification($phoneNumber, $orderReference, $amount, $payerName);
@@ -91,6 +119,143 @@ class PaymentController extends Controller
     }
 
     /**
+     * Public payment store method - returns JSON response
+     */
+    public function publicStore(Request $request)
+    {
+        try {
+            // Validate request data
+            $validated = $request->validate([
+                'payer_name' => 'required|string|min:2|max:100',
+                'amount' => 'required|numeric|min:100|max:1000000',
+                'phone_number' => 'required|string|regex:/^255[67]\d{8}$/',
+                'description' => 'nullable|string|max:255'
+            ]);
+
+            // Check if ClickPesa API is configured
+            if (empty(config('clickpesa.api_key')) || empty(config('clickpesa.client_id'))) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'ClickPesa API haimewekwa. Tafadhali weka API key na Client ID.',
+                    'debug_info' => [
+                        'error_type' => 'api_not_configured',
+                        'api_key_set' => !empty(config('clickpesa.api_key')),
+                        'client_id_set' => !empty(config('clickpesa.client_id'))
+                    ]
+                ], 500);
+            }
+
+            // Process with live API
+            $amount = $this->api->formatAmount($validated['amount']);
+            $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);
+            $payerName = $validated['payer_name'];
+            $orderReference = $this->api->generateOrderReference();
+
+            if (!$phoneNumber) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Namba ya simu si sahihi. Tafadhali tumia muundo: 255712345678'
+                ], 400);
+            }
+
+            // Preview the payment first
+            $preview = $this->api->previewUSSDPush($amount, $orderReference, $phoneNumber, true);
+
+            if (empty($preview['activeMethods'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hakuna njia za malipo zinazopatikana kwa namba hii ya simu'
+                ], 400);
+            }
+
+            // Save transaction to database first
+            $transaction = Transaction::create([
+                'order_reference' => $orderReference,
+                'status' => 'PROCESSING',
+                'amount' => $validated['amount'],
+                'currency' => 'TZS',
+                'phone_number' => $phoneNumber,
+                'payer_name' => $payerName,
+                'description' => $validated['description'] ?? null,
+            ]);
+
+            // Initiate the payment with customer details
+            $customerDetails = [
+                'customerName' => $payerName,
+                'description' => $validated['description'] ?? ''
+            ];
+            $payment = $this->api->initiateUSSDPush($amount, $orderReference, $phoneNumber, null, $customerDetails);
+            
+            // Update transaction with API response
+            if (isset($payment['transactionId'])) {
+                $transaction->update([
+                    'transaction_id' => $payment['transactionId'],
+                    'status' => 'PENDING',
+                ]);
+            }
+            
+            // Send SMS notification for payment initiation
+            $this->sendPaymentInitiationNotification($phoneNumber, $orderReference, $amount, $payerName);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Malipo yameanzishwa kwa mafanikio! USSD imetumwa kwenye ' . $phoneNumber,
+                'order_reference' => $orderReference,
+                'amount' => $validated['amount'],
+                'phone_number' => $phoneNumber,
+                'payer_name' => $payerName,
+                'transaction_id' => $payment['transactionId'] ?? null
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed: ' . $e->getMessage(),
+                'errors' => $e->errors()
+            ], 422);
+        } catch (Exception $e) {
+            Log::error('Payment initiation failed: ' . $e->getMessage());
+            Log::error('Exception details: ', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            
+            // Handle insufficient funds error specifically
+            if (stripos($e->getMessage(), 'Insufficient Funds') !== false) {
+                // Send SMS notification for insufficient funds
+                if (isset($phoneNumber) && isset($orderReference) && isset($amount) && isset($payerName)) {
+                    $this->sendInsufficientFundsNotification($phoneNumber, $orderReference, $amount, $payerName);
+                }
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage(),
+                    'debug_info' => [
+                        'error_type' => 'insufficient_funds',
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine()
+                    ]
+                ], 400);
+            }
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Hitilafu mtandao. Tafadhali jaribu tena.',
+                'debug_info' => [
+                    'error_type' => 'network_error',
+                    'error_message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString()
+                ]
+            ], 500);
+        }
+    }
+
+    /**
      * Check payment status
      */
     public function status(Request $request)
@@ -103,25 +268,50 @@ class PaymentController extends Controller
 
         if ($orderReference) {
             try {
-                Log::info('Calling API for payment status', ['reference' => $orderReference]);
-                $paymentData = $this->api->queryPaymentStatus($orderReference);
-                Log::info('API response received', ['data' => $paymentData]);
-                
-                // Check if payment is successful and send SMS notification
-                if (isset($paymentData['status']) && $paymentData['status'] === 'SUCCESS') {
-                    $this->sendPaymentSuccessNotification($paymentData);
+                // Check if ClickPesa API is configured
+                if (empty(config('clickpesa.api_key')) || empty(config('clickpesa.client_id'))) {
+                    // Get payment data from database as fallback
+                    $paymentData = Transaction::where('order_reference', $orderReference)->first();
+                    
+                    if ($paymentData) {
+                        // Convert database data to API-like format
+                        $paymentData = [
+                            'orderReference' => $paymentData->order_reference,
+                            'transactionId' => $paymentData->transaction_id,
+                            'status' => $paymentData->status,
+                            'amount' => $paymentData->amount,
+                            'currency' => $paymentData->currency,
+                            'phone' => $paymentData->phone_number,
+                            'payer_name' => $paymentData->payer_name,
+                            'description' => $paymentData->description,
+                            'type' => 'payment',
+                            'created_at' => $paymentData->created_at->format('Y-m-d H:i:s'),
+                            'updated_at' => $paymentData->updated_at->format('Y-m-d H:i:s'),
+                            'api_mode' => 'database_fallback'
+                        ];
+                        
+                        Log::info('Payment status retrieved from database (API not configured)', ['reference' => $orderReference]);
+                    } else {
+                        $error = 'No payment found with this order reference';
+                        Log::warning('No payment data found in database', ['reference' => $orderReference]);
+                    }
+                } else {
+                    // Normal API flow when configured
+                    Log::info('Calling API for payment status', ['reference' => $orderReference]);
+                    $paymentData = $this->api->queryPaymentStatus($orderReference);
+                    Log::info('API response received', ['data' => $paymentData]);
+                    
+                    // Check if payment is successful and send SMS notification
+                    if (isset($paymentData['status']) && $paymentData['status'] === 'SUCCESS') {
+                        $this->sendPaymentSuccessNotification($paymentData);
+                    }
+                    
+                    // Check if API returned valid data
+                    if (empty($paymentData) || !is_array($paymentData)) {
+                        $error = 'No payment found with this order reference';
+                        Log::warning('No payment data found', ['reference' => $orderReference]);
+                    }
                 }
-                
-                // Check if API returned valid data
-                if (empty($paymentData) || !is_array($paymentData)) {
-                    $error = 'No payment found with this order reference';
-                    Log::warning('No payment data found', ['reference' => $orderReference]);
-                }
-                // Remove strict validation to see what API returns
-                // elseif (!isset($paymentData['id']) && !isset($paymentData['orderReference'])) {
-                //     $error = 'Invalid payment data received from API';
-                //     Log::warning('Invalid payment data structure', ['reference' => $orderReference, 'data' => $paymentData]);
-                // }
             } catch (Exception $e) {
                 $error = $e->getMessage();
                 Log::error('Payment status check failed: ' . $error, [

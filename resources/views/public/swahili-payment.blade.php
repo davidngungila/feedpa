@@ -10,6 +10,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
     
     <style>
         body {
@@ -237,6 +239,19 @@
                            required>
                 </div>
 
+                <!-- Payment Description -->
+                <div class="form-group">
+                    <label for="description" class="form-label">
+                        Maelezo Ya Malipo
+                    </label>
+                    <textarea class="form-control" 
+                              id="description" 
+                              name="description" 
+                              rows="3" 
+                              placeholder="Andika maelezo ya malipo"></textarea>
+                    <small class="text-muted">Maelezo ya ziada kuhusu malipo yako (hiari)</small>
+                </div>
+
                 <!-- Submit Button -->
                 <div class="form-group">
                     <button type="submit" class="btn-payment" id="submitBtn">
@@ -250,6 +265,8 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <script>
         // Payment form handling
@@ -266,27 +283,52 @@
                 const data = {
                     amount: formData.get('amount'),
                     phone_number: formData.get('phone_number'),
-                    payer_name: formData.get('payer_name')
+                    payer_name: formData.get('payer_name'),
+                    description: formData.get('description')
                 };
                 
                 // Validate form
                 if (!data.payer_name || data.payer_name.trim() === '') {
-                    showAlert('error', 'Tafadhali jina lako kamili.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hitilafu',
+                        text: 'Tafadhali jina lako kamili.',
+                        confirmButtonText: 'Sawa',
+                        confirmButtonColor: '#28a745'
+                    });
                     return;
                 }
                 
                 if (!data.phone_number || !data.phone_number.match(/^255[67]\d{8}$/)) {
-                    showAlert('error', 'Tafadhali namba ya simu sahi. Mfano: 255712345678');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hitilafu',
+                        text: 'Tafadhali namba ya simu sahi. Mfano: 255712345678',
+                        confirmButtonText: 'Sawa',
+                        confirmButtonColor: '#28a745'
+                    });
                     return;
                 }
                 
                 if (!data.amount || data.amount < 500) {
-                    showAlert('error', 'Kiasi lazima ni TZS 500.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hitilafu',
+                        text: 'Kiasi lazima ni TZS 500.',
+                        confirmButtonText: 'Sawa',
+                        confirmButtonColor: '#28a745'
+                    });
                     return;
                 }
                 
                 if (data.amount > 5000000) {
-                    showAlert('error', 'Kiasi ya juu ni TZS 5,000,000.');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hitilafu',
+                        text: 'Kiasi ya juu ni TZS 5,000,000.',
+                        confirmButtonText: 'Sawa',
+                        confirmButtonColor: '#28a745'
+                    });
                     return;
                 }
                 
@@ -294,11 +336,21 @@
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Inatuma Malipo...';
                 
-                // Show processing modal
-                showProcessingModal();
+                // Show SweetAlert loading
+                Swal.fire({
+                    title: 'Inatuma Malipo...',
+                    text: 'Tafadhali subiri tunapokea malipo lako...',
+                    icon: 'info',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
                 
                 // Make API call
-                fetch('/payments/store', {
+                fetch('/payment/store', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -306,27 +358,117 @@
                     },
                     body: JSON.stringify(data)
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(result => {
-                    // Close processing modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
-                    if (modal) modal.hide();
-                    
                     if (result.success) {
                         // Show success notification in Swahili
-                        showUSSDNotification(data);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Malipo Yameanzishwa!',
+                            html: `
+                                <div class="text-left">
+                                    <p><strong>Toa maelezo kwamba utaomba uthibitisho kwa simu yako , tafadhari thibitisha...</strong></p>
+                                    <p><strong>Kwenye form ongeza malipo ni kwaajili ya...</strong></p>
+                                    <hr>
+                                    <p><strong>Namba ya Simu:</strong> ${data.phone_number}</p>
+                                    <p><strong>Kiasi:</strong> TZS ${data.amount}</p>
+                                    <p><strong>Jina:</strong> ${data.payer_name}</p>
+                                    <hr>
+                                    <p class="text-muted">Tafadhali subiri kwenye USSD iliyo kwenye simu yako.</p>
+                                    <p class="text-muted">Ukisubiri na kubonyeza "Lipa Sasa" kisha ukamilisha malipo.</p>
+                                </div>
+                            `,
+                            confirmButtonText: 'Nimefanya',
+                            confirmButtonColor: '#28a745',
+                            allowOutsideClick: false
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Reset form
+                                form.reset();
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
+                            }
+                        });
                     } else {
-                        showAlert('error', result.message || 'Imeshindikwa malipo. Tafadhali tena.');
+                        // Display server error with debug info
+                        let errorHtml = `
+                            <div class="text-left">
+                                <p><strong>Error:</strong> ${result.message || 'Imeshindikwa malipo. Tafadhali tena.'}</p>
+                        `;
+                        
+                        if (result.debug_info) {
+                            errorHtml += `
+                                <hr>
+                                <p><strong>Debug Information:</strong></p>
+                                <p><strong>Error Type:</strong> ${result.debug_info.error_type || 'Unknown'}</p>
+                                <p><strong>File:</strong> ${result.debug_info.file || 'Unknown'}</p>
+                                <p><strong>Line:</strong> ${result.debug_info.line || 'Unknown'}</p>
+                            `;
+                            
+                            if (result.debug_info.error_message) {
+                                errorHtml += `<p><strong>Server Error:</strong> ${result.debug_info.error_message}</p>`;
+                            }
+                            
+                            if (result.debug_info.trace) {
+                                errorHtml += `
+                                    <p><strong>Stack Trace:</strong></p>
+                                    <pre style="font-size: 12px; max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px;">${result.debug_info.trace}</pre>
+                                `;
+                            }
+                        }
+                        
+                        errorHtml += `
+                            <hr>
+                            <p class="text-muted">Tafadhali jaribu tena.</p>
+                            </div>
+                        `;
+                        
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Imeshindikwa',
+                            html: errorHtml,
+                            confirmButtonText: 'Jaribu Tena',
+                            confirmButtonColor: '#28a745',
+                            width: '700px'
+                        });
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
                     }
                 })
                 .catch(error => {
-                    // Close processing modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
-                    if (modal) modal.hide();
+                    console.error('Payment error:', error);
+                    console.error('Error details:', {
+                        message: error.message,
+                        stack: error.stack,
+                        name: error.name
+                    });
                     
-                    showAlert('error', 'Hitilafu mtandao. Tafadhali tena tena.');
+                    // Display exact error for debugging
+                    const errorMessage = error.message || 'Unknown error occurred';
+                    const errorStack = error.stack || 'No stack trace available';
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Hitilafu Mtandao',
+                        html: `
+                            <div class="text-left">
+                                <p><strong>Error:</strong> ${errorMessage}</p>
+                                <hr>
+                                <p><strong>Stack Trace:</strong></p>
+                                <pre style="font-size: 12px; max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px;">${errorStack}</pre>
+                                <hr>
+                                <p class="text-muted">Tafadhali jaribu tena.</p>
+                            </div>
+                        `,
+                        confirmButtonText: 'Jaribu Tena',
+                        confirmButtonColor: '#28a745',
+                        width: '600px'
+                    });
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
                 });

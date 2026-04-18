@@ -23,6 +23,19 @@
 
 <section class="content">
     <div class="container-fluid">
+        <!-- Success Flash Messages -->
+        @if(session('success'))
+            <div class="row">
+                <div class="col-12">
+                    <div class="alert alert-success alert-dismissible">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>Success:</strong> {{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
+            </div>
+        @endif
+        
         @if($error)
             <div class="row">
                 <div class="col-12">

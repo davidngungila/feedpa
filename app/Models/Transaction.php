@@ -4,11 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Transaction extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory;
 
     protected $fillable = [
         'order_reference',
@@ -17,6 +16,7 @@ class Transaction extends Model
         'amount',
         'currency',
         'phone',
+        'payer_name',
         'email',
         'description',
         'type',

@@ -185,7 +185,7 @@
     <div class="payment-container">
         <!-- Header -->
         <div class="payment-header">
-            <h2><i class="fas fa-credit-card me-2"></i>Malipo Salama</h2>
+            <h2>Malipo Salama</h2>
             <p>Fanya malipo salama kwa Tigo Pesa, M-Pesa, Halopesa, na Airtel Money</p>
         </div>
 
@@ -197,7 +197,7 @@
                 <!-- Customer Name -->
                 <div class="form-group">
                     <label for="payer_name" class="form-label">
-                        Jina La Mteja
+                        Jina La Mwanachama
                     </label>
                     <input type="text" 
                            class="form-control" 
@@ -240,14 +240,14 @@
                 <!-- Payment Description -->
                 <div class="form-group">
                     <label for="description" class="form-label">
-                        Maelezo Ya Malipo
+                        Malipo Kwaajili Ya:
                     </label>
                     <textarea class="form-control" 
                               id="description" 
                               name="description" 
                               rows="3" 
                               placeholder="Andika maelezo ya malipo"></textarea>
-                    <small class="text-muted">Maelezo ya ziada kuhusu malipo yako (hiari)</small>
+                    <small class="text-muted">Maelezo ya ziada kuhusu malipo yako</small>
                 </div>
 
                 <!-- Submit Button -->
@@ -331,7 +331,7 @@
                         // Show success notification in Swahili
                         showUSSDNotification(result);
                     } else {
-                        showAlert('error', result.message || 'Imeshindikwa malipo. Tafadhali tena.');
+                        showAlert('error', result.message || 'Imeshindikwa malipo. Tafadhali jaribu tena.');
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
                     }
@@ -373,7 +373,8 @@
                                     <span class="visually-hidden">Inatuma...</span>
                                 </div>
                                 <h5>Inatuma Malipo</h5>
-                                <p class="text-muted">Tafadhali subiri tunapokea malipo lako...</p>
+                                <h5 class="text-success">Tafadhari Thibitisha malipo yako kwa kuandika PIN</h5>
+                                
                                 <div class="progress" style="height: 6px;">
                                     <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
                                 </div>
@@ -488,7 +489,7 @@
                                 <div class="mb-4">
                                     <i class="fas fa-mobile-alt text-success" style="font-size: 3rem;"></i>
                                 </div>
-                                <h5 class="text-success">Tafadhari thibitisha...</h5>
+                                
                                 <div class="alert alert-info">
                                     <strong>${data.phone_number || data.phone}</strong>
                                 </div>
@@ -496,9 +497,7 @@
                                 <div class="alert alert-success">
                                     <strong>TZS ${data.amount}</strong>
                                 </div>
-                                <p class="text-muted mb-4">Tafadhali subiri kwenye USSD iliyo kwenye simu yako na kisha ukamilisha malipo kwa kuandika pin</p>
-                                <p class="text-muted mb-4">Ukisubiri na kubonyeza "Lipa Sasa" kisha ukamilisha malipo.</p>
-                            </div>
+                                 </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-success" onclick="closeUSSDNotification()">
                                     <i class="fas fa-check me-2"></i>

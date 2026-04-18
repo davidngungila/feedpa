@@ -4,7 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Malipo - ClickPesa</title>
+ 
+    <title>Malipo ya Wanachama - FeedTan CMG</title>
+
+    <meta name="description" content="Fanya malipo ya wanachama wa FeedTan Community Microfinance Group kwa urahisi kupitia Tigo Pesa, M-Pesa, Airtel Money na Halopesa. Malipo salama kupitia ClickPesa.">
+
+    <meta name="keywords" content="FeedTan, malipo ya simu, microfinance Tanzania, ClickPesa, M-Pesa, Tigo Pesa, Airtel Money">
+
+    <meta property="og:title" content="FeedTan CMG - Malipo ya Wanachama">
+    <meta property="og:description" content="Malipo salama na ya haraka kwa wanachama wa FeedTan kupitia mobile money.">
+    <meta property="og:site_name" content="FeedTan CMG">
+
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -185,7 +195,7 @@
     <div class="payment-container">
         <!-- Header -->
         <div class="payment-header">
-            <h2>Malipo Salama</h2>
+            <h2>FeedTan CMG</h2>
             <p>Fanya malipo salama kwa Tigo Pesa, M-Pesa, Halopesa, na Airtel Money</p>
         </div>
 
@@ -253,10 +263,11 @@
                 <!-- Submit Button -->
                 <div class="form-group">
                     <button type="submit" class="btn-payment" id="submitBtn">
-                        <i class="fas fa-lock me-2"></i>
-                        Lipa Sasa
-                    </button>
+    <i class="fas fa-lock me-2"></i>
+    Lipa Sasa <span id="btnAmount">0</span> TZS
+</button>
                 </div>
+             <center>  <p>Let's Grow Together</p></center>
             </form>
         </div>
     </div>
@@ -350,6 +361,21 @@ document.addEventListener('DOMContentLoaded', function() {
             resetButton();
         });
     });
+
+
+
+
+
+
+    const amountInput = document.getElementById('amount');
+const btnAmount = document.getElementById('btnAmount');
+
+amountInput.addEventListener('input', function () {
+    let value = this.value || 0;
+    btnAmount.textContent = value;
+});
+
+
 
     // =========================
     // RESET BUTTON

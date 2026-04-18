@@ -372,7 +372,7 @@
                             title: 'Malipo Yameanzishwa!',
                             html: `
                                 <div class="text-left">
-                                    <p><strong>Toa maelezo kwamba utaomba uthibitisho kwa simu yako , tafadhari thibitisha...</strong></p>
+                                    <p><strong>Maelezo ya malipo yamekabidhiwa kwa simu yako, tafadhali thibitisha...</strong></p>
                                     <p><strong>Kwenye form ongeza malipo ni kwaajili ya...</strong></p>
                                     <hr>
                                     <p><strong>Namba ya Simu:</strong> ${data.phone_number}</p>
@@ -612,8 +612,8 @@
                                 <div class="mb-4">
                                     <i class="fas fa-mobile-alt text-success" style="font-size: 3rem;"></i>
                                 </div>
-                                <h5 class="text-success">Toa maeleza kwamba utaomba uthibitisho kwa simu yako , tafadhari thibitisha...</h5>
-                                <p class="mb-3">Kwenye form ongeza malipo ni kwaajili ya...</p>
+                                <h5 class="text-success">Tafadhari thibitisha kwa kuandika Pin kwa simu yako</h5>
+  
                                 <div class="alert alert-info">
                                     <strong>${data.phone_number}</strong>
                                 </div>
@@ -622,7 +622,7 @@
                                     <strong>TZS ${data.amount}</strong>
                                 </div>
                                 <p class="text-muted mb-4">Tafadhali subiri kwenye USSD iliyo kwenye simu yako.</p>
-                                <p class="text-muted mb-4">Ukisubiri na kubonyeza "Lipa Sasa" kisha ukamilisha malipo.</p>
+
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-success" onclick="closeUSSDNotification()">

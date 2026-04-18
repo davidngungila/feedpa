@@ -341,9 +341,12 @@
                     const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
                     if (modal) modal.hide();
                     
-                    showAlert('error', 'Hitilafu mtandao. Tafadhali tena tena.');
+                    // Reset button state but don't show error popup
                     submitBtn.disabled = false;
                     submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
+                    
+                    // Log error to console for debugging but don't show to user
+                    console.log('Payment error:', error);
                 });
             });
             

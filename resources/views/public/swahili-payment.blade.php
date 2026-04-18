@@ -264,266 +264,263 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <script>
-        // Payment form handling
-        document.addEventListener('DOMContentLoaded', function() {
-            const form = document.getElementById('paymentForm');
-            const submitBtn = document.getElementById('submitBtn');
-            
-            // Form validation and submission
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Get form data
-                const formData = new FormData(form);
-                const data = {
-                    amount: formData.get('amount'),
-                    phone_number: formData.get('phone_number'),
-                    payer_name: formData.get('payer_name'),
-                    description: formData.get('description')
-                };
-                
-                // Validate form
-                if (!data.payer_name || data.payer_name.trim() === '') {
-                    showAlert('error', 'Tafadhali jina lako kamili.');
-                    return;
-                }
-                
-                if (!data.phone_number || !data.phone_number.match(/^255[67]\d{8}$/)) {
-                    showAlert('error', 'Tafadhali namba ya simu sahi. Mfano: 255712345678');
-                    return;
-                }
-                
-                if (!data.amount || data.amount < 500) {
-                    showAlert('error', 'Kiasi lazima ni TZS 500.');
-                    return;
-                }
-                
-                if (data.amount > 5000000) {
-                    showAlert('error', 'Kiasi ya juu ni TZS 5,000,000.');
-                    return;
-                }
-                
-                // Show loading state
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Inatuma Malipo...';
-                
-                // Show processing modal
-                showProcessingModal();
-                
-                // Make Ajax request
-                fetch('/payments/store', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then(response => response.json())
-                .then(result => {
-                    // Close processing modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
-                    if (modal) modal.hide();
-                    
-                    if (result.success) {
-                        // Show success notification in Swahili
-                        showUSSDNotification(result);
-                    } else {
-                        showAlert('error', result.message || 'Imeshindikwa malipo. Tafadhali jaribu tena.');
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
-                    }
-                })
-                .catch(error => {
-                    // Close processing modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
-                    if (modal) modal.hide();
-                    
-                    // Reset button state but don't show error popup
-                    submitBtn.disabled = false;
-                    submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
-                    
-                    // Log error to console for debugging but don't show to user
-                    console.log('Payment error:', error);
-                });
-            });
-            
-            // Auto-format phone number as user types
-            const phoneInput = document.getElementById('phone_number');
-            phoneInput.addEventListener('blur', function() {
-                let value = this.value.replace(/\D/g, '');
-                if (value.length === 9 && value.startsWith('0')) {
-                    // Convert 07... to 2557...
-                    value = '255' + value.substring(1);
-                    this.value = value;
-                }
-            });
-        });
-        
-        // Show processing modal
-        function showProcessingModal() {
-            const modalHtml = `
-                <div class="modal fade" id="processingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-body text-center py-4">
-                                <div class="spinner-border text-primary mb-3" role="status">
-                                    <span class="visually-hidden">Inatuma...</span>
-                                </div>
-                                <h5>Inatuma Malipo</h5>
-                                <h5 class="text-success">Tafadhari Thibitisha malipo yako kwa kuandika PIN</h5>
-                                
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.insertAdjacentHTML('beforeend', modalHtml);
-            const modal = new bootstrap.Modal(document.getElementById('processingModal'));
-            modal.show();
+   <script>
+document.addEventListener('DOMContentLoaded', function() {
+
+    const form = document.getElementById('paymentForm');
+    const submitBtn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const formData = new FormData(form);
+
+        const data = {
+            amount: formData.get('amount'),
+            phone_number: formData.get('phone_number'),
+            payer_name: formData.get('payer_name'),
+            description: formData.get('description')
+        };
+
+        // =========================
+        // VALIDATION (FRIENDLY)
+        // =========================
+        if (!data.payer_name || data.payer_name.trim() === '') {
+            showAlert('error', 'Tafadhali ingiza jina lako kamili.');
+            return;
         }
-        
-        // Show alert function
-        function showAlert(type, message) {
-            // Remove any existing alerts
-            const existingAlerts = document.querySelectorAll('.custom-alert-overlay');
-            existingAlerts.forEach(alert => alert.remove());
-            
-            // Create overlay container
-            const overlay = document.createElement('div');
-            overlay.className = 'custom-alert-overlay';
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                z-index: 99999;
-                animation: fadeIn 0.3s ease-in-out;
-            `;
-            
-            // Create alert container
-            const alertContainer = document.createElement('div');
-            alertContainer.style.cssText = `
-                max-width: 500px;
-                width: 90%;
-                margin: 20px;
-                animation: slideIn 0.3s ease-in-out;
-            `;
-            
-            // Create alert content
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} alert-dismissible fade show d-flex align-items-center`;
-            alertDiv.style.cssText = `
-                margin: 0;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-                border-radius: 8px;
-                position: relative;
-            `;
-            
-            // Set icon based on type
-            let iconHtml = '';
-            if (type === 'success') {
-                iconHtml = '<i class="fas fa-check-circle me-3" style="font-size: 1.5rem;"></i>';
-            } else if (type === 'error') {
-                iconHtml = '<i class="fas fa-exclamation-triangle me-3" style="font-size: 1.5rem;"></i>';
-            } else if (type === 'warning') {
-                iconHtml = '<i class="fas fa-exclamation-circle me-3" style="font-size: 1.5rem;"></i>';
-            } else {
-                iconHtml = '<i class="fas fa-info-circle me-3" style="font-size: 1.5rem;"></i>';
-            }
-            
-            alertDiv.innerHTML = `
-                ${iconHtml}
-                <div class="flex-grow-1">
-                    <div class="fw-bold">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
-                    <div class="small">${message}</div>
-                </div>
-                <button type="button" class="btn-close ms-3" onclick="closeAlert(this)"></button>
-            `;
-            
-            alertContainer.appendChild(alertDiv);
-            overlay.appendChild(alertContainer);
-            document.body.appendChild(overlay);
-            
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                closeAlert(overlay.querySelector('.btn-close'));
-            }, 5000);
+
+        if (!data.phone_number || !data.phone_number.match(/^255[67]\d{8}$/)) {
+            showAlert('error', 'Namba ya simu si sahihi. Mfano: 255712345678');
+            return;
         }
-        
-        // Close alert function
-        function closeAlert(button) {
-            const overlay = button.closest('.custom-alert-overlay');
-            if (overlay) {
-                overlay.style.animation = 'fadeOut 0.3s ease-in-out';
-                setTimeout(() => {
-                    overlay.remove();
-                }, 300);
-            }
+
+        if (!data.amount || data.amount < 500) {
+            showAlert('error', 'Kiasi cha chini ni TZS 500.');
+            return;
         }
-        
-        // Show USSD notification in Swahili
-        function showUSSDNotification(data) {
-            const notificationHtml = `
-                <div class="modal fade" id="ussdNotification" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
-                    <div class="modal-dialog modal-dialog-centered">
-                        <div class="modal-content">
-                            <div class="modal-header bg-success text-white">
-                                <h5 class="modal-title">
-                                    <i class="fas fa-check-circle me-2"></i>
-                                    Malipo Yamechakatwa!
-                                </h5>
-                            </div>
-                            <div class="modal-body text-center py-4">
-                                <div class="mb-4">
-                                    <i class="fas fa-mobile-alt text-success" style="font-size: 3rem;"></i>
-                                </div>
-                                
-                                <div class="alert alert-info">
-                                    <strong>${data.phone_number || data.phone}</strong>
-                                </div>
-                                <p class="mb-3">Kiasi:</p>
-                                <div class="alert alert-success">
-                                    <strong>TZS ${data.amount}</strong>
-                                </div>
-                                 </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-success" onclick="closeUSSDNotification()">
-                                    <i class="fas fa-check me-2"></i>
-                                    Nimefanya
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.body.insertAdjacentHTML('beforeend', notificationHtml);
-            const notificationModal = new bootstrap.Modal(document.getElementById('ussdNotification'));
-            notificationModal.show();
-            
-            // Reset form
-            form.reset();
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
+
+        if (data.amount > 5000000) {
+            showAlert('error', 'Kiasi cha juu ni TZS 5,000,000.');
+            return;
         }
-        
-        // Close USSD notification
-        function closeUSSDNotification() {
-            const modal = bootstrap.Modal.getInstance(document.getElementById('ussdNotification'));
+
+        // =========================
+        // LOADING STATE
+        // =========================
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Tunatuma Malipo...';
+
+        showProcessingModal();
+
+        // =========================
+        // API REQUEST
+        // =========================
+        fetch('/payments/store', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(result => {
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
             if (modal) modal.hide();
+
+            if (result.success) {
+                showUSSDNotification(result);
+            } else {
+                showAlert('error', result.message || 'Imeshindikwa kutuma malipo. Jaribu tena.');
+                resetButton();
+            }
+
+        })
+        .catch(error => {
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
+            if (modal) modal.hide();
+
+            console.log('Payment error:', error);
+
+            showAlert('warning', 'Tatizo la mtandao. Tafadhali jaribu tena.');
+            resetButton();
+        });
+    });
+
+    // =========================
+    // RESET BUTTON
+    // =========================
+    function resetButton() {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Lipa Sasa';
+    }
+
+    // =========================
+    // PROCESSING MODAL (FRIENDLY)
+    // =========================
+    function showProcessingModal() {
+        const modalHtml = `
+            <div class="modal fade" id="processingModal" tabindex="-1" data-bs-backdrop="static">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content text-center">
+                        <div class="modal-body py-4">
+
+                            <div class="spinner-border text-primary mb-3"></div>
+
+                            <h5 class="fw-bold">Tunaandaa Malipo Yako...</h5>
+
+                            <p class="text-muted">
+                                Tafadhali subiri kidogo, USSD inatumwa kwenye simu yako.
+                            </p>
+
+                            <div class="alert alert-info text-start">
+                                📲 Fuata hatua hizi:<br>
+                                ✔ Angalia simu yako<br>
+                                ✔ Fungua USSD<br>
+                                ✔ Weka PIN yako<br>
+                                ✔ Thibitisha malipo
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        const modal = new bootstrap.Modal(document.getElementById('processingModal'));
+        modal.show();
+    }
+
+    // =========================
+    // SUCCESS MODAL (FRIENDLY)
+    // =========================
+    function showUSSDNotification(data) {
+
+        const html = `
+        <div class="modal fade" id="ussdNotification" tabindex="-1" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content text-center">
+
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">🎉 Malipo Yameanzishwa</h5>
+                    </div>
+
+                    <div class="modal-body py-4">
+
+                        <i class="fas fa-mobile-alt text-success" style="font-size: 3rem;"></i>
+
+                        <h6 class="mt-3">
+                            USSD imetumwa kwenye simu yako
+                        </h6>
+
+                        <div class="alert alert-primary mt-3">
+                            📱 ${data.phone_number || data.phone}
+                        </div>
+
+                        <div class="alert alert-success">
+                            💰 TZS ${data.amount}
+                        </div>
+
+                        <div class="alert alert-warning text-start">
+                            <b>Hatua zako:</b><br>
+                            1️⃣ Fungua USSD kwenye simu yako<br>
+                            2️⃣ Weka PIN yako<br>
+                            3️⃣ Thibitisha malipo<br>
+                            4️⃣ Subiri uthibitisho
+                        </div>
+
+                        <small class="text-muted">
+                            ⚡ Malipo yatakamilika baada ya uthibitisho wako
+                        </small>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn btn-success w-100" onclick="closeUSSDNotification()">
+                            Nimeelewa 👍
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        const modal = new bootstrap.Modal(document.getElementById('ussdNotification'));
+        modal.show();
+
+        form.reset();
+        resetButton();
+    }
+
+    // =========================
+    // CLOSE SUCCESS MODAL
+    // =========================
+    window.closeUSSDNotification = function() {
+        const modal = bootstrap.Modal.getInstance(document.getElementById('ussdNotification'));
+        if (modal) modal.hide();
+    }
+
+    // =========================
+    // PHONE FORMAT AUTO FIX
+    // =========================
+    const phoneInput = document.getElementById('phone_number');
+    phoneInput.addEventListener('blur', function() {
+        let value = this.value.replace(/\D/g, '');
+
+        if (value.length === 10 && value.startsWith('0')) {
+            this.value = '255' + value.substring(1);
         }
-    </script>
+    });
+
+    // =========================
+    // FRIENDLY ALERT SYSTEM
+    // =========================
+    function showAlert(type, message) {
+
+        const overlay = document.createElement('div');
+        overlay.className = 'custom-alert-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top:0;
+            left:0;
+            width:100%;
+            height:100%;
+            background: rgba(0,0,0,0.5);
+            display:flex;
+            justify-content:center;
+            align-items:center;
+            z-index:99999;
+        `;
+
+        let icon = 'info-circle';
+        let color = 'primary';
+
+        if (type === 'success') { icon = 'check-circle'; color = 'success'; }
+        if (type === 'error') { icon = 'times-circle'; color = 'danger'; }
+        if (type === 'warning') { icon = 'exclamation-triangle'; color = 'warning'; }
+
+        overlay.innerHTML = `
+            <div class="alert alert-${color} text-center p-4" style="max-width:400px;">
+                <i class="fas fa-${icon}" style="font-size:2rem;"></i>
+                <h5 class="mt-2 text-capitalize">${type}</h5>
+                <p>${message}</p>
+                <button class="btn btn-dark btn-sm" onclick="this.closest('.custom-alert-overlay').remove()">
+                    OK
+                </button>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+    }
+
+});
+</script>
 </body>
 </html>

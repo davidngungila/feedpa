@@ -478,23 +478,22 @@
                             <div class="modal-header bg-success text-white">
                                 <h5 class="modal-title">
                                     <i class="fas fa-check-circle me-2"></i>
-                                    Malipo Umejeshwa!
+                                    Malipo Yamechakatwa!
                                 </h5>
                             </div>
                             <div class="modal-body text-center py-4">
                                 <div class="mb-4">
                                     <i class="fas fa-mobile-alt text-success" style="font-size: 3rem;"></i>
                                 </div>
-                                <h5 class="text-success">Toa maeleza kwamba utaomba uthibitisho kwa simu yako , tafadhari thibitisha...</h5>
-                                <p class="mb-3">Kwenye form ongeza malipo ni kwaajili ya...</p>
+                                <h5 class="text-success">Tafadhari thibitisha...</h5>
                                 <div class="alert alert-info">
-                                    <strong>${data.phone_number}</strong>
+                                    <strong>${data.phone_number || data.phone}</strong>
                                 </div>
                                 <p class="mb-3">Kiasi:</p>
                                 <div class="alert alert-success">
                                     <strong>TZS ${data.amount}</strong>
                                 </div>
-                                <p class="text-muted mb-4">Tafadhali subiri kwenye USSD iliyo kwenye simu yako.</p>
+                                <p class="text-muted mb-4">Tafadhali subiri kwenye USSD iliyo kwenye simu yako na kisha ukamilisha malipo kwa kuandika pin</p>
                                 <p class="text-muted mb-4">Ukisubiri na kubonyeza "Lipa Sasa" kisha ukamilisha malipo.</p>
                             </div>
                             <div class="modal-footer">

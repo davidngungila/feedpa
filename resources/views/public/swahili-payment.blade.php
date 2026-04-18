@@ -311,12 +311,13 @@
                 // Show processing modal
                 showProcessingModal();
                 
-                // Make API call
+                // Make Ajax request
                 fetch('/payments/store', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || ''
+                        'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '',
+                        'X-Requested-With': 'XMLHttpRequest'
                     },
                     body: JSON.stringify(data)
                 })
@@ -328,7 +329,7 @@
                     
                     if (result.success) {
                         // Show success notification in Swahili
-                        showUSSDNotification(data);
+                        showUSSDNotification(result);
                     } else {
                         showAlert('error', result.message || 'Imeshindikwa malipo. Tafadhali tena.');
                         submitBtn.disabled = false;

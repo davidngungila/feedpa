@@ -92,6 +92,18 @@ class PaymentController extends Controller
             // Send SMS notification for payment initiation
             $this->sendPaymentInitiationNotification($phoneNumber, $orderReference, $amount, $payerName);
 
+            // Check if this is an Ajax request from Swahili payment page
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Malipo umekamilika! USSD umetumwa kwa {$phoneNumber}",
+                    'order_reference' => $orderReference,
+                    'amount' => $amount,
+                    'phone_number' => $phoneNumber,
+                    'payer_name' => $payerName
+                ]);
+            }
+
             return redirect()->route('payments.status', ['reference' => $orderReference])
                 ->with('success', "Payment initiated successfully! USSD Push sent to {$phoneNumber}");
         } catch (Exception $e) {
@@ -102,10 +114,27 @@ class PaymentController extends Controller
                 // Send SMS notification for insufficient funds
                 $this->sendInsufficientFundsNotification($phoneNumber, $orderReference, $amount, $payerName);
                 
+                // Check if this is an Ajax request from Swahili payment page
+                if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $e->getMessage(),
+                        'warning_type' => 'insufficient_funds'
+                    ]);
+                }
+                
                 return back()
                     ->with('error', $e->getMessage())
                     ->with('warning_type', 'insufficient_funds')
                     ->withInput();
+            }
+            
+            // Check if this is an Ajax request from Swahili payment page
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ]);
             }
             
             return back()->with('error', $e->getMessage())->withInput();

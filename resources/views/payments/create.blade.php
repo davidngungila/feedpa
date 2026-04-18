@@ -639,12 +639,75 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
         return;
     }
     
+    // Prevent default form submission
+    e.preventDefault();
+    
     // Show loading state
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Payment...';
     
     // Show processing modal
     showProcessingModal();
+    
+    // Get form data
+    const formData = new FormData(this);
+    const data = {
+        amount: formData.get('amount'),
+        phone_number: formData.get('phone_number'),
+        payer_name: formData.get('payer_name'),
+        description: formData.get('description')
+    };
+    
+    // Make Ajax request
+    fetch('/payments/store', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).getAttribute('content') || '',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        // Close processing modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
+        if (modal) modal.hide();
+        
+        if (result.success) {
+            // Show success notification
+            showAlert('success', result.message || 'Payment initiated successfully! USSD Push sent to your phone.');
+            
+            // Reset form after successful submission
+            this.reset();
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Process Payment';
+            
+            // Update character count
+            const charCountElement = document.getElementById('charCount');
+            if (charCountElement) {
+                charCountElement.textContent = '255';
+            }
+            
+            // Clear any validation states
+            document.querySelectorAll('.is-invalid').forEach(element => {
+                element.classList.remove('is-invalid');
+            });
+        } else {
+            showAlert('error', result.message || 'Payment initiation failed. Please try again.');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Process Payment';
+        }
+    })
+    .catch(error => {
+        // Close processing modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('processingModal'));
+        if (modal) modal.hide();
+        
+        showAlert('error', 'Network error. Please try again.');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Process Payment';
+    });
 });
 
 // Reset form function

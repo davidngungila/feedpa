@@ -163,7 +163,7 @@
             <div class="card-header bg-light">
                 <h5 class="card-title mb-0">
                     <i class="fas fa-user me-2"></i>
-                    Customer Information
+                    Maelezo Ya Mteja
                 </h5>
             </div>
             <div class="card-body">
@@ -174,8 +174,8 @@
                                 <i class="fas fa-user"></i>
                             </div>
                             <div>
-                                <small class="text-muted d-block">Customer Name</small>
-                                <strong>{{ $payment['customer']['customerName'] ?? $payment['payer_name'] ?? $payment['customerName'] ?? 'Customer' }}</strong>
+                                <small class="text-muted d-block">Jina La Mwanachama</small>
+                                <strong>{{ $payment['payer_name'] ?? 'Mteja' }}</strong>
                             </div>
                         </div>
                     </div>
@@ -185,8 +185,8 @@
                                 <i class="fas fa-phone"></i>
                             </div>
                             <div>
-                                <small class="text-muted d-block">Phone Number</small>
-                                <strong>{{ $payment['customer']['customerPhoneNumber'] ?? $payment['paymentPhoneNumber'] ?? 'N/A' }}</strong>
+                                <small class="text-muted d-block">Namba Ya Simu</small>
+                                <strong>{{ $payment['phone'] ?? 'Haijulikani' }}</strong>
                             </div>
                         </div>
                     </div>
@@ -196,8 +196,8 @@
                                 <i class="fas fa-envelope"></i>
                             </div>
                             <div>
-                                <small class="text-muted d-block">Email Address</small>
-                                <strong>{{ $payment['customer']['customerEmail'] ?? $payment['customerEmail'] ?? 'N/A' }}</strong>
+                                <small class="text-muted d-block">Anwani Ya Barua Pepe</small>
+                                <strong>{{ $payment['email'] ?? 'Haijulikani' }}</strong>
                             </div>
                         </div>
                     </div>
@@ -854,7 +854,18 @@ function performUssdResend(orderReference) {
 function sharePayment() {
     const orderReference = '{{ $payment['orderReference'] ?? '' }}';
     const amount = '{{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }} {{ $payment['collectedCurrency'] ?? 'TZS' }}';
-    const status = '{{ $statusText }}';
+    
+    // Define status text mapping in JavaScript scope
+    const statusTextMap = {
+        'SUCCESS': 'Payment Successful',
+        'SETTLED': 'Payment Settled',
+        'PROCESSING': 'Processing Payment',
+        'PENDING': 'Payment Pending',
+        'FAILED': 'Payment Failed',
+        'default': 'Unknown Status'
+    };
+    
+    const status = statusTextMap['{{ $payment['status'] ?? 'default' }}'] || 'Unknown Status';
     
     const shareText = `Payment Details:\nReference: ${orderReference}\nAmount: ${amount}\nStatus: ${status}\nDate: {{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y H:i') }}`;
     

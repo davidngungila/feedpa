@@ -154,25 +154,72 @@ class PaymentController extends Controller
 
         if ($orderReference) {
             try {
-                Log::info('Calling API for payment status', ['reference' => $orderReference]);
-                $paymentData = $this->api->queryPaymentStatus($orderReference);
-                Log::info('API response received', ['data' => $paymentData]);
+                // First, try to get transaction from database
+                $transaction = Transaction::where('order_reference', $orderReference)->first();
                 
-                // Check if payment is successful and send SMS notification
-                if (isset($paymentData['status']) && $paymentData['status'] === 'SUCCESS') {
-                    $this->sendPaymentSuccessNotification($paymentData);
+                if ($transaction) {
+                    Log::info('Transaction found in database', ['reference' => $orderReference, 'transaction_id' => $transaction->id]);
+                    
+                    // Convert transaction to array format expected by view
+                    $paymentData = [
+                        'id' => $transaction->id,
+                        'orderReference' => $transaction->order_reference,
+                        'transaction_id' => $transaction->transaction_id,
+                        'status' => $transaction->status,
+                        'amount' => $transaction->amount,
+                        'currency' => $transaction->currency,
+                        'phone' => $transaction->phone,
+                        'payer_name' => $transaction->payer_name,
+                        'description' => $transaction->description,
+                        'type' => $transaction->type,
+                        'payment_method' => $transaction->payment_method,
+                        'created_at' => $transaction->created_at,
+                        'updated_at' => $transaction->updated_at
+                    ];
+                    
+                    // If status is still PROCESSING or PENDING, try to get updated status from API
+                    if (in_array($transaction->status, ['PROCESSING', 'PENDING'])) {
+                        Log::info('Calling API for payment status', ['reference' => $orderReference]);
+                        $apiData = $this->api->queryPaymentStatus($orderReference);
+                        Log::info('API response received', ['data' => $apiData]);
+                        
+                        // Update transaction with API data
+                        if (isset($apiData['status'])) {
+                            $transaction->update([
+                                'status' => $apiData['status'],
+                                'transaction_id' => $apiData['transaction_id'] ?? $transaction->transaction_id,
+                                'payment_method' => $apiData['payment_method'] ?? $transaction->payment_method,
+                                'updated_at' => now()
+                            ]);
+                            
+                            // Update payment data with API response
+                            $paymentData['status'] = $apiData['status'];
+                            $paymentData['transaction_id'] = $apiData['transaction_id'] ?? $transaction->transaction_id;
+                            $paymentData['payment_method'] = $apiData['payment_method'] ?? $transaction->payment_method;
+                            
+                            // Check if payment is successful and send SMS notification
+                            if ($apiData['status'] === 'SUCCESS') {
+                                $this->sendPaymentSuccessNotification($apiData);
+                            }
+                        }
+                    }
+                } else {
+                    // Transaction not found in database, try API
+                    Log::info('Transaction not found in database, trying API', ['reference' => $orderReference]);
+                    $paymentData = $this->api->queryPaymentStatus($orderReference);
+                    Log::info('API response received', ['data' => $paymentData]);
+                    
+                    // Check if payment is successful and send SMS notification
+                    if (isset($paymentData['status']) && $paymentData['status'] === 'SUCCESS') {
+                        $this->sendPaymentSuccessNotification($paymentData);
+                    }
+                    
+                    // Check if API returned valid data
+                    if (empty($paymentData) || !is_array($paymentData)) {
+                        $error = 'No payment found with this order reference';
+                        Log::warning('No payment data found', ['reference' => $orderReference]);
+                    }
                 }
-                
-                // Check if API returned valid data
-                if (empty($paymentData) || !is_array($paymentData)) {
-                    $error = 'No payment found with this order reference';
-                    Log::warning('No payment data found', ['reference' => $orderReference]);
-                }
-                // Remove strict validation to see what API returns
-                // elseif (!isset($paymentData['id']) && !isset($paymentData['orderReference'])) {
-                //     $error = 'Invalid payment data received from API';
-                //     Log::warning('Invalid payment data structure', ['reference' => $orderReference, 'data' => $paymentData]);
-                // }
             } catch (Exception $e) {
                 $error = $e->getMessage();
                 Log::error('Payment status check failed: ' . $error, [

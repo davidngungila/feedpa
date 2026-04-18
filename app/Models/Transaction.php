@@ -15,7 +15,7 @@ class Transaction extends Model
         'status',
         'amount',
         'currency',
-        'phone',
+        'phone_number',
         'payer_name',
         'email',
         'description',

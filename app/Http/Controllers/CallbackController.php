@@ -3,11 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Services\MessagingServiceAPI;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class CallbackController extends Controller
 {
+    protected MessagingServiceAPI $messaging;
+
+    public function __construct(MessagingServiceAPI $messaging)
+    {
+        $this->messaging = $messaging;
+    }
+
     /**
      * Handle ClickPesa webhook callbacks
      */
@@ -36,11 +44,12 @@ class CallbackController extends Controller
         }
 
         $data = $request->all();
+        $event = $data['event'] ?? null;
         $status = $data['status'] ?? null;
         $transactionId = $data['transaction_id'] ?? $data['id'] ?? null;
         $orderReference = $data['orderReference'] ?? null;
         $amount = $data['amount'] ?? $data['collectedAmount'] ?? null;
-        $phone = $data['phone'] ?? $data['paymentPhoneNumber'] ?? null;
+        $phone = $data['phone'] ?? $data['paymentPhoneNumber'] ?? $data['customer']['customerPhoneNumber'] ?? null;
 
         try {
             // Find transaction by order reference
@@ -62,6 +71,11 @@ class CallbackController extends Controller
                     'status' => $status,
                     'transaction_id' => $transactionId
                 ]);
+
+                // Send SMS notification only when PAYMENT RECEIVED event is triggered
+                if ($event === 'PAYMENT RECEIVED' && $status === 'SUCCESS') {
+                    $this->sendPaymentSuccessNotification($data, $transaction);
+                }
 
                 return response()->json(['status' => 'success', 'message' => 'Callback processed']);
             } else {
@@ -92,6 +106,59 @@ class CallbackController extends Controller
             ]);
 
             return response()->json(['status' => 'error', 'message' => 'Processing failed'], 500);
+        }
+    }
+
+    /**
+     * Send SMS notification for successful payment via webhook
+     */
+    private function sendPaymentSuccessNotification(array $webhookData, $transaction)
+    {
+        try {
+            if (!config('messaging.enabled') || !config('messaging.notifications.payment_confirmation')) {
+                Log::info('SMS notifications disabled, skipping payment success notification');
+                return;
+            }
+
+            $phoneNumber = $webhookData['customer']['customerPhoneNumber'] ?? $transaction->phone;
+            if (!$phoneNumber) {
+                Log::warning('No phone number available for payment success notification');
+                return;
+            }
+
+            // Prepare payment data in the format expected by messaging service
+            $paymentData = [
+                'orderReference' => $webhookData['orderReference'] ?? $transaction->order_reference,
+                'id' => $webhookData['id'] ?? $transaction->transaction_id,
+                'status' => $webhookData['status'],
+                'collectedAmount' => $webhookData['collectedAmount'] ?? $transaction->amount,
+                'collectedCurrency' => $webhookData['collectedCurrency'] ?? 'TZS',
+                'paymentPhoneNumber' => $phoneNumber,
+                'channel' => $webhookData['channel'] ?? 'Mobile Money',
+                'customer' => [
+                    'customerName' => $webhookData['customer']['customerName'] ?? $transaction->payer_name,
+                    'customerEmail' => $webhookData['customer']['customerEmail'] ?? null,
+                    'customerPhoneNumber' => $phoneNumber
+                ],
+                'createdAt' => $webhookData['createdAt'] ?? $transaction->created_at,
+                'updatedAt' => $webhookData['updatedAt'] ?? now()
+            ];
+
+            $result = $this->messaging->sendPaymentConfirmation($phoneNumber, $paymentData);
+            
+            Log::info('Payment success SMS sent via webhook', [
+                'reference' => $paymentData['orderReference'],
+                'phone_number' => $phoneNumber,
+                'amount' => $paymentData['collectedAmount'],
+                'result' => $result
+            ]);
+
+        } catch (Exception $e) {
+            Log::error('Failed to send payment success SMS via webhook', [
+                'webhook_data' => $webhookData,
+                'transaction_id' => $transaction->id,
+                'error' => $e->getMessage()
+            ]);
         }
     }
 

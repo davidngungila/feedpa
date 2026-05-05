@@ -406,7 +406,7 @@ amountInput.addEventListener('input', function () {
                             <div class="alert alert-info text-start">
                                 📲 Fuata hatua hizi:<br>
                                 ✔ Angalia simu yako<br>
-                                ✔ Fungua USSD<br>
+                                ✔ Mfumo Utaanzisha USSD PUSH<br>
                                 ✔ Weka PIN yako<br>
                                 ✔ Thibitisha malipo
                             </div>
@@ -454,10 +454,10 @@ amountInput.addEventListener('input', function () {
 
                         <div class="alert alert-warning text-start">
                             <b>Hatua zako:</b><br>
-                            1️⃣ Fungua USSD kwenye simu yako<br>
+                            1️⃣ Utaona USSD PUSH kwenye simu yako<br>
                             2️⃣ Weka PIN yako<br>
                             3️⃣ Thibitisha malipo<br>
-                            4️⃣ Subiri uthibitisho
+                            4️⃣ Subiri uthibitisho kwa SMS
                         </div>
 
                         <small class="text-muted">

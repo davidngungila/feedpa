@@ -89,8 +89,7 @@ class PaymentController extends Controller
                 ]);
             }
             
-            // Send SMS notification for payment initiation
-            $this->sendPaymentInitiationNotification($phoneNumber, $orderReference, $amount, $payerName);
+            // SMS notification removed - only send when payment is successful
 
             // Check if this is an Ajax request from Swahili payment page
             if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -111,8 +110,7 @@ class PaymentController extends Controller
             
             // Handle insufficient funds error specifically
             if (stripos($e->getMessage(), 'Insufficient Funds') !== false) {
-                // Send SMS notification for insufficient funds
-                $this->sendInsufficientFundsNotification($phoneNumber, $orderReference, $amount, $payerName);
+                // SMS notification removed - only send when payment is successful
                 
                 // Check if this is an Ajax request from Swahili payment page
                 if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -197,10 +195,7 @@ class PaymentController extends Controller
                             $paymentData['transaction_id'] = $apiData['transaction_id'] ?? $transaction->transaction_id;
                             $paymentData['payment_method'] = $apiData['payment_method'] ?? $transaction->payment_method;
                             
-                            // Check if payment is successful and send SMS notification
-                            if ($apiData['status'] === 'SUCCESS') {
-                                $this->sendPaymentSuccessNotification($apiData);
-                            }
+                            // SMS notifications now handled by webhooks for better reliability
                         }
                     }
                 } else {
@@ -209,10 +204,7 @@ class PaymentController extends Controller
                     $paymentData = $this->api->queryPaymentStatus($orderReference);
                     Log::info('API response received', ['data' => $paymentData]);
                     
-                    // Check if payment is successful and send SMS notification
-                    if (isset($paymentData['status']) && $paymentData['status'] === 'SUCCESS') {
-                        $this->sendPaymentSuccessNotification($paymentData);
-                    }
+                    // SMS notifications now handled by webhooks for better reliability
                     
                     // Check if API returned valid data
                     if (empty($paymentData) || !is_array($paymentData)) {

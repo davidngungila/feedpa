@@ -20,7 +20,7 @@ use App\Http\Controllers\CallbackController;
 */
 
 Route::get('/', function () {
-    return redirect()->route('dashboard.index');
+    return redirect()->route('public.payment');
 });
 
 // Dashboard Routes
@@ -81,8 +81,8 @@ Route::prefix('account')->name('account.')->group(function () {
 
 // Callback/Webhook Routes
 Route::prefix('webhooks')->name('webhooks.')->group(function () {
-    Route::post('/clickpesa', [CallbackController::class, 'handle'])->name('clickpesa');
-    Route::post('/clickpesa/test', [CallbackController::class, 'test'])->name('clickpesa.test');
+    Route::post('/clickpesa', [CallbackController::class, 'handle'])->name('clickpesa')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+    Route::post('/clickpesa/test', [CallbackController::class, 'test'])->name('clickpesa.test')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 });
 
 // Authentication Routes (if needed)

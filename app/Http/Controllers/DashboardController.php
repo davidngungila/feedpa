@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\ClickPesaAPIService;
-use App\Models\BillPayNumber;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -24,7 +23,8 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $recentPayments = [];
-        $recentBillPays = [];
+        $successfulPayments = [];
+        $failedPayments = [];
         $stats = [
             'total_transactions' => 0,
             'successful' => 0,
@@ -35,21 +35,7 @@ class DashboardController extends Controller
             'average_transaction' => 0,
             'success_rate' => 0,
             'failure_rate' => 0,
-            'payouts' => [
-                'total' => 0,
-                'successful' => 0,
-                'pending' => 0,
-                'failed' => 0,
-                'total_amount' => 0
-            ],
-            'billpays' => [
-                'total' => 0,
-                'active' => 0,
-                'total_amount' => 0,
-                'paid_amount' => 0,
-                'pending_amount' => 0
-            ],
-            'daily_stats' => [],
+                        'daily_stats' => [],
             'weekly_stats' => [],
             'monthly_stats' => [],
             'yearly_stats' => [],
@@ -113,25 +99,63 @@ class DashboardController extends Controller
                     in_array($p['status'] ?? '', ['PROCESSING', 'PENDING']))->count();
                 $stats['failed'] = collect($allPayments)->filter(fn($p) => 
                     in_array($p['status'] ?? '', ['FAILED', 'ERROR']))->count();
-                $stats['total_amount'] = collect($allPayments)->sum(fn($p) => $p['amount'] ?? 0);
+                // Calculate revenue only from settled transactions
+                $settledPayments = collect($allPayments)->filter(fn($p) => 
+                    in_array($p['status'] ?? '', ['SETTLED']));
+                
+                $stats['total_amount'] = $settledPayments->sum(fn($p) => $p['amount'] ?? $p['collectedAmount'] ?? 0);
+                $stats['settled_count'] = $settledPayments->count();
                 
                 // Use limited response for recent payments display
                 if (isset($response['data'])) {
-                    $recentPayments = array_slice($response['data'], 0, 10);
+                    $allRecentPayments = array_slice($response['data'], 0, 50); // Get more for filtering
+                    
+                    // Separate successful and failed transactions
+                    $successfulTransactions = array_filter($allRecentPayments, function($payment) {
+                        return in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']);
+                    });
+                    
+                    $failedTransactions = array_filter($allRecentPayments, function($payment) {
+                        return in_array($payment['status'] ?? '', ['FAILED', 'ERROR']);
+                    });
+                    
+                    // Enhance customer data extraction for better display
+                    $enhancePaymentData = function($payment) {
+                        // Extract customer name from various possible fields
+                        $payment['customer_name'] = $payment['customer']['customerName'] ?? 
+                                                   $payment['payer_name'] ?? 
+                                                   $payment['customerName'] ?? 
+                                                   'Customer';
+                        
+                        // Extract customer phone number
+                        $payment['customer_phone'] = $payment['customer']['customerPhoneNumber'] ?? 
+                                                    $payment['paymentPhoneNumber'] ?? 
+                                                    $payment['phone'] ?? 
+                                                    'N/A';
+                        
+                        return $payment;
+                    };
+                    
+                    $recentPayments = array_map($enhancePaymentData, array_slice($allRecentPayments, 0, 10));
+                    $successfulPayments = array_map($enhancePaymentData, array_slice($successfulTransactions, 0, 10));
+                    $failedPayments = array_map($enhancePaymentData, array_slice($failedTransactions, 0, 10));
                 } else {
                     $recentPayments = [];
+                    $successfulPayments = [];
+                    $failedPayments = [];
                 }
                 
-                // Calculate today's revenue and statistics
+                // Calculate today's revenue and statistics (settled only)
                 $todayPayments = collect($allPayments)->filter(function($payment) {
                     $paymentDate = isset($payment['createdAt']) ? 
                         \Carbon\Carbon::parse($payment['createdAt'])->format('Y-m-d') : null;
-                    return $paymentDate === now()->format('Y-m-d');
+                    return $paymentDate === now()->format('Y-m-d') && 
+                           in_array($payment['status'] ?? '', ['SETTLED']);
                 });
                 
-                $stats['today_revenue'] = $todayPayments->sum(fn($p) => $p['amount'] ?? 0);
-                $stats['average_transaction'] = $stats['total_transactions'] > 0 ? 
-                    $stats['total_amount'] / $stats['total_transactions'] : 0;
+                $stats['today_revenue'] = $todayPayments->sum(fn($p) => $p['amount'] ?? $p['collectedAmount'] ?? 0);
+                $stats['average_transaction'] = $stats['settled_count'] > 0 ? 
+                    $stats['total_amount'] / $stats['settled_count'] : 0;
                 
                 // Calculate success and failure rates
                 $stats['success_rate'] = $stats['total_transactions'] > 0 ? 
@@ -156,33 +180,18 @@ class DashboardController extends Controller
                 
                 // Currency breakdown
                 $stats['currency_breakdown'] = $this->calculateCurrencyBreakdown($allPayments);
+                
+                // Calculate top customers by transaction count and amount
+                $stats['top_customers'] = $this->calculateTopCustomers($allPayments);
             }
 
-            // Get BillPay data
-            $billPayRecords = BillPayNumber::orderBy('created_at', 'desc')->take(50)->get();
-            $recentBillPays = $billPayRecords->take(10);
             
-            $stats['billpays']['total'] = BillPayNumber::count();
-            $stats['billpays']['active'] = BillPayNumber::where('bill_status', 'ACTIVE')->count();
-            $stats['billpays']['total_amount'] = BillPayNumber::sum('bill_amount') ?? 0;
-            $stats['billpays']['paid_amount'] = BillPayNumber::sum('total_paid') ?? 0;
-            $stats['billpays']['pending_amount'] = $stats['billpays']['total_amount'] - $stats['billpays']['paid_amount'];
-            
-            // Top customers by BillPay count
-            $stats['top_customers'] = BillPayNumber::select('customer_name')
-                ->whereNotNull('customer_name')
-                ->groupBy('customer_name')
-                ->selectRaw('customer_name, COUNT(*) as count, SUM(bill_amount) as total_amount')
-                ->orderBy('count', 'desc')
-                ->take(5)
-                ->get();
-
         } catch (Exception $e) {
             $error = 'Failed to load dashboard data: ' . $e->getMessage();
             Log::error('Dashboard data loading failed: ' . $error);
         }
 
-        return view('dashboard.index', compact('stats', 'recentPayments', 'recentBillPays', 'error'));
+        return view('dashboard.index', compact('stats', 'recentPayments', 'successfulPayments', 'failedPayments', 'error'));
     }
     public function liveStatus()
     {
@@ -417,5 +426,44 @@ class DashboardController extends Controller
         }
         
         return array_values($currencies);
+    }
+
+    /**
+     * Calculate top customers by transaction count and total amount
+     */
+    private function calculateTopCustomers($payments)
+    {
+        $customers = [];
+        
+        foreach ($payments as $payment) {
+            // Extract customer name from various possible fields
+            $customerName = $payment['customer']['customerName'] ?? 
+                           $payment['payer_name'] ?? 
+                           $payment['customerName'] ?? 
+                           'Customer';
+            
+            $amount = $payment['collectedAmount'] ?? $payment['amount'] ?? 0;
+            
+            if (!isset($customers[$customerName])) {
+                $customers[$customerName] = [
+                    'name' => $customerName,
+                    'count' => 0,
+                    'total_amount' => 0,
+                    'phone' => $payment['customer']['customerPhoneNumber'] ?? 
+                               $payment['paymentPhoneNumber'] ?? 
+                               $payment['phone'] ?? 'N/A'
+                ];
+            }
+            
+            $customers[$customerName]['count']++;
+            $customers[$customerName]['total_amount'] += $amount;
+        }
+        
+        // Sort by total amount descending and take top 5
+        uasort($customers, function($a, $b) {
+            return $b['total_amount'] <=> $a['total_amount'];
+        });
+        
+        return array_slice($customers, 0, 5);
     }
 }

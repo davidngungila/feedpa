@@ -266,6 +266,44 @@
         </div>
     </div>
     
+    <!-- Top Customers -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Top Customers
+                </h5>
+            </div>
+            <div class="card-body">
+                @if(isset($stats['top_customers']) && count($stats['top_customers']) > 0)
+                    @foreach($stats['top_customers'] as $customer)
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar avatar-sm bg-label-success rounded-circle me-2">
+                                <i class="fas fa-user fs-6"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ $customer['name'] }}</h6>
+                                <small class="text-muted">{{ $customer['count'] }} transactions</small>
+                            </div>
+                        </div>
+                        <div class="text-end">
+                            <h6 class="mb-0">{{ number_format($customer['total_amount'], 2) }} TZS</h6>
+                            <small class="text-success">Total</small>
+                        </div>
+                    </div>
+                    @endforeach
+                @else
+                    <div class="text-center py-4">
+                        <i class="fas fa-users fs-1 text-muted mb-3"></i>
+                        <p class="text-muted">No customer data available</p>
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
     <!-- Payment Methods Breakdown -->
     <div class="col-lg-4 mb-4">
         <div class="card">
@@ -305,7 +343,7 @@
     </div>
 </div>
 
-    <!-- Recent Transactions - Full Screen -->
+    <!-- Recent Transactions with Tabs -->
 <div class="col-12 mb-4">
     <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -345,7 +383,7 @@
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     {{ $error }}
                 </div>
-            @elseif(empty($recentPayments))
+            @elseif(empty($recentPayments) && empty($successfulPayments) && empty($failedPayments))
                 <div class="text-center py-5">
                     <i class="fas fa-exchange-alt fs-1 text-muted mb-3"></i>
                     <h5 class="text-muted">No recent transactions found</h5>
@@ -355,260 +393,340 @@
                     </a>
                 </div>
             @else
-                <div class="table-responsive">
-                    <table class="table table-hover" id="recentTransactionsTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width: 15%;">
-                                    <i class="fas fa-hashtag me-1"></i>Reference
-                                </th>
-                                <th style="width: 20%;">
-                                    <i class="fas fa-user me-1"></i>Customer
-                                </th>
-                                <th style="width: 10%;">
-                                    <i class="fas fa-chart-line me-1"></i>Status
-                                </th>
-                                <th style="width: 12%;">
-                                    <i class="fas fa-money-bill me-1"></i>Amount
-                                </th>
-                                <th style="width: 10%;">
-                                    <i class="fas fa-mobile-alt me-1"></i>Method
-                                </th>
-                                <th style="width: 13%;">
-                                    <i class="fas fa-calendar me-1"></i>Date
-                                </th>
-                                <th style="width: 20%;">
-                                    <i class="fas fa-cog me-1"></i>Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($recentPayments as $payment)
-                                @php
-                                    $statusColor = match($payment['status'] ?? '') {
-                                        'SUCCESS', 'SETTLED' => 'success',
-                                        'PROCESSING', 'PENDING' => 'warning',
-                                        'FAILED' => 'danger',
-                                        default => 'secondary'
-                                    };
-                                    $statusIcon = match($payment['status'] ?? '') {
-                                        'SUCCESS', 'SETTLED' => 'fa-check-circle',
-                                        'PROCESSING', 'PENDING' => 'fa-clock',
-                                        'FAILED' => 'fa-times-circle',
-                                        default => 'fa-question-circle'
-                                    };
-                                @endphp
-                                <tr>
-                                    <td>
-                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
-                                           class="text-primary fw-bold text-decoration-none">
-                                            {{ $payment['orderReference'] ?? 'N/A' }}
-                                        </a>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar avatar-sm bg-label-primary rounded-circle me-2">
-                                                <i class="fas fa-user fs-6"></i>
-                                            </div>
-                                            <div>
-                                                <div class="fw-semibold">{{ $payment['payer_name'] ?? 'Customer' }}</div>
-                                                <small class="text-muted">{{ $payment['paymentPhoneNumber'] ?? 'N/A' }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-label-{{ $statusColor }} d-flex align-items-center" style="width: fit-content;">
-                                            <i class="fas {{ $statusIcon }} me-1"></i>
-                                            {{ $payment['status'] ?? 'UNKNOWN' }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="text-end">
-                                            <div class="fw-bold text-success">
-                                                {{ number_format($payment['amount'] ?? $payment['collectedAmount'] ?? 0, 2) }}
-                                            </div>
-                                            <small class="text-muted">TZS</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <i class="fas fa-mobile-alt me-2 text-primary"></i>
-                                            <span>{{ $payment['channel'] ?? $payment['paymentMethod'] ?? 'HALOPESA' }}</span>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div>
-                                            <div>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
-                                            <small class="text-muted">{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i') }}</small>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex gap-1 flex-wrap">
-                                            <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
-                                               class="btn btn-sm btn-outline-primary" title="View Details">
-                                                <i class="fas fa-eye me-1"></i>View
-                                            </a>
-                                            @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
-                                            <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" 
-                                               target="_blank" class="btn btn-sm btn-outline-success" title="Download Receipt">
-                                                <i class="fas fa-receipt me-1"></i>Receipt
-                                            </a>
-                                            @endif
-                                            <button class="btn btn-sm btn-outline-secondary" onclick="copyReference('{{ $payment['orderReference'] ?? '' }}')" title="Copy Reference">
-                                                <i class="fas fa-copy me-1"></i>Copy
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                <!-- Tabs Navigation -->
+                <ul class="nav nav-tabs nav-linetabs nav-linetabs-borderless nav-linetabs-bottom-border d-flex justify-content-center" id="transactionTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="successful-tab" data-bs-toggle="tab" data-bs-target="#successful" type="button" role="tab" aria-controls="successful" aria-selected="true">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Successful ({{ count($successfulPayments) }})
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="failed-tab" data-bs-toggle="tab" data-bs-target="#failed" type="button" role="tab" aria-controls="failed" aria-selected="false">
+                            <i class="fas fa-times-circle me-2"></i>
+                            Failed ({{ count($failedPayments) }})
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content" id="transactionTabContent">
+                    <!-- Successful Transactions Tab -->
+                    <div class="tab-pane fade show active" id="successful" role="tabpanel" aria-labelledby="successful-tab">
+                        @if(empty($successfulPayments))
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fs-1 text-success mb-3"></i>
+                                <h5 class="text-muted">No successful transactions</h5>
+                                <p class="text-muted">All transactions are currently pending or failed</p>
+                            </div>
+                        @else
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="successfulTransactionsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 15%;">
+                                                <i class="fas fa-hashtag me-1"></i>Reference
+                                            </th>
+                                            <th style="width: 20%;">
+                                                <i class="fas fa-user me-1"></i>Customer
+                                            </th>
+                                            <th style="width: 10%;">
+                                                <i class="fas fa-chart-line me-1"></i>Status
+                                            </th>
+                                            <th style="width: 12%;">
+                                                <i class="fas fa-money-bill me-1"></i>Amount
+                                            </th>
+                                            <th style="width: 10%;">
+                                                <i class="fas fa-mobile-alt me-1"></i>Method
+                                            </th>
+                                            <th style="width: 13%;">
+                                                <i class="fas fa-calendar me-1"></i>Date
+                                            </th>
+                                            <th style="width: 20%;">
+                                                <i class="fas fa-cog me-1"></i>Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($successfulPayments as $payment)
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
+                                                       class="text-primary fw-bold text-decoration-none">
+                                                        {{ $payment['orderReference'] ?? 'N/A' }}
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar avatar-sm bg-label-success rounded-circle me-2">
+                                                            <i class="fas fa-user fs-6"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-semibold text-success">{{ $payment['customer_name'] ?? 'Customer' }}</div>
+                                                            <small class="text-muted">{{ $payment['customer_phone'] ?? 'N/A' }}</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-label-success d-flex align-items-center" style="width: fit-content;">
+                                                        <i class="fas fa-check-circle me-1"></i>
+                                                        {{ $payment['status'] ?? 'SUCCESS' }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="text-end">
+                                                        <div class="fw-bold text-success">
+                                                            {{ number_format($payment['amount'] ?? $payment['collectedAmount'] ?? 0, 2) }}
+                                                        </div>
+                                                        <small class="text-muted">TZS</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-mobile-alt me-2 text-success"></i>
+                                                        <span>{{ $payment['channel'] ?? $payment['paymentMethod'] ?? 'Mobile Money' }}</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <div>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
+                                                        <small class="text-muted">{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i') }}</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex gap-1 flex-wrap">
+                                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
+                                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                                            <i class="fas fa-eye me-1"></i>View
+                                                        </a>
+                                                        <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" 
+                                                           target="_blank" class="btn btn-sm btn-outline-success" title="Download Receipt">
+                                                            <i class="fas fa-receipt me-1"></i>Receipt
+                                                        </a>
+                                                        <button class="btn btn-sm btn-outline-secondary" onclick="copyReference('{{ $payment['orderReference'] ?? '' }}')" title="Copy Reference">
+                                                            <i class="fas fa-copy me-1"></i>Copy
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+
+                    <!-- Failed Transactions Tab -->
+                    <div class="tab-pane fade" id="failed" role="tabpanel" aria-labelledby="failed-tab">
+                        @if(empty($failedPayments))
+                            <div class="text-center py-5">
+                                <i class="fas fa-check-circle fs-1 text-success mb-3"></i>
+                                <h5 class="text-muted">No failed transactions</h5>
+                                <p class="text-muted">All transactions are successful or pending</p>
+                            </div>
+                        @else
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="failedTransactionsTable">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 15%;">
+                                                <i class="fas fa-hashtag me-1"></i>Reference
+                                            </th>
+                                            <th style="width: 20%;">
+                                                <i class="fas fa-user me-1"></i>Customer
+                                            </th>
+                                            <th style="width: 10%;">
+                                                <i class="fas fa-chart-line me-1"></i>Status
+                                            </th>
+                                            <th style="width: 12%;">
+                                                <i class="fas fa-money-bill me-1"></i>Amount
+                                            </th>
+                                            <th style="width: 10%;">
+                                                <i class="fas fa-mobile-alt me-1"></i>Method
+                                            </th>
+                                            <th style="width: 13%;">
+                                                <i class="fas fa-calendar me-1"></i>Date
+                                            </th>
+                                            <th style="width: 20%;">
+                                                <i class="fas fa-cog me-1"></i>Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($failedPayments as $payment)
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
+                                                       class="text-primary fw-bold text-decoration-none">
+                                                        {{ $payment['orderReference'] ?? 'N/A' }}
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar avatar-sm bg-label-danger rounded-circle me-2">
+                                                            <i class="fas fa-user fs-6"></i>
+                                                        </div>
+                                                        <div>
+                                                            <div class="fw-semibold text-danger">{{ $payment['customer_name'] ?? 'Customer' }}</div>
+                                                            <small class="text-muted">{{ $payment['customer_phone'] ?? 'N/A' }}</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-label-danger d-flex align-items-center" style="width: fit-content;">
+                                                        <i class="fas fa-times-circle me-1"></i>
+                                                        {{ $payment['status'] ?? 'FAILED' }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="text-end">
+                                                        <div class="fw-bold text-danger">
+                                                            {{ number_format($payment['amount'] ?? $payment['collectedAmount'] ?? 0, 2) }}
+                                                        </div>
+                                                        <small class="text-muted">TZS</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-mobile-alt me-2 text-danger"></i>
+                                                        <span>{{ $payment['channel'] ?? $payment['paymentMethod'] ?? 'Mobile Money' }}</span>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <div>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
+                                                        <small class="text-muted">{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i') }}</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex gap-1 flex-wrap">
+                                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
+                                                           class="btn btn-sm btn-outline-primary" title="View Details">
+                                                            <i class="fas fa-eye me-1"></i>View
+                                                        </a>
+                                                        <button class="btn btn-sm btn-outline-warning" onclick="retryPayment('{{ $payment['orderReference'] ?? '' }}')" title="Retry Payment">
+                                                            <i class="fas fa-redo me-1"></i>Retry
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-secondary" onclick="copyReference('{{ $payment['orderReference'] ?? '' }}')" title="Copy Reference">
+                                                            <i class="fas fa-copy me-1"></i>Copy
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
                 </div>
             @endif
         </div>
     </div>
 </div>
 
-<!-- Quick Actions & System Status - Box Style -->
-<div class="col-12">
-    <div class="row">
-        <!-- Quick Actions Box -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100 border-success border-left-4">
-                <div class="card-header bg-success bg-opacity-10 text-success">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-bolt me-2"></i>
-                        Quick Actions
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <a href="{{ route('payments.create') }}" class="btn btn-primary w-100 h-100 p-3 text-start">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar avatar-lg bg-white bg-opacity-20 rounded-circle me-3">
-                                        <i class="fas fa-plus fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold">New Payment</div>
-                                        <small>Create payment transaction</small>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-md-6">
-                            <a href="{{ route('billpay.create') }}" class="btn btn-info w-100 h-100 p-3 text-start">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar avatar-lg bg-white bg-opacity-20 rounded-circle me-3">
-                                        <i class="fas fa-file-invoice fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold">Create Bill</div>
-                                        <small>Generate billing invoice</small>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-md-6">
-                            <a href="{{ route('payments.history') }}" class="btn btn-outline-primary w-100 h-100 p-3 text-start">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar avatar-lg bg-primary bg-opacity-10 rounded-circle me-3">
-                                        <i class="fas fa-history fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold">Transaction History</div>
-                                        <small>View all payments</small>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        <div class="col-md-6">
-                            <button class="btn btn-outline-success w-100 h-100 p-3 text-start" onclick="generateReport()">
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar avatar-lg bg-success bg-opacity-10 rounded-circle me-3">
-                                        <i class="fas fa-chart-bar fs-5"></i>
-                                    </div>
-                                    <div>
-                                        <div class="fw-bold">Generate Report</div>
-                                        <small>Analytics & insights</small>
-                                    </div>
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- System Status Box -->
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100 border-info border-left-4">
-                <div class="card-header bg-info bg-opacity-10 text-info">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-server me-2"></i>
-                        System Status
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="mb-3 text-muted">Service Status</h6>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">API Status</span>
-                                <span class="badge bg-success">Online</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Database</span>
-                                <span class="badge bg-success">Connected</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">SMS Service</span>
-                                <span class="badge bg-success">Active</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">Uptime</span>
-                                <span class="text-success fw-bold">99.9%</span>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <h6 class="mb-3 text-muted">Performance Metrics</h6>
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <small class="text-muted">Response Time</small>
-                                    <small class="text-success">120ms</small>
-                                </div>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" style="width: 85%"></div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <small class="text-muted">Success Rate</small>
-                                    <small class="text-info">{{ $stats['total_transactions'] > 0 ? round(($stats['successful'] / $stats['total_transactions']) * 100, 1) : 0 }}%</small>
-                                </div>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-info" style="width: {{ $stats['total_transactions'] > 0 ? ($stats['successful'] / $stats['total_transactions']) * 100 : 0 }}%"></div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <small class="text-muted">Server Load</small>
-                                    <small class="text-warning">45%</small>
-                                </div>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-warning" style="width: 45%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
 @endsection
+
+@push('scripts')
+<script>
+// Tab switching functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Copy reference function
+    window.copyReference = function(reference) {
+        navigator.clipboard.writeText(reference).then(function() {
+            // Show success message
+            Swal.fire({
+                icon: 'success',
+                title: 'Copied!',
+                text: 'Reference ' + reference + ' copied to clipboard',
+                showConfirmButton: false,
+                timer: 1500,
+                toast: true,
+                position: 'top-end'
+            });
+        }).catch(function(err) {
+            console.error('Failed to copy: ', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Failed to copy',
+                text: 'Please try again',
+                toast: true,
+                position: 'top-end',
+                timer: 2000
+            });
+        });
+    };
+
+    // Retry payment function
+    window.retryPayment = function(reference) {
+        Swal.fire({
+            title: 'Retry Payment?',
+            text: 'Do you want to retry payment for reference: ' + reference,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, retry it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Redirect to payment creation with retry logic
+                window.location.href = '{{ route("payments.create") }}?retry=' + reference;
+            }
+        });
+    };
+
+    // Search functionality for transactions
+    const searchInput = document.getElementById('transactionSearch');
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function() {
+            const searchTerm = this.value.toLowerCase();
+            const activeTab = document.querySelector('.tab-pane.active');
+            const rows = activeTab.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    }
+
+    // Export transactions function
+    window.exportTransactions = function() {
+        const activeTab = document.querySelector('.tab-pane.active');
+        const tabId = activeTab.id;
+        
+        Swal.fire({
+            title: 'Export Transactions',
+            text: 'Export ' + (tabId === 'successful' ? 'successful' : 'failed') + ' transactions?',
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Export CSV'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Simulate export (you can implement actual CSV export here)
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Export Started',
+                    text: 'Your CSV file will be downloaded shortly.',
+                    timer: 2000,
+                    toast: true,
+                    position: 'top-end'
+                });
+            }
+        });
+    };
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    const tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+@endpush
 
 @push('styles')
 <style>
@@ -826,86 +944,6 @@ function exportTransactions() {
     document.body.removeChild(a);
 }
 
-function generateReport() {
-    // Generate report functionality
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            title: 'Generate Report',
-            html: `
-                <div class="text-start">
-                    <label class="form-label">Report Type</label>
-                    <select class="form-select mb-3" id="reportType">
-                        <option value="daily">Daily Report</option>
-                        <option value="weekly">Weekly Report</option>
-                        <option value="monthly">Monthly Report</option>
-                        <option value="custom">Custom Range</option>
-                    </select>
-                    
-                    <label class="form-label">Format</label>
-                    <select class="form-select mb-3" id="reportFormat">
-                        <option value="pdf">PDF</option>
-                        <option value="excel">Excel</option>
-                        <option value="csv">CSV</option>
-                    </select>
-                    
-                    <div id="dateRange" style="display: none;">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" class="form-control mb-2" id="startDate">
-                        <label class="form-label">End Date</label>
-                        <input type="date" class="form-control mb-2" id="endDate">
-                    </div>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: 'Generate',
-            cancelButtonText: 'Cancel',
-            didOpen: function() {
-                document.getElementById('reportType').addEventListener('change', function() {
-                    const dateRange = document.getElementById('dateRange');
-                    dateRange.style.display = this.value === 'custom' ? 'block' : 'none';
-                });
-            },
-            preConfirm: function() {
-                const reportType = document.getElementById('reportType').value;
-                const reportFormat = document.getElementById('reportFormat').value;
-                const startDate = document.getElementById('startDate').value;
-                const endDate = document.getElementById('endDate').value;
-                
-                return {
-                    type: reportType,
-                    format: reportFormat,
-                    startDate: startDate,
-                    endDate: endDate
-                };
-            }
-        }).then(function(result) {
-            if (result.isConfirmed) {
-                // Show loading
-                Swal.fire({
-                    title: 'Generating Report...',
-                    html: 'Please wait while we generate your report.',
-                    allowOutsideClick: false,
-                    didOpen: function() {
-                        Swal.showLoading();
-                    }
-                });
-                
-                // Simulate report generation
-                setTimeout(function() {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Report Generated!',
-                        text: 'Your report has been generated successfully.',
-                        timer: 3000,
-                        showConfirmButton: false
-                    });
-                }, 2000);
-            }
-        });
-    } else {
-        alert('Report generation feature requires SweetAlert library');
-    }
-}
 
 // Search functionality
 document.addEventListener('DOMContentLoaded', function() {

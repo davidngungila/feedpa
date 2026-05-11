@@ -5,7 +5,8 @@ namespace App\Models;
 /**
  * Transaction model for payment records
  * Fixed merge conflicts and added SMS tracking
- * Updated: 2026-05-11 14:30:00 UTC - Deployment fix
+ * EMERGENCY FIX: 2026-05-11 14:32:00 UTC - ParseError Resolution
+ * NO MERGE CONFLICTS - CLEAN VERSION
  */
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;

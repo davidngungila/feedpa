@@ -2,13 +2,6 @@
 
 namespace App\Models;
 
-/**
- * Transaction model for payment records
- * Fixed merge conflicts and added SMS tracking
- * EMERGENCY FIX: 2026-05-11 14:32:00 UTC - ParseError Resolution
- * NO MERGE CONFLICTS - CLEAN VERSION
- */
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -49,9 +42,6 @@ class Transaction extends Model
         'updated_at' => 'datetime'
     ];
 
-    /**
-     * Get the human-readable status description
-     */
     public function getStatusDescriptionAttribute(): string
     {
         return match($this->status) {
@@ -64,51 +54,23 @@ class Transaction extends Model
         };
     }
 
-    /**
-     * Scope to get successful transactions
-     */
     public function scopeSuccessful($query)
     {
         return $query->whereIn('status', ['SUCCESS', 'SETTLED']);
     }
 
-    /**
-     * Scope to get pending transactions
-     */
     public function scopePending($query)
     {
         return $query->whereIn('status', ['PROCESSING', 'PENDING']);
     }
 
-    /**
-     * Scope to get failed transactions
-     */
     public function scopeFailed($query)
     {
         return $query->where('status', 'FAILED');
     }
 
-    /**
-     * Scope to get payments
-     */
     public function scopePayments($query)
     {
         return $query->where('type', 'payment');
-    }
-
-    /**
-     * Scope to get payouts
-     */
-    public function scopePayouts($query)
-    {
-        return $query->where('type', 'payout');
-    }
-
-    /**
-     * Scope to get billpay transactions
-     */
-    public function scopeBillpay($query)
-    {
-        return $query->where('type', 'billpay');
     }
 }

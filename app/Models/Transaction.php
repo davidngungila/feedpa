@@ -2,6 +2,11 @@
 
 namespace App\Models;
 
+/**
+ * Transaction model for payment records
+ * Fixed merge conflicts and added SMS tracking
+ */
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

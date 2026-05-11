@@ -171,6 +171,10 @@ class PaymentController extends Controller
                         'description' => $transaction->description,
                         'type' => $transaction->type,
                         'payment_method' => $transaction->payment_method,
+                        'sms_sent' => $transaction->sms_sent,
+                        'sms_message' => $transaction->sms_message,
+                        'sms_sent_at' => $transaction->sms_sent_at,
+                        'sms_error' => $transaction->sms_error,
                         'created_at' => $transaction->created_at,
                         'updated_at' => $transaction->updated_at
                     ];
@@ -178,22 +182,32 @@ class PaymentController extends Controller
                     // If status is still PROCESSING or PENDING, try to get updated status from API
                     if (in_array($transaction->status, ['PROCESSING', 'PENDING'])) {
                         Log::info('Calling API for payment status', ['reference' => $orderReference]);
-                        $apiData = $this->api->queryPaymentStatus($orderReference);
-                        Log::info('API response received', ['data' => $apiData]);
+                        $apiResponse = $this->api->queryPaymentStatus($orderReference);
+                        Log::info('API response received', ['data' => $apiResponse]);
+                        
+                        // Handle wrapped API response (data at index 0)
+                        $apiData = null;
+                        if ($apiResponse && is_array($apiResponse) && isset($apiResponse[0])) {
+                            $apiData = $apiResponse[0];
+                            Log::info('Unwrapped payment data from API for existing transaction', ['reference' => $orderReference, 'api_data' => $apiData]);
+                        } elseif ($apiResponse && is_array($apiResponse)) {
+                            $apiData = $apiResponse;
+                            Log::info('Direct payment data from API for existing transaction', ['reference' => $orderReference, 'api_data' => $apiData]);
+                        }
                         
                         // Update transaction with API data
-                        if (isset($apiData['status'])) {
+                        if ($apiData && isset($apiData['status'])) {
                             $transaction->update([
                                 'status' => $apiData['status'],
-                                'transaction_id' => $apiData['transaction_id'] ?? $transaction->transaction_id,
-                                'payment_method' => $apiData['payment_method'] ?? $transaction->payment_method,
+                                'transaction_id' => $apiData['id'] ?? $apiData['transaction_id'] ?? $transaction->transaction_id,
+                                'payment_method' => $apiData['channel'] ?? $apiData['paymentMethod'] ?? $transaction->payment_method,
                                 'updated_at' => now()
                             ]);
                             
                             // Update payment data with API response
                             $paymentData['status'] = $apiData['status'];
-                            $paymentData['transaction_id'] = $apiData['transaction_id'] ?? $transaction->transaction_id;
-                            $paymentData['payment_method'] = $apiData['payment_method'] ?? $transaction->payment_method;
+                            $paymentData['transaction_id'] = $apiData['id'] ?? $apiData['transaction_id'] ?? $transaction->transaction_id;
+                            $paymentData['payment_method'] = $apiData['channel'] ?? $apiData['paymentMethod'] ?? $transaction->payment_method;
                             
                             // SMS notifications now handled by webhooks for better reliability
                         }
@@ -201,23 +215,96 @@ class PaymentController extends Controller
                 } else {
                     // Transaction not found in database, try API
                     Log::info('Transaction not found in database, trying API', ['reference' => $orderReference]);
-                    $paymentData = $this->api->queryPaymentStatus($orderReference);
-                    Log::info('API response received', ['data' => $paymentData]);
                     
-                    // SMS notifications now handled by webhooks for better reliability
-                    
-                    // Check if API returned valid data
-                    if (empty($paymentData) || !is_array($paymentData)) {
-                        $error = 'No payment found with this order reference';
-                        Log::warning('No payment data found', ['reference' => $orderReference]);
+                    try {
+                        $apiResponse = $this->api->queryPaymentStatus($orderReference);
+                        Log::info('API response received', ['data' => $apiResponse]);
+                        
+                        // Handle wrapped API response (data at index 0)
+                        $apiPaymentData = null;
+                        if ($apiResponse && is_array($apiResponse) && isset($apiResponse[0])) {
+                            $apiPaymentData = $apiResponse[0];
+                            Log::info('Unwrapped payment data from API', ['reference' => $orderReference, 'payment_data' => $apiPaymentData]);
+                        } elseif ($apiResponse && is_array($apiResponse)) {
+                            $apiPaymentData = $apiResponse;
+                            Log::info('Direct payment data from API', ['reference' => $orderReference, 'payment_data' => $apiPaymentData]);
+                        }
+                        
+                        // SMS notifications now handled by webhooks for better reliability
+                        
+                        // Check if API returned valid data
+                        if (empty($apiPaymentData) || !is_array($apiPaymentData) || (isset($apiPaymentData['status']) && $apiPaymentData['status'] === 'NOT_FOUND')) {
+                            $error = 'Payment not found. The reference number may be incorrect or the payment may not exist in the system.';
+                            Log::warning('No payment data found from API', ['reference' => $orderReference, 'api_response' => $apiResponse]);
+                        } else {
+                            // Create transaction in database from API data for future reference
+                            Transaction::create([
+                                'order_reference' => $orderReference,
+                                'transaction_id' => $apiPaymentData['id'] ?? $apiPaymentData['transaction_id'] ?? null,
+                                'status' => $apiPaymentData['status'] ?? 'UNKNOWN',
+                                'amount' => $apiPaymentData['collectedAmount'] ?? $apiPaymentData['amount'] ?? 0,
+                                'currency' => $apiPaymentData['collectedCurrency'] ?? 'TZS',
+                                'phone' => $apiPaymentData['customer']['customerPhoneNumber'] ?? $apiPaymentData['paymentPhoneNumber'] ?? null,
+                                'payer_name' => $apiPaymentData['customer']['customerName'] ?? $apiPaymentData['payer_name'] ?? null,
+                                'payment_method' => $apiPaymentData['channel'] ?? $apiPaymentData['paymentMethod'] ?? null,
+                                'description' => $apiPaymentData['description'] ?? null,
+                                'type' => 'payment',
+                                'sms_sent' => false,
+                                'sms_message' => null,
+                                'sms_sent_at' => null,
+                                'sms_error' => null,
+                                'created_at' => $apiPaymentData['createdAt'] ?? now(),
+                                'updated_at' => $apiPaymentData['updatedAt'] ?? now()
+                            ]);
+                            
+                            Log::info('Transaction created from API data', ['reference' => $orderReference]);
+                            
+                            // Set paymentData for view using the captured API data
+                            $paymentData = [
+                                'id' => $apiPaymentData['id'] ?? null,
+                                'orderReference' => $apiPaymentData['orderReference'] ?? $orderReference,
+                                'transaction_id' => $apiPaymentData['id'] ?? $apiPaymentData['transaction_id'] ?? null,
+                                'status' => $apiPaymentData['status'] ?? 'UNKNOWN',
+                                'amount' => $apiPaymentData['collectedAmount'] ?? $apiPaymentData['amount'] ?? 0,
+                                'currency' => $apiPaymentData['collectedCurrency'] ?? 'TZS',
+                                'phone' => $apiPaymentData['customer']['customerPhoneNumber'] ?? $apiPaymentData['paymentPhoneNumber'] ?? null,
+                                'payer_name' => $apiPaymentData['customer']['customerName'] ?? $apiPaymentData['payer_name'] ?? null,
+                                'payment_method' => $apiPaymentData['channel'] ?? $apiPaymentData['paymentMethod'] ?? null,
+                                'description' => $apiPaymentData['description'] ?? null,
+                                'type' => 'payment',
+                                'sms_sent' => false,
+                                'sms_message' => null,
+                                'sms_sent_at' => null,
+                                'sms_error' => null,
+                                'created_at' => $apiPaymentData['createdAt'] ?? now(),
+                                'updated_at' => $apiPaymentData['updatedAt'] ?? now(),
+                                'customer' => $apiPaymentData['customer'] ?? null,
+                                'paymentPhoneNumber' => $apiPaymentData['paymentPhoneNumber'] ?? null,
+                                'collectedAmount' => $apiPaymentData['collectedAmount'] ?? $apiPaymentData['amount'] ?? 0,
+                                'collectedCurrency' => $apiPaymentData['collectedCurrency'] ?? 'TZS',
+                                'channel' => $apiPaymentData['channel'] ?? $apiPaymentData['paymentMethod'] ?? null
+                            ];
+                        }
+                    } catch (Exception $apiError) {
+                        Log::error('API call failed', ['reference' => $orderReference, 'error' => $apiError->getMessage()]);
+                        $error = 'Payment status check failed. The payment service may be temporarily unavailable. Please try again in a few minutes.';
                     }
                 }
             } catch (Exception $e) {
-                $error = $e->getMessage();
-                Log::error('Payment status check failed: ' . $error, [
-                    'reference' => $orderReference,
-                    'exception' => $e->getTraceAsString()
-                ]);
+                // If we have database data, use it even if API fails
+                if (isset($paymentData) && $paymentData) {
+                    Log::warning('API failed but using database data', [
+                        'reference' => $orderReference,
+                        'api_error' => $e->getMessage()
+                    ]);
+                    // Don't set error, use the database data we already have
+                } else {
+                    $error = 'Payment not found. Please verify the reference number is correct and try again.';
+                    Log::error('Payment status check failed: ' . $error, [
+                        'reference' => $orderReference,
+                        'exception' => $e->getTraceAsString()
+                    ]);
+                }
             }
         } else {
             $error = 'No order reference provided';

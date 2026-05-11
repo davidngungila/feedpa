@@ -299,17 +299,37 @@
                 </div>
             </div>
             
-            <div class="status-legend">
-                <small class="text-muted d-block mb-1"><strong>Status Meanings:</strong></small>
-                <ul class="list-unstyled mb-0">
-                    <li class="mb-1"><small><span class="badge bg-label-warning">PENDING</span> Payment initiated</small></li>
-                    <li class="mb-1"><small><span class="badge bg-label-info">PROCESSING</span> Being processed</small></li>
-                    <li class="mb-1"><small><span class="badge bg-label-success">SUCCESS</span> Completed successfully</small></li>
-                    <li class="mb-1"><small><span class="badge bg-label-success">SETTLED</span> Payment settled</small></li>
-                    <li class="mb-0"><small><span class="badge bg-label-danger">FAILED</span> Payment failed</small></li>
-                </ul>
+            @if(isset($payment['sms_sent']))
+            <div class="mb-3">
+                <h6 class="text-muted mb-2">SMS Notification</h6>
+                <div class="alert {{ $payment['sms_sent'] ? 'alert-success' : 'alert-danger' }} alert-dismissible">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas {{ $payment['sms_sent'] ? 'fa-check-circle' : 'fa-times-circle' }} fs-4"></i>
+                        </div>
+                        <div>
+                            <strong>{{ $payment['sms_sent'] ? 'SMS Sent Successfully' : 'SMS Failed' }}</strong>
+                            @if($payment['sms_sent'])
+                                <br><small class="text-muted">Sent at: {{ \Carbon\Carbon::parse($payment['sms_sent_at'])->format('M d, Y H:i:s') }}</small>
+                            @else
+                                @if($payment['sms_error'])
+                                    <br><small class="text-danger">Error: {{ $payment['sms_error'] }}</small>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+                    @if($payment['sms_message'])
+                        <div class="mt-2 p-2 bg-light rounded">
+                            <small class="text-muted">Message:</small>
+                            <p class="mb-0">{{ $payment['sms_message'] }}</p>
+                        </div>
+                    @endif
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
             </div>
+            @endif
             
+                        
             @if(in_array($payment['status'] ?? '', ['PENDING', 'PROCESSING', 'FAILED']))
             <div class="alert alert-warning alert-dismissible mt-3">
                 <i class="fas fa-mobile-alt me-2"></i>
@@ -452,14 +472,30 @@
 </div>
 @else
 <div class="text-center py-5">
-    <div class="avatar avatar-xl bg-light rounded-circle mx-auto mb-3">
-        <i class="fas fa-search fs-1 text-muted"></i>
+    <div class="avatar avatar-xl bg-warning bg-opacity-10 rounded-circle mx-auto mb-3">
+        <i class="fas fa-exclamation-triangle fs-1 text-warning"></i>
     </div>
-    <h3 class="text-muted">Payment Not Found</h3>
-    <p class="text-muted mb-4">No payment details found for the given reference.</p>
-    <a href="{{ route('payments.history') }}" class="btn btn-primary">
-        <i class="fas fa-history me-2"></i>View Payment History
-    </a>
+    <h3 class="text-warning">Payment Not Found</h3>
+    <p class="text-muted mb-4">
+        @if($error)
+            {{ $error }}
+        @else
+            No payment details found for the given reference number.
+        @endif
+    </p>
+    <div class="mb-3">
+        <small class="text-muted">
+            <strong>Reference searched:</strong> <code>{{ $orderReference ?? 'N/A' }}</code>
+        </small>
+    </div>
+    <div class="d-flex justify-content-center gap-2">
+        <a href="{{ route('payments.history') }}" class="btn btn-primary">
+            <i class="fas fa-history me-2"></i>View Payment History
+        </a>
+        <a href="{{ route('dashboard.index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+        </a>
+    </div>
 </div>
 @endif
 </div>

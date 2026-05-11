@@ -47,46 +47,8 @@
       </ul>
     </li>
 
-    <!-- Payouts -->
-    <li class="menu-item {{ request()->routeIs('payouts.*') ? 'active' : '' }}">
-      <a href="javascript:void(0);" class="menu-link menu-toggle">
-        <i class="menu-icon tf-icons bx bx-money-withdraw"></i>
-        <div data-i18n="Payouts">Payouts</div>
-      </a>
-      <ul class="menu-sub">
-        <li class="menu-item">
-          <a href="{{ route('payouts.create') }}" class="menu-link">
-            <div data-i18n="Create Payout">Create Payout</div>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="{{ route('payouts.history') }}" class="menu-link">
-            <div data-i18n="Payout History">Payout History</div>
-          </a>
-        </li>
-      </ul>
-    </li>
-
-    <!-- BillPay -->
-    <li class="menu-item {{ request()->routeIs('billpay.*') ? 'active' : '' }}">
-      <a href="javascript:void(0);" class="menu-link menu-toggle">
-        <i class="menu-icon tf-icons bx bx-receipt"></i>
-        <div data-i18n="BillPay">BillPay</div>
-      </a>
-      <ul class="menu-sub">
-        <li class="menu-item">
-          <a href="{{ route('billpay.index') }}" class="menu-link">
-            <div data-i18n="All Bills">All Bills</div>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="{{ route('billpay.create') }}" class="menu-link">
-            <div data-i18n="Create Bill">Create Bill</div>
-          </a>
-        </li>
-      </ul>
-    </li>
-
+    
+    
     <!-- Account -->
     <li class="menu-item {{ request()->routeIs('account.*') ? 'active' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">

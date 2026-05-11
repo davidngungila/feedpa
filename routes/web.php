@@ -3,8 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PaymentController;
-use App\Http\Controllers\PayoutController;
-use App\Http\Controllers\BillPayController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CallbackController;
 
@@ -28,6 +26,7 @@ Route::prefix('dashboard')->name('dashboard.')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('index');
     Route::get('/advanced', [DashboardController::class, 'advanced'])->name('advanced');
     Route::get('/live-status', [DashboardController::class, 'liveStatus'])->name('live-status');
+    Route::post('/send-manual-sms', [DashboardController::class, 'sendManualSMS'])->name('send.manual.sms');
 });
 
 // Payment Routes
@@ -52,22 +51,6 @@ Route::get('/payment', function () {
     return view('public.swahili-payment');
 })->name('public.payment');
 
-// Payout Routes
-Route::prefix('payouts')->name('payouts.')->group(function () {
-    Route::get('/create', [PayoutController::class, 'create'])->name('create');
-    Route::post('/', [PayoutController::class, 'store'])->name('store');
-    Route::get('/status', [PayoutController::class, 'status'])->name('status');
-    Route::get('/history', [PayoutController::class, 'history'])->name('history');
-});
-
-// BillPay Routes
-Route::prefix('billpay')->name('billpay.')->group(function () {
-    Route::get('/', [BillPayController::class, 'index'])->name('index');
-    Route::get('/create', [BillPayController::class, 'create'])->name('create');
-    Route::post('/', [BillPayController::class, 'store'])->name('store');
-    Route::get('/{billPayNumber}', [BillPayController::class, 'show'])->name('show');
-    Route::patch('/{billPayNumber}', [BillPayController::class, 'update'])->name('update');
-});
 
 // Account Routes
 Route::prefix('account')->name('account.')->group(function () {

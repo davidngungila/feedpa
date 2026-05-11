@@ -169,19 +169,14 @@ class MessagingServiceAPI
      */
     private function formatPaymentMessage(array $paymentData): string
     {
-        $amount = number_format($paymentData['amount'] ?? 0, 2);
-        $currency = $paymentData['currency'] ?? 'TZS';
-        $reference = $paymentData['reference'] ?? 'N/A';
-        $transactionId = $paymentData['transaction_id'] ?? 'N/A';
-        $paymentMethod = $paymentData['payment_method'] ?? 'Mobile Money';
+        $amount = number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 2);
+        $customerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? '[Jina la Mteja]';
+        $paymentMethod = $paymentData['channel'] ?? 'Mobile Money';
+        $date = \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i');
+        $transactionId = $paymentData['id'] ?? $paymentData['transaction_id'] ?? 'FTN-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+        $reference = $paymentData['orderReference'] ?? $paymentData['reference'] ?? 'N/A';
 
-        return "FEEDTAN: Payment Confirmed\n" .
-               "Transaction ID: {$transactionId}\n" .
-               "Reference: {$reference}\n" .
-               "Amount: {$amount} {$currency}\n" .
-               "Method: {$paymentMethod}\n" .
-               "Status: SUCCESS\n" .
-               "Thank you for your payment!";
+        return "Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$customerName} kupitia {$paymentMethod} tarehe {$date}. Kumbukumbu ya muamala: {$transactionId}, Rejea: {$reference}. Asante kwa kutumia huduma zetu.";
     }
 
     /**

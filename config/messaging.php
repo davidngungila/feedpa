@@ -17,6 +17,10 @@ return [
     
     'sender_id' => env('MESSAGING_SENDER_ID', 'FEEDTAN'),
     
+    'api_key' => env('MESSAGING_API_KEY', 'f9a89f439206e27169ead766463ca92c'),
+    
+    'provider' => env('MESSAGING_PROVIDER', 'messaging-service'),
+    
     'timeout' => env('MESSAGING_TIMEOUT', 30),
     
     'enabled' => env('MESSAGING_ENABLED', true),

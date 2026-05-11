@@ -69,281 +69,11 @@
     </div>
 </div>
 
-<!-- Key Performance Indicators -->
-<div class="row mb-4">
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card h-100 border-left-primary border-left-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar avatar-lg bg-primary bg-opacity-10 rounded-circle me-3">
-                        <i class="fas fa-receipt text-primary fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 text-muted">Total Transactions</h6>
-                        <h3 class="mb-0">{{ number_format($stats['total_transactions'] ?? 0) }}</h3>
-                        <small class="text-primary">
-                            <i class="fas fa-arrow-up me-1"></i>
-                            {{ number_format(($stats['daily_stats'][count($stats['daily_stats'])-1]['count'] ?? 0) * 100) }}% today
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card h-100 border-left-success border-left-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar avatar-lg bg-success bg-opacity-10 rounded-circle me-3">
-                        <i class="fas fa-check-circle text-success fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 text-muted">Successful Payments</h6>
-                        <h3 class="mb-0">{{ number_format($stats['successful'] ?? 0) }}</h3>
-                        <small class="text-success">
-                            <i class="fas fa-arrow-up me-1"></i>
-                            {{ $stats['success_rate'] ?? 0 }}% success rate
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card h-100 border-left-warning border-left-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar avatar-lg bg-warning bg-opacity-10 rounded-circle me-3">
-                        <i class="fas fa-clock text-warning fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 text-muted">Pending Payments</h6>
-                        <h3 class="mb-0">{{ number_format($stats['pending'] ?? 0) }}</h3>
-                        <small class="text-warning">
-                            <i class="fas fa-hourglass-half me-1"></i>
-                            Processing
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-3 col-md-6 mb-4">
-        <div class="card h-100 border-left-danger border-left-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar avatar-lg bg-danger bg-opacity-10 rounded-circle me-3">
-                        <i class="fas fa-exclamation-triangle text-danger fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 text-muted">Failed Payments</h6>
-                        <h3 class="mb-0">{{ number_format($stats['failed'] ?? 0) }}</h3>
-                        <small class="text-danger">
-                            <i class="fas fa-exclamation-triangle me-1"></i>
-                            {{ $stats['failure_rate'] ?? 0 }}% failure rate
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Revenue Overview -->
-<div class="row mb-4">
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card h-100 border-left-info border-left-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar avatar-lg bg-info bg-opacity-10 rounded-circle me-3">
-                        <i class="fas fa-money-bill-wave text-info fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 text-muted">Total Revenue</h6>
-                        <h3 class="mb-0">{{ number_format($stats['total_amount'] ?? 0, 2) }} TZS</h3>
-                        <small class="text-info">
-                            <i class="fas fa-chart-line me-1"></i>
-                            All time
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card h-100 border-left-success border-left-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar avatar-lg bg-success bg-opacity-10 rounded-circle me-3">
-                        <i class="fas fa-calendar-day text-success fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 text-muted">Today's Revenue</h6>
-                        <h3 class="mb-0">{{ number_format($stats['today_revenue'] ?? 0, 2) }} TZS</h3>
-                        <small class="text-success">
-                            <i class="fas fa-arrow-trend-up me-1"></i>
-                            {{ ($stats['total_amount'] ?? 0) > 0 ? number_format(($stats['today_revenue'] / $stats['total_amount']) * 100, 1) : 0 }}% of total
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="col-lg-4 col-md-6 mb-4">
-        <div class="card h-100 border-left-primary border-left-4">
-            <div class="card-body">
-                <div class="d-flex align-items-center">
-                    <div class="avatar avatar-lg bg-primary bg-opacity-10 rounded-circle me-3">
-                        <i class="fas fa-chart-bar text-primary fs-4"></i>
-                    </div>
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1 text-muted">Average Transaction</h6>
-                        <h3 class="mb-0">{{ number_format($stats['average_transaction'] ?? 0, 2) }} TZS</h3>
-                        <small class="text-primary">
-                            <i class="fas fa-calculator me-1"></i>
-                            Per transaction
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- Revenue Overview -->
-<div class="row mb-4">
-    <div class="col-lg-8 mb-4">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-chart-bar me-2"></i>
-                    Revenue Overview
-                </h5>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary active">7 Days</button>
-                    <button class="btn btn-outline-primary">30 Days</button>
-                    <button class="btn btn-outline-primary">90 Days</button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="text-center mb-3">
-                            <h6 class="text-muted">Total Revenue</h6>
-                            <h3 class="text-success mb-0">
-                                {{ number_format($stats['total_amount'] ?? 0, 2) }} TZS
-                            </h3>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="text-center mb-3">
-                            <h6 class="text-muted">Average Transaction</h6>
-                            <h3 class="text-info mb-0">
-                                {{ number_format(($stats['total_transactions'] ?? 1) > 0 ? ($stats['total_amount'] ?? 0) / ($stats['total_transactions'] ?? 1) : 0, 2) }} TZS
-                            </h3>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="text-center mb-3">
-                            <h6 class="text-muted">Today's Revenue</h6>
-                            <h3 class="text-warning mb-0">
-                                {{ number_format($stats['daily_stats'][count($stats['daily_stats'])-1]['amount'] ?? 0, 2) }} TZS
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Mini Chart -->
-                <div class="mt-4">
-                    <canvas id="revenueChart" height="100"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Top Customers -->
-    <div class="col-lg-4 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-users me-2"></i>
-                    Top Customers
-                </h5>
-            </div>
-            <div class="card-body">
-                @if(isset($stats['top_customers']) && count($stats['top_customers']) > 0)
-                    @foreach($stats['top_customers'] as $customer)
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="d-flex align-items-center">
-                            <div class="avatar avatar-sm bg-label-success rounded-circle me-2">
-                                <i class="fas fa-user fs-6"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-0">{{ $customer['name'] }}</h6>
-                                <small class="text-muted">{{ $customer['count'] }} transactions</small>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <h6 class="mb-0">{{ number_format($customer['total_amount'], 2) }} TZS</h6>
-                            <small class="text-success">Total</small>
-                        </div>
-                    </div>
-                    @endforeach
-                @else
-                    <div class="text-center py-4">
-                        <i class="fas fa-users fs-1 text-muted mb-3"></i>
-                        <p class="text-muted">No customer data available</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    <!-- Payment Methods Breakdown -->
-    <div class="col-lg-4 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="fas fa-mobile-alt me-2"></i>
-                    Payment Methods
-                </h5>
-            </div>
-            <div class="card-body">
-                @if(isset($stats['payment_methods']) && count($stats['payment_methods']) > 0)
-                    @foreach($stats['payment_methods'] as $method)
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="d-flex align-items-center">
-                            <div class="avatar avatar-sm bg-label-primary rounded-circle me-2">
-                                <i class="fas fa-credit-card fs-6"></i>
-                            </div>
-                            <div>
-                                <h6 class="mb-0">{{ $method['name'] ?? 'Unknown' }}</h6>
-                                <small class="text-muted">{{ $method['count'] ?? 0 }} transactions</small>
-                            </div>
-                        </div>
-                        <div class="text-end">
-                            <h6 class="mb-0">{{ number_format($method['amount'] ?? 0, 2) }} TZS</h6>
-                            <small class="text-success">{{ $method['success'] ?? 0 }} successful</small>
-                        </div>
-                    </div>
-                    @endforeach
-                @else
-                    <div class="text-center py-4">
-                        <i class="fas fa-mobile-alt fs-1 text-muted mb-3"></i>
-                        <p class="text-muted">No payment method data available</p>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-</div>
 
     <!-- Recent Transactions with Tabs -->
+<div class="row mb-4">
 <div class="col-12 mb-4">
     <div class="card h-100">
         <div class="card-header d-flex justify-content-between align-items-center">
@@ -503,6 +233,11 @@
                                                            target="_blank" class="btn btn-sm btn-outline-success" title="Download Receipt">
                                                             <i class="fas fa-receipt me-1"></i>Receipt
                                                         </a>
+                                                        @if($payment['status'] === 'SUCCESS' || $payment['status'] === 'SETTLED')
+                                                            <button class="btn btn-sm btn-outline-info" onclick="sendManualSMS('{{ $payment['orderReference'] ?? '' }}', '{{ $payment['customer_phone'] ?? $payment['customer']['customerPhoneNumber'] ?? '' }}', '{{ $payment['customer_name'] ?? $payment['customer']['customerName'] ?? 'Customer' }}', {{ number_format($payment['amount'] ?? $payment['collectedAmount'] ?? 0, 2) }})" title="Send SMS">
+                                                                <i class="fas fa-sms me-1"></i>SMS
+                                                            </button>
+                                                        @endif
                                                         <button class="btn btn-sm btn-outline-secondary" onclick="copyReference('{{ $payment['orderReference'] ?? '' }}')" title="Copy Reference">
                                                             <i class="fas fa-copy me-1"></i>Copy
                                                         </button>
@@ -623,6 +358,7 @@
             @endif
         </div>
     </div>
+</div>
 </div>
 
 
@@ -942,6 +678,63 @@ function exportTransactions() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+}
+
+function sendManualSMS(reference, phoneNumber, customerName, amount) {
+    if (!reference || !phoneNumber) {
+        alert('Missing required information for SMS');
+        return;
+    }
+    
+    if (confirm(`Send payment confirmation SMS to ${customerName} for TZS ${amount}?\n\nReference: ${reference}\nPhone: ${phoneNumber}`)) {
+        // Show loading state
+        const button = event.target;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+        button.disabled = true;
+        
+        // Send SMS via AJAX
+        fetch('{{ route("dashboard.send.manual.sms") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                reference: reference,
+                phone_number: phoneNumber,
+                customer_name: customerName,
+                amount: amount
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('SMS sent successfully to ' + customerName);
+                // Update button to show success
+                button.innerHTML = '<i class="fas fa-check me-2"></i>SMS Sent';
+                button.classList.remove('btn-outline-info');
+                button.classList.add('btn-success');
+                
+                // Refresh the transactions list after 2 seconds
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                alert('Failed to send SMS: ' + data.message);
+                // Restore button
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error sending SMS:', error);
+            alert('Error sending SMS. Please try again.');
+            // Restore button
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+    }
 }
 
 

@@ -24,6 +24,10 @@ class Transaction extends Model
         'payment_method',
         'callback_data',
         'callback_received_at',
+        'sms_sent',
+        'sms_message',
+        'sms_sent_at',
+        'sms_error',
         'created_at',
         'updated_at'
     ];

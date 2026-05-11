@@ -466,4 +466,115 @@ class DashboardController extends Controller
         
         return array_slice($customers, 0, 5);
     }
+    
+    /**
+     * Send manual SMS for payment confirmation
+     */
+    public function sendManualSMS(Request $request)
+    {
+        try {
+            $reference = $request->input('reference');
+            $phoneNumber = $request->input('phone_number');
+            $customerName = $request->input('customer_name');
+            $amount = $request->input('amount');
+            
+            if (!$reference || !$phoneNumber || !$customerName || !$amount) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Missing required information for SMS'
+                ], 400);
+            }
+            
+            // Find transaction
+            $transaction = \App\Models\Transaction::where('order_reference', $reference)->first();
+            
+            if (!$transaction) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction not found'
+                ], 404);
+            }
+            
+            // Use messaging service to send SMS
+            $messaging = app(\App\Services\MessagingServiceAPI::class);
+            
+            // Prepare payment data for SMS
+            $paymentData = [
+                'orderReference' => $reference,
+                'id' => $transaction->transaction_id,
+                'status' => $transaction->status,
+                'collectedAmount' => $transaction->amount,
+                'collectedCurrency' => $transaction->currency,
+                'paymentPhoneNumber' => $phoneNumber,
+                'channel' => $transaction->payment_method,
+                'customer' => [
+                    'customerName' => $customerName,
+                    'customerPhoneNumber' => $phoneNumber
+                ],
+                'createdAt' => $transaction->created_at,
+                'updatedAt' => $transaction->updated_at
+            ];
+            
+            // Generate SMS message
+            $smsMessage = "FeedTan: Malipo yako ya TZS " . number_format($amount, 0) . " kwa reference {$reference} imethibitishwa. Ahsante kwa kutumia!";
+            
+            // Send SMS
+            $result = $messaging->sendPaymentConfirmation($phoneNumber, $paymentData);
+            
+            // Update transaction with SMS details
+            if ($result) {
+                $transaction->update([
+                    'sms_sent' => true,
+                    'sms_message' => $smsMessage,
+                    'sms_sent_at' => now(),
+                    'sms_error' => null
+                ]);
+                
+                Log::info('Manual SMS sent successfully', [
+                    'reference' => $reference,
+                    'phone_number' => $phoneNumber,
+                    'customer_name' => $customerName,
+                    'amount' => $amount
+                ]);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'SMS sent successfully to ' . $customerName
+                ]);
+            } else {
+                $transaction->update([
+                    'sms_sent' => false,
+                    'sms_message' => $smsMessage,
+                    'sms_sent_at' => null,
+                    'sms_error' => 'Failed to send manual SMS'
+                ]);
+                
+                Log::error('Failed to send manual SMS', [
+                    'reference' => $reference,
+                    'phone_number' => $phoneNumber,
+                    'customer_name' => $customerName,
+                    'amount' => $amount
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to send SMS. Please try again.'
+                ], 500);
+            }
+            
+        } catch (Exception $e) {
+            Log::error('Error in sendManualSMS', [
+                'error' => $e->getMessage(),
+                'reference' => $reference,
+                'phone_number' => $phoneNumber,
+                'customer_name' => $customerName,
+                'amount' => $amount
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while sending SMS. Please try again.'
+            ], 500);
+        }
+    }
 }

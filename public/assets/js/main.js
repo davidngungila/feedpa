@@ -115,13 +115,19 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // Auto update layout based on screen size
-  window.Helpers.setAutoUpdate(true);
+  if (window.Helpers && typeof window.Helpers.setAutoUpdate === 'function') {
+    window.Helpers.setAutoUpdate(true);
+  }
 
   // Toggle Password Visibility
-  window.Helpers.initPasswordToggle();
+  if (window.Helpers && typeof window.Helpers.initPasswordToggle === 'function') {
+    window.Helpers.initPasswordToggle();
+  }
 
   // Speech To Text
-  window.Helpers.initSpeechToText();
+  if (window.Helpers && typeof window.Helpers.initSpeechToText === 'function') {
+    window.Helpers.initSpeechToText();
+  }
 
   // Manage menu expanded/collapsed with templateCustomizer & local storage
   //------------------------------------------------------------------

@@ -226,8 +226,9 @@ class CallbackController extends Controller
         $amount = number_format($paymentData['collectedAmount'] ?? 0, 0);
         $reference = $paymentData['orderReference'] ?? 'N/A';
         $customerName = $paymentData['customer']['customerName'] ?? 'Mteja';
+        $phoneNumber = $paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? '255622239304';
         
-        return "Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? '255622239304'}  tarehe " . \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i') . ".  Rejea: {$reference}. Asante kwa kutumia huduma zetu.";
+        return "Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$phoneNumber}  tarehe " . \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i') . ".  Rejea: {$reference}. Asante kwa kutumia huduma zetu.";
     }
 
     /**

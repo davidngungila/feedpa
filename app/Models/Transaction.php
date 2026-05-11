@@ -36,6 +36,8 @@ class Transaction extends Model
         'amount' => 'decimal:2',
         'callback_data' => 'array',
         'callback_received_at' => 'datetime',
+        'sms_sent' => 'boolean',
+        'sms_sent_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime'
     ];

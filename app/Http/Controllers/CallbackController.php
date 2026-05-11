@@ -227,7 +227,7 @@ class CallbackController extends Controller
         $reference = $paymentData['orderReference'] ?? 'N/A';
         $customerName = $paymentData['customer']['customerName'] ?? 'Mteja';
         
-        return "FeedTan: Malipo yako ya TZS {$amount} kwa reference {$reference} imethibitishwa. Ahsante kwa kutumia!";
+        return "Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? '255622239304'}  tarehe " . \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i') . ".  Rejea: {$reference}. Asante kwa kutumia huduma zetu.";
     }
 
     /**

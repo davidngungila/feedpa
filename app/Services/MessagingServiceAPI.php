@@ -176,7 +176,7 @@ class MessagingServiceAPI
         $transactionId = $paymentData['id'] ?? $paymentData['transaction_id'] ?? 'FTN-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
         $reference = $paymentData['orderReference'] ?? $paymentData['reference'] ?? 'N/A';
 
-        return "Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$customerName} kupitia {$paymentMethod} tarehe {$date}. Kumbukumbu ya muamala: {$transactionId}, Rejea: {$reference}. Asante kwa kutumia huduma zetu.";
+        return "Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? '255622239304'}  tarehe " . \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i') . ".  Rejea: {$reference}. Asante kwa kutumia huduma zetu.";
     }
 
     /**

@@ -286,239 +286,183 @@
             </div>
         @endif
 
-        <!-- Payment Transactions Table -->
-        <div class="row">
+        <!-- Successful Payments Table -->
+        <div class="row mb-4">
             <div class="col-12">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-light">
+                    <div class="card-header bg-success text-white">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-list me-2"></i>
-                            Payment Transactions
-                            <span class="badge bg-primary float-end">{{ count($payments ?? 0) }} Records</span>
+                            <i class="fas fa-check-circle me-2"></i>
+                            Successful Payments
+                            <span class="badge bg-light text-success float-end">{{ count(array_filter($payments ?? [], fn($p) => in_array($p['status'] ?? '', ['SUCCESS', 'SETTLED']))) }} Records</span>
                         </h5>
-                        <div class="card-tools">
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleTableView()">
-                                    <i class="fas fa-th me-1"></i>
-                                </button>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="toggleCardView()">
-                                    <i class="fas fa-th-large me-1"></i>
-                                </button>
-                            </div>
-                        </div>
                     </div>
                     <div class="card-body">
-                        @if($error)
-                            <div class="alert alert-danger">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                {{ $error }}
-                            </div>
-                        @endif
+                        @php
+                            $successfulPayments = array_filter($payments ?? [], fn($p) => in_array($p['status'] ?? '', ['SUCCESS', 'SETTLED']));
+                        @endphp
                         
-                        @if(empty($payments))
-                            <div class="text-center py-5">
-                                <div class="avatar avatar-xl bg-light rounded-circle mx-auto mb-3">
-                                    <i class="fas fa-search fs-1 text-muted"></i>
-                                </div>
-                                <h3 class="text-muted">No Payment Transactions Found</h3>
-                                <p class="text-muted mb-4">No payment transactions match your current filters.</p>
-                                <a href="{{ route('payments.create') }}" class="btn btn-primary">
-                                    <i class="fas fa-plus me-2"></i>
-                                    Create First Payment
-                                </a>
+                        @if(empty($successfulPayments))
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle fs-1 text-muted mb-3"></i>
+                                <h5 class="text-muted">No Successful Payments</h5>
                             </div>
                         @else
-                            <!-- Table View -->
-                            <div id="tableView">
-                                <div class="table-responsive">
-                                    <table class="table table-hover table-striped" id="paymentsTable">
-                                        <thead class="table-dark">
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped">
+                                    <thead class="table-success">
+                                        <tr>
+                                            <th>Order Reference</th>
+                                            <th>Customer</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Payment Method</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($successfulPayments as $payment)
                                             <tr>
-                                                <th>
-                                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
-                                                </th>
-                                                <th>Order Reference</th>
-                                                <th>Transaction ID</th>
-                                                <th>Customer</th>
-                                                <th>Amount</th>
-                                                <th>Status</th>
-                                                <th>Payment Method</th>
-                                                <th>Date</th>
-                                                <th>Actions</th>
+                                                <td>
+                                                    <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" class="text-decoration-none fw-bold">
+                                                        {{ $payment['orderReference'] ?? 'N/A' }}
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-bold">{{ $payment['customerName'] ?? $payment['payer_name'] ?? 'N/A' }}</div>
+                                                    <small class="text-muted">{{ $payment['paymentPhoneNumber'] ?? $payment['customer']['customerPhoneNumber'] ?? 'N/A' }}</small>
+                                                </td>
+                                                <td>
+                                                    <span class="fw-bold text-success">{{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }}</span>
+                                                    <small class="text-muted">{{ $payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS' }}</small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-success">{{ $payment['status'] ?? 'UNKNOWN' }}</span>
+                                                </td>
+                                                <td>
+                                                    <span>{{ $payment['paymentMethod'] ?? $payment['channel'] ?? $payment['source'] ?? $payment['provider'] ?? 'N/A' }}</span>
+                                                </td>
+                                                <td>
+                                                    <div class="text-muted">
+                                                        <div>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
+                                                        <small>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i A') }}</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" class="btn btn-sm btn-info">View</a>
+                                                        <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" class="btn btn-sm btn-success" target="_blank">Receipt</a>
+                                                    </div>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($payments as $payment)
-                                                <tr class="payment-row" data-status="{{ $payment['status'] ?? '' }}">
-                                                    <td>
-                                                        <input type="checkbox" class="row-checkbox" value="{{ $payment['orderReference'] ?? '' }}">
-                                                    </td>
-                                                    <td>
-                                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
-                                                           class="text-decoration-none fw-bold">
-                                                            {{ $payment['orderReference'] ?? 'N/A' }}
-                                                        </a>
-                                                    </td>
-                                                    <td>
-                                                        <span class="text-monospace">{{ $payment['transactionId'] ?? $payment['id'] ?? 'N/A' }}</span>
-                                                    </td>
-                                                    <td>
-                                                        <div class="d-flex align-items-center">
-                                                            <div class="avatar avatar-sm bg-light rounded-circle me-2">
-                                                                <i class="fas fa-user text-muted fs-xs"></i>
-                                                            </div>
-                                                            <div>
-                                                                <div class="fw-bold">{{ $payment['customerName'] ?? $payment['payer_name'] ?? 'N/A' }}</div>
-                                                                <small class="text-muted">{{ $payment['paymentPhoneNumber'] ?? $payment['customer']['customerPhoneNumber'] ?? 'N/A' }}</small>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <span class="fw-bold">{{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }}</span>
-                                                        <small class="text-muted">{{ $payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS' }}</small>
-                                                    </td>
-                                                    <td>
-                                                        @php
-                                                            $statusColor = match($payment['status'] ?? '') {
-                                                                'SUCCESS', 'SETTLED' => 'success',
-                                                                'PROCESSING', 'PENDING' => 'warning',
-                                                                'FAILED' => 'danger',
-                                                                default => 'secondary'
-                                                            };
-                                                        @endphp
-                                                        <span class="badge bg-label-{{ $statusColor }} fs-6">
-                                                            <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
-                                                            {{ $payment['status'] ?? 'UNKNOWN' }}
-                                                        </span>
-                                                    </td>
-                                                    <td>
-                                                        <div class="d-flex align-items-center">
-                                                            <div class="payment-method-icon me-2">
-                                                                @php
-                                                                    $methodIcon = match(strtolower($payment['paymentMethod'] ?? $payment['channel'] ?? $payment['source'] ?? $payment['provider'] ?? '')) {
-                                                                        'halopesa' => 'fa-mobile-alt',
-                                                                        'tigopesa' => 'fa-mobile-alt',
-                                                                        'airtelmoney' => 'fa-mobile-alt',
-                                                                        'mpesa' => 'fa-mobile-alt',
-                                                                        'ezypesa' => 'fa-mobile-alt',
-                                                                        default => 'fa-credit-card'
-                                                                    };
-                                                                @endphp
-                                                                <i class="fas {{ $methodIcon }} text-muted"></i>
-                                                            </div>
-                                                            <span>{{ $payment['paymentMethod'] ?? $payment['channel'] ?? $payment['source'] ?? $payment['provider'] ?? 'N/A' }}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div class="text-muted">
-                                                            <div class="fw-bold">{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
-                                                            <small>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i A') }}</small>
-                                                        </div>
-                                                    </td>
-                                                    <td>
-                                                        <div class="btn-group">
-                                                            <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
-                                                               class="btn btn-sm btn-info" title="View Status">
-                                                                View
-                                                            </a>
-                                                            @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
-                                                                <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" 
-                                                                   class="btn btn-sm btn-success" title="Download Receipt" target="_blank">
-                                                                    Receipt
-                                                                </a>
-                                                            @endif
-                                                            <a href="{{ route('payments.export.pdf') }}?order_reference={{ $payment['orderReference'] ?? '' }}" 
-                                                               class="btn btn-sm btn-danger" title="Export to PDF">
-                                                                PDF
-                                                            </a>
-                                                            <a href="{{ route('payments.export.excel') }}?order_reference={{ $payment['orderReference'] ?? '' }}" 
-                                                               class="btn btn-sm btn-outline-success" title="Export to Excel">
-                                                                Excel
-                                                            </a>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            <!-- Card View (Hidden by default) -->
-                            <div id="cardView" style="display: none;">
-                                <div class="row g-3" id="cardContainer">
-                                    @foreach($payments as $payment)
-                                        <div class="col-lg-4 col-md-6 mb-3">
-                                            <div class="card shadow-sm payment-card" data-status="{{ $payment['status'] ?? '' }}">
-                                                <div class="card-header bg-light">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <h6 class="card-title mb-0">
-                                                            {{ $payment['orderReference'] ?? 'N/A' }}
-                                                        </h6>
-                                                        @php
-                                                            $statusColor = match($payment['status'] ?? '') {
-                                                                'SUCCESS', 'SETTLED' => 'success',
-                                                                'PROCESSING', 'PENDING' => 'warning',
-                                                                'FAILED' => 'danger',
-                                                                default => 'secondary'
-                                                            };
-                                                        @endphp
-                                                        <span class="badge bg-label-{{ $statusColor }}">
-                                                            {{ $payment['status'] ?? 'UNKNOWN' }}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div class="d-flex align-items-center mb-3">
-                                                        <div class="avatar avatar-lg bg-light rounded-circle me-3">
-                                                            @php
-                                                                $methodIcon = match(strtolower($payment['paymentMethod'] ?? $payment['channel'] ?? $payment['source'] ?? $payment['provider'] ?? '')) {
-                                                                    'halopesa' => 'fa-mobile-alt',
-                                                                    'tigopesa' => 'fa-mobile-alt',
-                                                                    'airtelmoney' => 'fa-mobile-alt',
-                                                                    'mpesa' => 'fa-mobile-alt',
-                                                                    'ezypesa' => 'fa-mobile-alt',
-                                                                    default => 'fa-credit-card'
-                                                                };
-                                                            @endphp
-                                                            <i class="fas {{ $methodIcon }} text-muted"></i>
-                                                        </div>
-                                                        <div class="flex-grow-1">
-                                                            <h5 class="mb-1">{{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }} {{ $payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS' }}</h5>
-                                                            <p class="text-muted mb-1">{{ $payment['customerName'] ?? $payment['payer_name'] ?? 'N/A' }}</p>
-                                                            <small class="text-muted">{{ $payment['paymentPhoneNumber'] ?? $payment['customer']['customerPhoneNumber'] ?? 'N/A' }}</small>
-                                                        </div>
-                                                    </div>
-                                                    <div class="text-center">
-                                                        <small class="text-muted">
-                                                            <i class="fas fa-calendar me-1"></i>
-                                                            {{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y H:i') }}
-                                                        </small>
-                                                    </div>
-                                                </div>
-                                                <div class="card-footer bg-light">
-                                                    <div class="btn-group w-100">
-                                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" 
-                                                           class="btn btn-sm btn-info">
-                                                            View Details
-                                                        </a>
-                                                        @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
-                                                            <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" 
-                                                               class="btn btn-sm btn-success" target="_blank">
-                                                                Receipt
-                                                            </a>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </div>
                                         @endforeach
-                                </div>
+                                    </tbody>
+                                </table>
                             </div>
                         @endif
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Failed Payments Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Failed Payments
+                            <span class="badge bg-light text-danger float-end">{{ count(array_filter($payments ?? [], fn($p) => $p['status'] === 'FAILED')) }} Records</span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        @php
+                            $failedPayments = array_filter($payments ?? [], fn($p) => $p['status'] === 'FAILED');
+                        @endphp
+                        
+                        @if(empty($failedPayments))
+                            <div class="text-center py-4">
+                                <i class="fas fa-check-circle fs-1 text-muted mb-3"></i>
+                                <h5 class="text-muted">No Failed Payments</h5>
+                            </div>
+                        @else
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped">
+                                    <thead class="table-danger">
+                                        <tr>
+                                            <th>Order Reference</th>
+                                            <th>Customer</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Payment Method</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($failedPayments as $payment)
+                                            <tr>
+                                                <td>
+                                                    <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" class="text-decoration-none fw-bold">
+                                                        {{ $payment['orderReference'] ?? 'N/A' }}
+                                                    </a>
+                                                </td>
+                                                <td>
+                                                    <div class="fw-bold">{{ $payment['customerName'] ?? $payment['payer_name'] ?? 'N/A' }}</div>
+                                                    <small class="text-muted">{{ $payment['paymentPhoneNumber'] ?? $payment['customer']['customerPhoneNumber'] ?? 'N/A' }}</small>
+                                                </td>
+                                                <td>
+                                                    <span class="fw-bold text-danger">{{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }}</span>
+                                                    <small class="text-muted">{{ $payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS' }}</small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-danger">{{ $payment['status'] ?? 'UNKNOWN' }}</span>
+                                                </td>
+                                                <td>
+                                                    <span>{{ $payment['paymentMethod'] ?? $payment['channel'] ?? $payment['source'] ?? $payment['provider'] ?? 'N/A' }}</span>
+                                                </td>
+                                                <td>
+                                                    <div class="text-muted">
+                                                        <div>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
+                                                        <small>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i A') }}</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" class="btn btn-sm btn-info">View</a>
+                                                        <a href="{{ route('payments.create') }}" class="btn btn-sm btn-warning">Retry</a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if(empty($payments))
+            <div class="row">
+                <div class="col-12">
+                    <div class="text-center py-5">
+                        <div class="avatar avatar-xl bg-light rounded-circle mx-auto mb-3">
+                            <i class="fas fa-search fs-1 text-muted"></i>
+                        </div>
+                        <h3 class="text-muted">No Payment Transactions Found</h3>
+                        <p class="text-muted mb-4">No payment transactions match your current filters.</p>
+                        <a href="{{ route('payments.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>
+                            Create First Payment
+                        </a>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         <!-- Enhanced Pagination -->
         @if(!empty($payments) && $totalCount > 20)

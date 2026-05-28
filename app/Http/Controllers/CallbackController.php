@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Services\MessagingServiceAPI;
 use App\Services\EmailNotificationService;
+use App\Support\TransactionFieldResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -53,23 +54,25 @@ class CallbackController extends Controller
         $orderReference = $data['orderReference'] ?? null;
         $amount = $data['amount'] ?? $data['collectedAmount'] ?? null;
         $phone = $data['phone'] ?? $data['paymentPhoneNumber'] ?? $data['customer']['customerPhoneNumber'] ?? null;
-        $payerName = $data['payer_name'] ?? $data['customer']['customerName'] ?? null;
+        $remotePayerName = $data['payer_name'] ?? $data['customer']['customerName'] ?? null;
 
         try {
             // Find transaction by order reference
             $transaction = Transaction::where('order_reference', $orderReference)->first();
 
             if ($transaction) {
-                // Avoid overwriting existing names with phone numbers from callback
-                $finalPayerName = $payerName ?? $transaction->payer_name;
-                if ($payerName && is_numeric($payerName) && strlen($payerName) > 5 && $transaction->payer_name && !is_numeric($transaction->payer_name)) {
-                    $finalPayerName = $transaction->payer_name;
-                }
-
-                $finalCustomerName = $transaction->customer_name ?? $payerName;
-                if ($payerName && is_numeric($payerName) && strlen($payerName) > 5 && $transaction->customer_name && !is_numeric($transaction->customer_name)) {
-                    $finalCustomerName = $transaction->customer_name;
-                }
+                $finalCustomerName = TransactionFieldResolver::memberName(
+                    $transaction->customer_name,
+                    $remotePayerName
+                );
+                $finalPayerName = TransactionFieldResolver::payerName(
+                    $transaction->payer_name,
+                    $remotePayerName
+                );
+                $finalDescription = TransactionFieldResolver::description(
+                    $transaction->description,
+                    $data['description'] ?? $data['narrative'] ?? null
+                );
 
                 // Update transaction status
                 $transaction->update([
@@ -79,6 +82,8 @@ class CallbackController extends Controller
                     'phone' => $phone ?? $transaction->phone,
                     'payer_name' => $finalPayerName,
                     'customer_name' => $finalCustomerName,
+                    'description' => $finalDescription,
+                    'payment_method' => $data['channel'] ?? $data['paymentMethod'] ?? $transaction->payment_method,
                     'callback_data' => $data,
                     'callback_received_at' => now()
                 ]);

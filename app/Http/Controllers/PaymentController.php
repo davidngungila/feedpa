@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Services\ClickPesaAPIService;
 use App\Services\MessagingServiceAPI;
+use App\Support\TransactionFieldResolver;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -44,14 +45,24 @@ class PaymentController extends Controller
             'description' => 'required|string|max:500',
         ]);
 
+        $description = trim($validated['description']);
+        if ($description === '') {
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tafadhali ingiza maelezo ya malipo (Malipo Kwaajili Ya).',
+                ], 422);
+            }
+
+            return back()
+                ->with('error', 'Please enter payment description (Malipo Kwaajili Ya).')
+                ->withInput();
+        }
+
         try {
             $amount = $this->api->formatAmount($validated['amount']);
             $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);
-            $payerName = trim($validated['payer_name']);
-            $description = trim((string) $request->input('description', ''));
-            if ($description === '') {
-                $description = 'Malipo ya FEEDTAN';
-            }
+            $memberName = trim($validated['payer_name']);
             $orderReference = $this->api->generateOrderReference();
 
             if (!$phoneNumber) {
@@ -72,8 +83,8 @@ class PaymentController extends Controller
                 'amount' => $validated['amount'],
                 'currency' => 'TZS',
                 'phone' => $phoneNumber,
-                'customer_name' => $payerName, // Store "Jina La Mwanachama" in customer_name
-                'payer_name' => $payerName,    // Also set initial payer_name
+                'customer_name' => $memberName,
+                'payer_name' => $memberName,
                 'description' => $description,
                 'type' => 'payment',
                 'callback_data' => null,
@@ -81,8 +92,8 @@ class PaymentController extends Controller
 
             // Initiate the payment with customer details
             $customerDetails = [
-                'customerName' => $payerName,
-                'description' => $description
+                'customerName' => $memberName,
+                'description' => $description,
             ];
             $payment = $this->api->initiateUSSDPush($amount, $orderReference, $phoneNumber, null, $customerDetails);
             
@@ -104,7 +115,8 @@ class PaymentController extends Controller
                     'order_reference' => $orderReference,
                     'amount' => $amount,
                     'phone_number' => $phoneNumber,
-                    'payer_name' => $payerName
+                    'payer_name' => $memberName,
+                    'description' => $description,
                 ]);
             }
 
@@ -209,10 +221,19 @@ class PaymentController extends Controller
                                 'amount' => $apiData['collectedAmount'] ?? $apiData['amount'] ?? $transaction->amount,
                                 'currency' => $apiData['collectedCurrency'] ?? $apiData['currency'] ?? $transaction->currency,
                                 'phone' => $apiData['customer']['customerPhoneNumber'] ?? $apiData['paymentPhoneNumber'] ?? $transaction->phone,
-                                'payer_name' => $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? $transaction->payer_name,
+                                'customer_name' => TransactionFieldResolver::memberName(
+                                    $transaction->customer_name,
+                                    $apiData['customer']['customerName'] ?? $apiData['customerName'] ?? null
+                                ),
+                                'payer_name' => TransactionFieldResolver::payerName(
+                                    $transaction->payer_name,
+                                    $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? null
+                                ),
                                 'email' => $apiData['customer']['customerEmail'] ?? $apiData['email'] ?? $transaction->email,
-                                // Strictly preserve local description if it has any content
-                                'description' => (!empty($transaction->description) && $transaction->description !== 'N/A') ? $transaction->description : ($apiData['description'] ?? $apiData['narrative'] ?? $transaction->description),
+                                'description' => TransactionFieldResolver::description(
+                                    $transaction->description,
+                                    $apiData['description'] ?? $apiData['narrative'] ?? null
+                                ),
                                 'updated_at' => now()
                             ]);
                             

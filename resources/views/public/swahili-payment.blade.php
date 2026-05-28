@@ -288,9 +288,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const data = {
             amount: formData.get('amount'),
-            phone_number: formData.get('phone_number'),
-            payer_name: formData.get('payer_name'),
-            description: formData.get('description')
+            phone_number: String(formData.get('phone_number') || '').replace(/\D/g, ''),
+            payer_name: String(formData.get('payer_name') || '').trim(),
+            description: String(formData.get('description') || '').trim()
         };
 
         // =========================
@@ -336,6 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
                 'X-Requested-With': 'XMLHttpRequest'
             },

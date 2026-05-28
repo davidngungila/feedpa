@@ -133,12 +133,14 @@
                                 ?? $callbackCustomer['customerPhoneNumber']
                                 ?? 'N/A';
 
-                            $displayDescription = trim((string) (
-                                $payment->description
-                                ?? $callbackData['description']
-                                ?? $callbackData['narrative']
-                                ?? ''
-                            ));
+                            $displayDescription = trim((string) ($payment->description ?? ''));
+                            if ($displayDescription === '' || strtoupper($displayDescription) === 'N/A') {
+                                $displayDescription = trim((string) (
+                                    $callbackData['description']
+                                    ?? $callbackData['narrative']
+                                    ?? ''
+                                ));
+                            }
                             if ($displayDescription === '' || strtoupper($displayDescription) === 'N/A') {
                                 $displayDescription = 'Malipo ya FEEDTAN';
                             }

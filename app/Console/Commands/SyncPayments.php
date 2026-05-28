@@ -10,6 +10,7 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 use App\Services\MessagingServiceAPI;
+use App\Support\TransactionFieldResolver;
 
 class SyncPayments extends Command
 {
@@ -103,18 +104,8 @@ class SyncPayments extends Command
 
                 $transaction = Transaction::where('order_reference', $orderReference)->first();
 
-                $apiPayerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? null;
-                 $apiCustomerName = $paymentData['customer']['customerName'] ?? null;
+                 $apiPayerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? null;
                  $apiDescription = $paymentData['description'] ?? $paymentData['narrative'] ?? null;
-                 
-                 // Avoid overwriting names with phone numbers if possible
-                 if ($apiPayerName && is_numeric($apiPayerName) && strlen($apiPayerName) > 5 && $transaction && $transaction->payer_name && !is_numeric($transaction->payer_name)) {
-                     $apiPayerName = $transaction->payer_name;
-                 }
-                 
-                 if ($apiCustomerName && is_numeric($apiCustomerName) && strlen($apiCustomerName) > 5 && $transaction && $transaction->customer_name && !is_numeric($transaction->customer_name)) {
-                     $apiCustomerName = $transaction->customer_name;
-                 }
 
                  $data = [
                      'order_reference' => $orderReference,
@@ -123,10 +114,14 @@ class SyncPayments extends Command
                      'amount' => $paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0,
                      'currency' => $paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS',
                      'phone' => $paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? null,
-                     'payer_name' => $apiPayerName,
-                     'customer_name' => $transaction ? ($transaction->customer_name ?? $apiCustomerName) : $apiCustomerName,
+                     'payer_name' => TransactionFieldResolver::payerName($transaction?->payer_name, $apiPayerName),
+                     'customer_name' => TransactionFieldResolver::memberName($transaction?->customer_name, $apiPayerName),
                      'email' => $paymentData['customer']['customerEmail'] ?? $paymentData['email'] ?? null,
-                     'description' => ($transaction && !empty($transaction->description) && $transaction->description !== 'N/A') ? $transaction->description : ($apiDescription ?: ($transaction->description ?? 'Malipo ya FEEDTAN')),
+                     'description' => TransactionFieldResolver::description(
+                         $transaction?->description,
+                         $apiDescription,
+                         $transaction ? null : 'Malipo ya FEEDTAN'
+                     ),
                      'payment_method' => $paymentData['channel'] ?? $paymentData['paymentMethod'] ?? null,
                      'updated_at' => isset($paymentData['updatedAt']) ? Carbon::parse($paymentData['updatedAt']) : now(),
                  ];

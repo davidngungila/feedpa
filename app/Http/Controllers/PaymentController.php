@@ -516,16 +516,8 @@ class PaymentController extends Controller
                 return back()->with('error', 'Payment not found');
             }
 
-            // Generate QR code with full payment details
-            $qrContent = "ClickPesa Payment Receipt\n" .
-                       "Order Reference: " . ($paymentData['orderReference'] ?? 'N/A') . "\n" .
-                       "Transaction ID: " . ($paymentData['id'] ?? $paymentData['transaction_id'] ?? 'N/A') . "\n" .
-                       "Amount: " . number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 2) . " " . ($paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS') . "\n" .
-                       "Status: " . ($paymentData['status'] ?? 'UNKNOWN') . "\n" .
-                       "Phone: " . ($paymentData['paymentPhoneNumber'] ?? $paymentData['phone'] ?? 'N/A') . "\n" .
-                       "Channel: " . ($paymentData['channel'] ?? $paymentData['payment_method'] ?? 'N/A') . "\n" .
-                       "Customer: " . ($paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? 'N/A') . "\n" .
-                       "Date: " . (isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('Y-m-d H:i:s') : 'N/A');
+            // Generate QR code with the production receipt URL
+            $qrContent = "https://pay.feedtancmg.org/payments/receipt/" . ($paymentData['orderReference'] ?? $orderReference);
             
             $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
             $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);

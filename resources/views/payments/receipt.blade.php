@@ -13,150 +13,252 @@
          } 
          .container { 
              width: 100%; 
-             padding: 20px; 
+             padding: 10px; 
          } 
-         .space-y-6 > * + * {
-             margin-top: 1.5rem;
-         }
-         .space-y-3 > * + * {
-             margin-top: 0.75rem;
-         }
-         .rounded-lg {
-             border-radius: 0.5rem;
-         }
-         .bg-light {
-             background-color: #f8f9fa !important;
-         }
-         .border-light {
-             border-color: #f8f9fa !important;
-         }
-         .mono {
-             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-         }
-         .tracking-wider {
-             letter-spacing: 0.05em;
-         }
-         .text-xs { font-size: 0.75rem; }
-         .text-sm { font-size: 0.875rem; }
-         .text-lg { font-size: 1.125rem; }
-         .text-muted { color: #6c757d; }
-         .uppercase { text-transform: uppercase; }
-         .font-bold { font-weight: bold; }
-         .flex { display: flex; }
-         .items-center { align-items: center; }
-         .justify-between { justify-content: space-between; }
-         .p-4 { padding: 1rem; }
-         .p-3 { padding: 0.75rem; }
-         .grid { display: block; width: 100%; }
-         .col-2 { width: 48%; display: inline-block; vertical-align: top; margin-bottom: 10px; }
-         .border { border: 1px solid #dee2e6; }
-         .text-right { text-align: right; }
-         .badge {
-             padding: 0.25em 0.6em;
-             font-size: 75%;
-             font-weight: 700;
-             border-radius: 0.25rem;
-             display: inline-block;
-         }
-         .badge-success { background-color: #dcfce7; color: #166534; }
-         .badge-warning { background-color: #fef3c7; color: #92400e; }
-         .text-green-600 { color: #16a34a; }
-         .italic { font-style: italic; }
-         .min-h-60 { min-height: 60px; }
-         .header {
-             text-align: center;
-             margin-bottom: 30px;
-         }
-         .logo {
-             font-size: 24px;
-             font-weight: 900;
-             color: #16a34a;
-         }
-    </style> 
+         .header { 
+             text-align: center; 
+             border-bottom: 2px solid #16a34a; 
+             padding-bottom: 15px; 
+             margin-bottom: 20px; 
+         } 
+         .logo { 
+             font-size: 22px; 
+             font-weight: 900; 
+             color: #16a34a; 
+             text-transform: uppercase; 
+             letter-spacing: 1px; 
+         } 
+         .sub-header { 
+             font-size: 11px; 
+             color: #16a34a; 
+             font-weight: bold; 
+             margin-top: 2px; 
+             text-transform: uppercase; 
+         } 
+         .receipt-title { 
+             font-size: 18px; 
+             margin-top: 8px; 
+             color: #111; 
+             font-weight: 900; 
+             background: #f3f4f6; 
+             padding: 5px; 
+             display: inline-block; 
+             border-radius: 4px; 
+         } 
+         .watermark { 
+             position: absolute; 
+             top: 50%; 
+             left: 50%; 
+             transform: translate(-50%, -50%) rotate(-45deg); 
+             font-size: 100px; 
+             color: rgba(22, 163, 74, 0.05); 
+             z-index: -1; 
+             font-weight: bold; 
+             white-space: nowrap; 
+         } 
+         .details-table { 
+             width: 100%; 
+             border-collapse: collapse; 
+             margin-bottom: 20px; 
+         } 
+         .details-table td { 
+             padding: 6px 0; 
+             vertical-align: top; 
+         } 
+         .label { 
+             font-weight: 800; 
+             color: #4b5563; 
+             width: 130px; 
+             text-transform: uppercase; 
+             font-size: 10px; 
+         } 
+         .value { 
+             font-weight: 700; 
+             color: #111; 
+             font-size: 12px; 
+         } 
+         .amount-section { 
+             background: linear-gradient(to right, #f0fdf4, #ffffff); 
+             border: 1px solid #bcf0da; 
+             padding: 15px; 
+             margin-bottom: 20px; 
+             border-radius: 8px; 
+             position: relative; 
+         } 
+         .amount-label { 
+             font-size: 10px; 
+             color: #16a34a; 
+             font-weight: 900; 
+             text-transform: uppercase; 
+             margin-bottom: 3px; 
+         } 
+         .amount-value { 
+             font-size: 28px; 
+             font-weight: 900; 
+             color: #15803d; 
+         } 
+         .amount-words { 
+             font-size: 11px; 
+             font-style: italic; 
+             color: #6b7280; 
+             margin-top: 5px; 
+             text-transform: capitalize; 
+         } 
+         .info-grid { 
+             width: 100%; 
+             margin-bottom: 20px; 
+         } 
+         .info-card { 
+             border: 1px solid #e5e7eb; 
+             border-radius: 6px; 
+             padding: 12px; 
+             background: #fff; 
+         } 
+         .qr-code-box { 
+             text-align: right; 
+         } 
+         .status-badge { 
+             display: inline-block; 
+             padding: 3px 8px; 
+             border-radius: 9999px; 
+             font-size: 9px; 
+             font-weight: 900; 
+             text-transform: uppercase; 
+         } 
+         .status-verified { background: #dcfce7; color: #166534; } 
+         .status-pending { background: #fef3c7; color: #92400e; } 
+         .footer { 
+             margin-top: 40px; 
+             text-align: center; 
+             font-size: 10px; 
+             color: #6b7280; 
+             border-top: 1px dashed #e5e7eb; 
+             padding-top: 15px; 
+         } 
+         .signature-grid { 
+             margin-top: 50px; 
+             width: 100%; 
+         } 
+         .sig-line { 
+             border-top: 1px solid #374151; 
+             width: 160px; 
+             margin: 0 auto 5px; 
+         } 
+         .sig-text { 
+             font-size: 9px; 
+             font-weight: bold; 
+             color: #4b5563; 
+         } 
+     </style> 
  </head> 
  <body> 
      @php
         $isSuccessful = in_array($paymentData['status'] ?? '', ['SUCCESS', 'SETTLED']);
-        $statusColor = $isSuccessful ? 'success' : 'warning';
-        $statusText = $isSuccessful ? 'Verified' : 'Pending Verification';
+        $customerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? 'Anonymous';
+        $payerName = $paymentData['payer_name'] ?? $paymentData['customer']['customerName'] ?? 'Anonymous';
+        $isPayerDifferent = strtolower($customerName) !== strtolower($payerName);
      @endphp
+     <div class="watermark">{{ $isSuccessful ? 'OFFICIAL' : 'PROVISIONAL' }}</div> 
      
      <div class="container"> 
          <div class="header"> 
              <div class="logo">FEEDTAN CMG</div> 
-             <div class="text-xs text-muted uppercase font-bold tracking-wider">OFFICIAL PAYMENT RECEIPT</div> 
-         </div>
-
-         <div class="space-y-6"> 
-           <!-- HEADER INFO --> 
-           <div class="flex items-center justify-between p-4 bg-light rounded-lg"> 
-             <div style="float: left;"> 
-               <div class="text-xs text-muted uppercase font-bold tracking-wider">Order Reference</div> 
-               <div class="text-lg font-bold mono">{{ $paymentData['orderReference'] ?? 'N/A' }}</div> 
-             </div> 
-             <div class="text-right" style="float: right;"> 
-               <div class="text-xs text-muted uppercase font-bold tracking-wider">Status</div> 
-               <span class="badge badge-{{ $statusColor }}"> 
-                 {{ $statusText }} 
-               </span> 
-             </div> 
-             <div style="clear: both;"></div>
-           </div> 
-         
-           <!-- TRANSACTION DETAILS --> 
-           <div class="grid" style="margin-top: 20px;"> 
-             <div class="col-2 p-3 border border-light rounded-lg" style="margin-right: 2%;"> 
-               <div class="text-xs text-muted mb-1">Customer / Payer</div> 
-               <div class="font-bold">{{ strtoupper($paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? 'Anonymous') }}</div> 
-               <div class="text-xs text-muted">{{ $paymentData['phone'] ?? $paymentData['paymentPhoneNumber'] ?? 'N/A' }}</div> 
-             </div> 
-             <div class="col-2 p-3 border border-light rounded-lg"> 
-               <div class="text-xs text-muted mb-1">Amount</div> 
-               <div class="font-bold text-green-600 text-lg">{{ $paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS' }} {{ number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 2) }}</div> 
-             </div> 
-             <div class="col-2 p-3 border border-light rounded-lg" style="margin-right: 2%;"> 
-               <div class="text-xs text-muted mb-1">Transaction ID</div> 
-               <div class="font-bold text-xs">{{ $paymentData['id'] ?? $paymentData['transaction_id'] ?? 'N/A' }}</div> 
-             </div> 
-             <div class="col-2 p-3 border border-light rounded-lg"> 
-               <div class="text-xs text-muted mb-1">Date</div> 
-               <div class="font-bold">{{ isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('M d, Y') : date('M d, Y') }}</div> 
-               <div class="text-xs text-muted">{{ isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('H:i:s') : date('H:i:s') }}</div>
-             </div> 
-             <div class="col-2 p-3 border border-light rounded-lg" style="margin-right: 2%;"> 
-               <div class="text-xs text-muted mb-1">Payment Method</div> 
-               <div class="font-bold">{{ ucfirst($paymentData['channel'] ?? $paymentData['paymentMethod'] ?? 'N/A') }}</div> 
-             </div> 
-             <div class="col-2 p-3 border border-light rounded-lg"> 
-               <div class="text-xs text-muted mb-1">Recorded By</div> 
-               <div class="font-bold text-xs">System</div> 
-             </div> 
-           </div> 
-         
-           <!-- NOTES / COMMENTS --> 
-           <div style="margin-top: 20px;"> 
-             <label class="text-xs text-muted uppercase font-bold mb-2 block" style="display: block;">Description / Notes</label> 
-             <div class="p-3 bg-light rounded-lg text-sm italic min-h-60"> 
-               {{ $paymentData['description'] ?? $paymentData['message'] ?? 'No additional notes provided for this transaction.' }} 
-             </div> 
-           </div> 
-
-           <!-- QR CODE -->
-           <div style="text-align: center; margin-top: 30px;">
-                <img src="{{ $qrCodeImage ?? '' }}" style="width: 30mm; height: 30mm; border: 1px solid #eee; padding: 5px; border-radius: 5px;">
-                <div class="text-xs text-muted mt-2">Scan to verify transaction</div>
-           </div>
-         
-           <!-- FOOTER --> 
-           <div style="margin-top: 40px; text-align: center; border-top: 1px dashed #dee2e6; padding-top: 20px;"> 
-             <div class="text-xs text-muted font-bold">FEEDTAN CMG - PAYMENT SYSTEM</div>
-             <div class="text-xs text-muted">Powered by ClickPesa</div>
-             <div class="text-xs text-green-600 mt-1">www.feedtan.co.tz • info@feedtan.co.tz</div>
-             <div style="margin-top: 15px; font-size: 8px; color: #9ca3af;"> 
+             <div class="sub-header">CLICKPESA PAYMENT MANAGEMENT SYSTEM</div> 
+             <div class="receipt-title">OFFICIAL PAYMENT RECEIPT</div> 
+         </div> 
+ 
+         <table style="width: 100%; margin-bottom: 15px;"> 
+             <tr> 
+                 <td> 
+                     <div class="label">Order Reference:</div> 
+                     <div class="value" style="font-size: 16px; color: #16a34a;">#{{ $paymentData['orderReference'] ?? 'N/A' }}</div> 
+                 </td> 
+                 <td style="text-align: right;"> 
+                     <div class="label">Date Issued:</div> 
+                     <div class="value">{{ isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('l, d F Y') : date('l, d F Y') }}</div> 
+                     <div class="value" style="font-size: 10px; color: #6b7280; font-weight: normal;">Time: {{ isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('H:i:s') : date('H:i:s') }}</div> 
+                 </td> 
+             </tr> 
+         </table> 
+ 
+         <div class="info-card"> 
+             <table class="details-table"> 
+                 <tr> 
+                     <td class="label">Received From (Member):</td> 
+                     <td class="value" style="font-size: 14px;">{{ strtoupper($customerName) }}</td> 
+                     <td rowspan="{{ $isPayerDifferent ? 5 : 4 }}" class="qr-code-box"> 
+                         <img src="{{ $qrCodeImage ?? '' }}" style="width: 25mm; height: 25mm;"> 
+                     </td> 
+                 </tr> 
+                 @if($isPayerDifferent)
+                 <tr> 
+                     <td class="label">Paid By (Payer):</td> 
+                     <td class="value">{{ strtoupper($payerName) }}</td> 
+                 </tr> 
+                 @endif
+                 <tr> 
+                     <td class="label">Transaction ID:</td> 
+                     <td class="value">{{ $paymentData['id'] ?? $paymentData['transaction_id'] ?? 'N/A' }}</td> 
+                 </tr> 
+                 <tr> 
+                     <td class="label">Description:</td> 
+                     <td class="value">{{ strtoupper($paymentData['description'] ?? 'PAYMENT TRANSACTION') }}</td> 
+                 </tr> 
+                 <tr> 
+                     <td class="label">Payment Mode:</td> 
+                     <td class="value"> 
+                         {{ strtoupper($paymentData['channel'] ?? $paymentData['payment_method'] ?? 'N/A') }} 
+                         <span class="status-badge {{ $isSuccessful ? 'status-verified' : 'status-pending' }}"> 
+                             • {{ $isSuccessful ? 'CONFIRMED' : 'AWAITING CLEARANCE' }} 
+                         </span> 
+                     </td> 
+                 </tr> 
+             </table> 
+         </div> 
+ 
+         <div class="amount-section"> 
+             <div class="amount-label">Authorized Amount</div> 
+             <div class="amount-value">{{ $paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS' }} {{ number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 2) }}</div> 
+             @php 
+                 $amount = $paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0;
+                 $f = new NumberFormatter("en", NumberFormatter::SPELLOUT); 
+                 $words = $f->format($amount); 
+             @endphp 
+             <div class="amount-words">Amount in words: {{ $words }} {{ $paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'Tanzanian Shillings' }} Only</div> 
+         </div> 
+ 
+         <div style="font-size: 10px; color: #4b5563; padding: 10px; background: #f9fafb; border-radius: 6px; border-left: 3px solid #16a34a;"> 
+             <strong>Transaction Reference:</strong> {{ $paymentData['orderReference'] ?? 'N/A' }}<br> 
+             @if(isset($paymentData['phone']) || isset($paymentData['paymentPhoneNumber'])) 
+                 <strong>Customer Phone:</strong> {{ $paymentData['phone'] ?? $paymentData['paymentPhoneNumber'] ?? 'N/A' }}
+             @endif 
+             @if(isset($paymentData['notes']) && $paymentData['notes'])
+                 <br><strong>System Remarks:</strong> {{ $paymentData['notes'] }}
+             @endif
+         </div> 
+ 
+         <table class="signature-grid"> 
+             <tr> 
+                 <td style="text-align: center; width: 50%;"> 
+                     <div class="sig-line"></div> 
+                     <div class="sig-text">TREASURER / SECRETARY</div> 
+                     <div style="font-size: 8px; color: #9ca3af;">(Digital Seal Applied)</div> 
+                 </td> 
+                 <td style="text-align: center; width: 50%;"> 
+                     <div class="sig-line"></div> 
+                     <div class="sig-text">MEMBER'S ACKNOWLEDGMENT</div> 
+                 </td> 
+             </tr> 
+         </table> 
+ 
+         <div class="footer"> 
+             <strong>FEEDTAN CMG - PAYMENT SYSTEM</strong><br> 
+             Powered by ClickPesa<br> 
+             <span style="color: #16a34a;">www.feedtan.co.tz • info@feedtan.co.tz</span><br> 
+             <div style="margin-top: 10px; font-size: 8px; color: #9ca3af;"> 
                  This document is electronically generated and verified by FEEDTAN CMG Payment System. 
              </div> 
-           </div> 
          </div> 
      </div> 
  </body> 
- </html> 
+ </html>

@@ -113,6 +113,36 @@
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
                     @forelse($payments as $payment)
+                        @php
+                            $callbackData = is_array($payment->callback_data ?? null) ? $payment->callback_data : [];
+                            $callbackCustomer = is_array($callbackData['customer'] ?? null) ? $callbackData['customer'] : [];
+
+                            $memberName = $payment->customer_name
+                                ?? $callbackCustomer['customerName']
+                                ?? $callbackData['customerName']
+                                ?? $payment->payer_name
+                                ?? 'N/A';
+
+                            $actualPayer = $payment->payer_name
+                                ?? $callbackData['payer_name']
+                                ?? $callbackCustomer['customerName']
+                                ?? $memberName;
+
+                            $displayPhone = $payment->phone
+                                ?? $callbackData['paymentPhoneNumber']
+                                ?? $callbackCustomer['customerPhoneNumber']
+                                ?? 'N/A';
+
+                            $displayDescription = trim((string) (
+                                $payment->description
+                                ?? $callbackData['description']
+                                ?? $callbackData['narrative']
+                                ?? ''
+                            ));
+                            if ($displayDescription === '' || strtoupper($displayDescription) === 'N/A') {
+                                $displayDescription = 'Malipo ya FEEDTAN';
+                            }
+                        @endphp
                         <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
                             <td class="whitespace-nowrap">
                                 <div class="font-bold text-primary-900 dark:text-white">{{ $payment->created_at->format('M d, Y') }}</div>
@@ -124,15 +154,13 @@
                                 </span>
                             </td>
                             <td>
-                                <div class="font-bold text-primary-900 dark:text-white">{{ $payment->customer_name ?? $payment->payer_name ?? 'N/A' }}</div>
-                                @if($payment->customer_name && $payment->payer_name && strtolower($payment->customer_name) !== strtolower($payment->payer_name))
-                                    <div class="text-[10px] text-primary-500">Payer: {{ $payment->payer_name }}</div>
-                                @endif
-                                <div class="text-[10px] text-primary-500 font-mono">{{ $payment->phone }}</div>
+                                <div class="font-bold text-primary-900 dark:text-white">{{ $memberName }}</div>
+                                <div class="text-[10px] text-primary-500">Payer: {{ $actualPayer }}</div>
+                                <div class="text-[10px] text-primary-500 font-mono">{{ $displayPhone }}</div>
                             </td>
                             <td>
-                                <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[200px] truncate" title="{{ $payment->description }}">
-                                    {{ $payment->description && $payment->description !== 'N/A' ? $payment->description : 'Malipo ya FEEDTAN' }}
+                                <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[260px] truncate" title="{{ $displayDescription }}">
+                                    {{ $displayDescription }}
                                 </div>
                             </td>
                             <td class="whitespace-nowrap">

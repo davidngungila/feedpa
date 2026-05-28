@@ -47,8 +47,11 @@ class PaymentController extends Controller
         try {
             $amount = $this->api->formatAmount($validated['amount']);
             $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);
-            $payerName = $validated['payer_name'];
-            $description = $request->input('description') ?: 'Malipo ya FEEDTAN';
+            $payerName = trim($validated['payer_name']);
+            $description = trim((string) $request->input('description', ''));
+            if ($description === '') {
+                $description = 'Malipo ya FEEDTAN';
+            }
             $orderReference = $this->api->generateOrderReference();
 
             if (!$phoneNumber) {

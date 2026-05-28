@@ -38,10 +38,10 @@ class PaymentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'payer_name' => 'required|string|min:2|max:100',
-            'amount' => 'required|numeric|min:100|max:1000000',
-            'phone_number' => 'required|string|regex:/^255[67]\d{8}$/',
-            'description' => 'nullable|string|max:255'
+            'amount' => 'required|numeric|min:500',
+            'phone_number' => 'required|string',
+            'payer_name' => 'required|string|max:255',
+            'description' => 'required|string|max:500',
         ]);
 
         try {

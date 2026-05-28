@@ -256,7 +256,7 @@
                               id="description" 
                               name="description" 
                               rows="3" 
-                              placeholder="Andika maelezo ya malipo"></textarea>
+                              placeholder="Andika maelezo ya malipo" required></textarea>
                     <small class="text-muted">Maelezo ya ziada kuhusu malipo yako</small>
                 </div>
 
@@ -298,6 +298,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // =========================
         if (!data.payer_name || data.payer_name.trim() === '') {
             showAlert('error', 'Tafadhali ingiza jina lako kamili.');
+            return;
+        }
+
+        if (!data.description || data.description.trim() === '') {
+            showAlert('error', 'Tafadhali ingiza maelezo ya malipo (Malipo Kwaajili Ya).');
             return;
         }
 

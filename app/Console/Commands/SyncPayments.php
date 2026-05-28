@@ -18,14 +18,14 @@ class SyncPayments extends Command
      *
      * @var string
      */
-    protected $signature = 'payments:sync {--days=1 : Number of days to look back} {--force-sms : Force sending SMS for all synced transactions}';
+    protected $signature = 'payments:sync {--days=1 : Number of days to look back} {--force-sms : Force sending SMS for all synced transactions} {--daemon : Run as a daemon for real-time polling} {--interval=5 : Sleep interval in seconds for daemon mode}';
 
     /**
      * The description of the console command.
      *
      * @var string
      */
-    protected $description = 'Sync payment details from ClickPesa API to local database and notify customers';
+    protected $description = 'Sync payment details from ClickPesa API to local database and notify customers in real-time';
 
     protected ClickPesaAPIService $api;
     protected MessagingServiceAPI $messaging;
@@ -42,10 +42,35 @@ class SyncPayments extends Command
      */
     public function handle()
     {
+        if ($this->option('daemon')) {
+            $interval = (int) $this->option('interval');
+            $this->info("Starting Real-Time Sync Daemon (Polling every {$interval} seconds)...");
+            
+            while (true) {
+                $this->performSync();
+                sleep($interval);
+            }
+        }
+
+        return $this->performSync();
+    }
+
+    /**
+     * Perform the actual sync logic
+     */
+    protected function performSync()
+    {
         $days = (int) $this->option('days');
         $forceSms = (bool) $this->option('force-sms');
-        $this->info("Syncing payments for the last {$days} day(s)...");
-        Log::info("SyncPayments command started", ['days' => $days, 'force_sms' => $forceSms]);
+        
+        // Use a shorter range for daemon mode to be faster
+         if ($this->option('daemon')) {
+             $days = 1; 
+         } else {
+             $this->info("Syncing payments for the last {$days} day(s)...");
+         }
+
+         Log::info("SyncPayments command started", ['days' => $days, 'force_sms' => $forceSms, 'daemon' => $this->option('daemon')]);
 
         try {
             $params = [
@@ -131,7 +156,12 @@ class SyncPayments extends Command
                 }
             }
 
-            $this->info("Sync complete. Total processed: {$total}. Synced: {$synced}. Created: {$created}. SMS Sent: {$smsSent}");
+            if (!$this->option('daemon')) {
+                $this->info("Sync complete. Total processed: {$total}. Synced: {$synced}. Created: {$created}. SMS Sent: {$smsSent}");
+            } else if ($created > 0 || $statusChanged > 0 || $smsSent > 0) {
+                // In daemon mode, only output to console if something actually happened
+                $this->info(now()->format('Y-m-d H:i:s') . " - New/Updated transactions found! Created: {$created}, Updated: {$synced}, SMS Sent: {$smsSent}");
+            }
             Log::info("SyncPayments command finished", [
                 'total' => $total,
                 'synced' => $synced,

@@ -105,6 +105,7 @@ class SyncPayments extends Command
 
                 $apiPayerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? null;
                  $apiCustomerName = $paymentData['customer']['customerName'] ?? null;
+                 $apiDescription = $paymentData['description'] ?? $paymentData['narrative'] ?? null;
                  
                  // Avoid overwriting names with phone numbers if possible
                  if ($apiPayerName && is_numeric($apiPayerName) && strlen($apiPayerName) > 5 && $transaction && $transaction->payer_name && !is_numeric($transaction->payer_name)) {
@@ -116,19 +117,19 @@ class SyncPayments extends Command
                  }
 
                  $data = [
-                    'order_reference' => $orderReference,
-                    'transaction_id' => $paymentData['id'] ?? $paymentData['transaction_id'] ?? null,
-                    'status' => $paymentData['status'] ?? 'UNKNOWN',
-                    'amount' => $paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0,
-                    'currency' => $paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS',
-                    'phone' => $paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? null,
-                    'payer_name' => $apiPayerName,
-                    'customer_name' => $transaction ? ($transaction->customer_name ?? $apiCustomerName) : $apiCustomerName,
-                    'email' => $paymentData['customer']['customerEmail'] ?? $paymentData['email'] ?? null,
-                    'description' => $paymentData['description'] ?? $paymentData['narrative'] ?? null,
-                    'payment_method' => $paymentData['channel'] ?? $paymentData['paymentMethod'] ?? null,
-                    'updated_at' => isset($paymentData['updatedAt']) ? Carbon::parse($paymentData['updatedAt']) : now(),
-                ];
+                     'order_reference' => $orderReference,
+                     'transaction_id' => $paymentData['id'] ?? $paymentData['transaction_id'] ?? null,
+                     'status' => $paymentData['status'] ?? 'UNKNOWN',
+                     'amount' => $paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0,
+                     'currency' => $paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS',
+                     'phone' => $paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? null,
+                     'payer_name' => $apiPayerName,
+                     'customer_name' => $transaction ? ($transaction->customer_name ?? $apiCustomerName) : $apiCustomerName,
+                     'email' => $paymentData['customer']['customerEmail'] ?? $paymentData['email'] ?? null,
+                     'description' => ($transaction && $transaction->description && !$apiDescription) ? $transaction->description : $apiDescription,
+                     'payment_method' => $paymentData['channel'] ?? $paymentData['paymentMethod'] ?? null,
+                     'updated_at' => isset($paymentData['updatedAt']) ? Carbon::parse($paymentData['updatedAt']) : now(),
+                 ];
 
                 $isNew = false;
                 $statusChanged = false;

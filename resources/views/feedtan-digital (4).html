@@ -1,0 +1,3087 @@
+<!DOCTYPE html>
+<html lang="en" x-data="FeedtanApp()" :class="{'dark': darkMode}" class="h-full">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FEEDTAN DIGITAL – Cooperative Management System</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Alpine.js -->
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<!-- Font Awesome -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          primary: { 50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857',800:'#065f46',900:'#064e3b',950:'#022c22' },
+          dark: { 800:'#0f1a14',850:'#111f17',900:'#0a140e',card:'#0d1f16',border:'#1a3328' }
+        },
+        fontFamily: { sans:['Plus Jakarta Sans','sans-serif'], mono:['JetBrains Mono','monospace'] },
+        animation: { 'fade-in':'fadeIn 0.4s ease','slide-in':'slideIn 0.3s ease','count-up':'countUp 1.5s ease','pulse-slow':'pulse 3s infinite','spin-slow':'spin 4s linear infinite','bounce-subtle':'bounceSubtle 2s infinite' },
+        keyframes: { fadeIn:{from:{opacity:0,transform:'translateY(10px)'},to:{opacity:1,transform:'translateY(0)'}}, slideIn:{from:{opacity:0,transform:'translateX(-20px)'},to:{opacity:1,transform:'translateX(0)'}}, bounceSubtle:{from:{transform:'translateY(0)'},'50%':{transform:'translateY(-4px)'},to:{transform:'translateY(0)'}} }
+      }
+    }
+  }
+</script>
+
+<style>
+/* ============================================================
+   GLOBAL STYLES
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; overflow: hidden; }
+
+/* Custom Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }
+
+/* ============================================================
+   LIGHT MODE
+   ============================================================ */
+.light-mode { background: #f0fdf4; color: #064e3b; }
+.light-mode .main-bg { background: #f0fdf4; }
+.light-mode .card { background: #ffffff; border: 1px solid #d1fae5; box-shadow: 0 2px 12px rgba(6,78,59,0.08); }
+.light-mode .sidebar-bg { background: #064e3b; }
+.light-mode .navbar-bg { background: #ffffff; border-bottom: 1px solid #d1fae5; }
+.light-mode .text-main { color: #064e3b; }
+.light-mode .text-sub { color: #6b7280; }
+.light-mode .input-field { background: #f9fafb; border: 1px solid #d1fae5; color: #064e3b; }
+.light-mode .table-row:hover { background: #ecfdf5; }
+.light-mode .sidebar-item:hover { background: rgba(255,255,255,0.1); }
+
+/* ============================================================
+   DARK MODE
+   ============================================================ */
+.dark .main-bg { background: #0a140e; }
+.dark .card { background: #0d1f16; border: 1px solid #1a3328; box-shadow: 0 2px 12px rgba(0,0,0,0.4); }
+.dark .sidebar-bg { background: #022c22; }
+.dark .navbar-bg { background: #0d1f16; border-bottom: 1px solid #1a3328; }
+.dark .text-main { color: #ecfdf5; }
+.dark .text-sub { color: #6ee7b7; }
+.dark .input-field { background: #0a140e; border: 1px solid #1a3328; color: #ecfdf5; }
+.dark .table-row:hover { background: #0d2318; }
+
+/* Sidebar */
+.sidebar { transition: width 0.3s cubic-bezier(0.4,0,0.2,1), transform 0.3s cubic-bezier(0.4,0,0.2,1); }
+.sidebar-collapsed { width: 64px; }
+.sidebar-expanded { width: 260px; }
+
+/* Dropdown menus in sidebar */
+.sidebar-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+.sidebar-dropdown.open { max-height: 1000px; }
+
+/* Page transitions */
+.page { display: none; animation: fadeIn 0.35s ease; }
+.page.active { display: block; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+@keyframes countUp { from { transform:translateY(8px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+@keyframes slideInLeft { from { transform:translateX(-100%); } to { transform:translateX(0); } }
+@keyframes slideOutLeft { from { transform:translateX(0); } to { transform:translateX(-100%); } }
+
+/* Glassmorphism cards */
+.glass { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.dark .glass { background: rgba(13,31,22,0.85); border: 1px solid rgba(26,51,40,0.8); }
+.light-mode .glass { background: rgba(255,255,255,0.85); border: 1px solid rgba(209,250,229,0.8); }
+
+/* Status badges */
+.badge { display:inline-flex; align-items:center; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:600; letter-spacing:0.4px; }
+.badge-green { background:#d1fae5; color:#065f46; }
+.badge-red { background:#fee2e2; color:#991b1b; }
+.badge-yellow { background:#fef9c3; color:#854d0e; }
+.badge-blue { background:#dbeafe; color:#1e40af; }
+.badge-gray { background:#f3f4f6; color:#4b5563; }
+.dark .badge-green { background:#052e16; color:#6ee7b7; }
+.dark .badge-red { background:#450a0a; color:#fca5a5; }
+.dark .badge-yellow { background:#422006; color:#fde68a; }
+.dark .badge-blue { background:#172554; color:#93c5fd; }
+.dark .badge-gray { background:#1f2937; color:#9ca3af; }
+
+/* Animated counter */
+.counter { display:inline-block; }
+
+/* Tables */
+.data-table { width:100%; border-collapse:collapse; }
+.data-table th { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; padding:10px 14px; }
+.data-table td { padding:10px 14px; font-size:13px; }
+.data-table tbody tr { transition:background 0.15s; border-bottom:1px solid transparent; }
+.dark .data-table th { color:#6ee7b7; background:#052e16; border-bottom:1px solid #1a3328; }
+.dark .data-table tbody tr { border-bottom-color:#1a3328; }
+.dark .data-table tbody tr:hover { background:#0d2318; }
+.light-mode .data-table th { color:#065f46; background:#ecfdf5; border-bottom:1px solid #d1fae5; }
+.light-mode .data-table tbody tr { border-bottom-color:#f0fdf4; }
+.light-mode .data-table tbody tr:hover { background:#f0fdf4; }
+
+/* Forms */
+.form-input {
+  width:100%; padding:9px 14px; border-radius:8px; font-size:13px;
+  outline:none; transition:border-color 0.2s, box-shadow 0.2s;
+  font-family:'Plus Jakarta Sans',sans-serif;
+}
+.form-input:focus { border-color:#10b981; box-shadow:0 0 0 3px rgba(16,185,129,0.15); }
+.form-label { font-size:12px; font-weight:600; margin-bottom:4px; display:block; }
+
+/* Notification dot */
+.notif-dot { width:8px;height:8px;border-radius:50%;background:#ef4444;position:absolute;top:2px;right:2px;animation:pulse 1.5s infinite; }
+
+/* Loader */
+.skeleton { animation:skeleton-loading 1.2s linear infinite alternate; }
+.dark .skeleton { background:linear-gradient(90deg,#0d2318 0%,#1a3328 50%,#0d2318 100%); }
+.light-mode .skeleton { background:linear-gradient(90deg,#f0fdf4 0%,#d1fae5 50%,#f0fdf4 100%); }
+@keyframes skeleton-loading { from{background-position:0 0;} to{background-position:100% 0;} }
+
+/* ============================================================
+   STAT CARDS
+   ============================================================ */
+.stat-card {
+  border-radius:14px; padding:20px 22px;
+  transition:transform 0.2s, box-shadow 0.2s;
+  position:relative; overflow:hidden;
+}
+.stat-card:hover { transform:translateY(-3px); box-shadow:0 12px 32px rgba(16,185,129,0.18); }
+.stat-card .icon-wrap { width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px; }
+.stat-card .bg-blob { position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;opacity:0.08; }
+
+/* Modal */
+.modal-overlay {
+  position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:999;
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;
+}
+.modal-box {
+  border-radius:16px;width:90%;max-width:600px;max-height:90vh;overflow-y:auto;
+  animation:fadeIn 0.3s ease;
+}
+
+/* ============================================================
+   CHART WRAPPERS
+   ============================================================ */
+.chart-wrapper { position:relative; }
+
+/* Toast */
+.toast-container { position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px; }
+.toast {
+  display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:12px;
+  font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,0.2);
+  animation:fadeIn 0.3s ease;
+  min-width:240px;
+}
+.toast-success { background:#064e3b;color:#6ee7b7;border:1px solid #065f46; }
+.toast-error { background:#450a0a;color:#fca5a5;border:1px solid #991b1b; }
+.toast-info { background:#172554;color:#93c5fd;border:1px solid #1e40af; }
+
+/* Progress bars */
+.progress-bar { height:6px;border-radius:99px;background:#d1fae5;overflow:hidden; }
+.dark .progress-bar { background:#1a3328; }
+.progress-fill { height:100%;border-radius:99px;background:linear-gradient(90deg,#10b981,#34d399);transition:width 1s ease; }
+
+/* Mobile overlay */
+.mobile-overlay { display:none; }
+@media(max-width:768px) {
+  .mobile-overlay { display:block; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:40; }
+  .sidebar { position:fixed!important; z-index:50; height:100vh; top:0; left:0; transform:translateX(-100%); }
+  .sidebar.mobile-open { transform:translateX(0)!important; }
+  .sidebar-expanded { width:260px!important; }
+  .main-content { margin-left:0!important; }
+}
+@media(max-width:1024px) {
+  .sidebar { position:fixed!important; z-index:50; height:100vh; top:0; left:0; transform:translateX(-100%); }
+  .sidebar.mobile-open { transform:translateX(0)!important; width:260px!important; }
+  .main-content { margin-left:0!important; }
+}
+
+/* Role badge */
+.role-tag { padding:3px 10px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.5px; }
+.role-admin { background:#059669;color:#fff; }
+.role-manager { background:#3b82f6;color:#fff; }
+.role-teller { background:#f59e0b;color:#fff; }
+.role-member { background:#6366f1;color:#fff; }
+.role-auditor { background:#ef4444;color:#fff; }
+</style>
+</head>
+<body class="h-full" :class="darkMode ? 'dark bg-[#0a140e]' : 'bg-[#f0fdf4]'">
+
+<!-- ============================================================
+     TOAST CONTAINER
+     ============================================================ -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ============================================================
+     LOGIN SCREEN
+     ============================================================ -->
+<div id="loginScreen" x-show="!loggedIn" x-transition class="fixed inset-0 z-50 flex items-center justify-center"
+     :class="darkMode ? 'bg-[#0a140e]' : 'bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700'">
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10" :class="darkMode ? 'bg-primary-400' : 'bg-white'"></div>
+    <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full opacity-10" :class="darkMode ? 'bg-primary-500' : 'bg-white'"></div>
+    <div class="absolute top-1/3 right-1/4 w-64 h-64 rounded-full opacity-5" :class="darkMode ? 'bg-primary-300' : 'bg-white'"></div>
+  </div>
+  <div class="relative w-full max-w-md mx-4">
+    <div class="card rounded-2xl p-8 shadow-2xl" :class="darkMode ? 'bg-[#0d1f16] border border-[#1a3328]' : 'bg-white'">
+      <!-- Logo -->
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 mb-4 shadow-lg">
+          <i class="fa-solid fa-leaf text-white text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold" :class="darkMode?'text-white':'text-primary-900'">FEEDTAN DIGITAL</h1>
+        <p class="text-sm mt-1" :class="darkMode?'text-primary-300':'text-primary-600'">Cooperative Management System</p>
+      </div>
+
+      <!-- Role selector -->
+      <div class="mb-5">
+        <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Login As</label>
+        <select x-model="loginRole" class="form-input input-field"
+                :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'">
+          <option value="admin">System Administrator</option>
+          <option value="manager">Branch Manager</option>
+          <option value="teller">Teller / Cashier</option>
+          <option value="member">Cooperative Member</option>
+          <option value="auditor">Internal Auditor</option>
+        </select>
+      </div>
+
+      <!-- Email -->
+      <div class="mb-4">
+        <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Email Address</label>
+        <div class="relative">
+          <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
+          <input type="email" x-model="loginEmail" placeholder="admin@feedtan.co.tz"
+                 class="form-input input-field pl-9"
+                 :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'"/>
+        </div>
+      </div>
+
+      <!-- Password -->
+      <div class="mb-6">
+        <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Password</label>
+        <div class="relative">
+          <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
+          <input type="password" x-model="loginPassword" placeholder="••••••••"
+                 class="form-input input-field pl-9"
+                 :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'"/>
+        </div>
+      </div>
+
+      <!-- Login Button -->
+      <button @click="doLogin()" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
+        <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
+      </button>
+
+      <!-- Demo accounts -->
+      <div class="mt-5 p-3 rounded-xl" :class="darkMode?'bg-primary-900/30 border border-primary-900':'bg-primary-50 border border-primary-100'">
+        <p class="text-xs font-bold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Demo Accounts (any password):</p>
+        <div class="grid grid-cols-2 gap-1">
+          <template x-for="r in ['admin','manager','teller','member','auditor']">
+            <button @click="loginRole=r;loginEmail=r+'@feedtan.co.tz'" class="text-xs py-1 px-2 rounded-lg text-left transition-colors"
+                    :class="darkMode?'hover:bg-primary-800 text-primary-300':'hover:bg-primary-100 text-primary-700'">
+              <span x-text="r.charAt(0).toUpperCase()+r.slice(1)"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+
+      <!-- Dark mode toggle -->
+      <div class="mt-4 flex justify-center">
+        <button @click="darkMode=!darkMode;saveDarkMode()" class="text-xs flex items-center gap-2 transition-colors"
+                :class="darkMode?'text-primary-300':'text-primary-600'">
+          <i :class="darkMode?'fa-solid fa-sun':'fa-solid fa-moon'"></i>
+          <span x-text="darkMode?'Switch to Light Mode':'Switch to Dark Mode'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MAIN APP
+     ============================================================ -->
+<div x-show="loggedIn" x-transition class="flex h-screen overflow-hidden">
+
+  <!-- Mobile Overlay -->
+  <div x-show="sidebarOpen" @click="sidebarOpen=false"
+       class="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm" x-transition></div>
+
+  <!-- ============================================================
+       SIDEBAR
+       ============================================================ -->
+  <aside :class="[sidebarOpen?'translate-x-0':'lg:translate-x-0 -translate-x-full','sidebar sidebar-bg fixed lg:relative h-screen z-50 flex flex-col transition-all duration-300',sidebarCollapsed&&window.innerWidth>=1024?'w-16':'w-[260px]']"
+         class="sidebar-bg">
+
+    <!-- Sidebar Header -->
+    <div class="flex items-center justify-between p-4 border-b border-primary-800/50 flex-shrink-0">
+      <div class="flex items-center gap-3" x-show="!sidebarCollapsed || window.innerWidth<1024">
+        <div class="w-8 h-8 rounded-lg bg-primary-400 flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-leaf text-primary-900 text-sm"></i>
+        </div>
+        <div x-show="!sidebarCollapsed">
+          <p class="text-white font-bold text-sm leading-tight">FEEDTAN</p>
+          <p class="text-primary-300 text-[10px]">DIGITAL</p>
+        </div>
+      </div>
+      <div x-show="sidebarCollapsed && window.innerWidth>=1024" class="w-8 h-8 rounded-lg bg-primary-400 flex items-center justify-center mx-auto">
+        <i class="fa-solid fa-leaf text-primary-900 text-sm"></i>
+      </div>
+      <button @click="sidebarCollapsed=!sidebarCollapsed" class="text-primary-300 hover:text-white transition-colors hidden lg:block">
+        <i :class="sidebarCollapsed?'fa-solid fa-chevron-right':'fa-solid fa-chevron-left'" class="text-xs"></i>
+      </button>
+    </div>
+
+    <!-- User Info in Sidebar -->
+    <div class="p-3 border-b border-primary-800/50 flex-shrink-0" x-show="!sidebarCollapsed">
+      <div class="flex items-center gap-3 p-2 rounded-xl bg-primary-800/30">
+        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+             x-text="currentUser.name.charAt(0)"></div>
+        <div class="min-w-0">
+          <p class="text-white text-xs font-semibold truncate" x-text="currentUser.name"></p>
+          <span class="role-tag" :class="'role-'+currentUser.role" x-text="currentUser.roleLabel"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+
+      <!-- Dashboard -->
+      <template x-if="hasAccess('dashboard')">
+        <button @click="navigate('dashboard')" :class="activePage==='dashboard'?'bg-primary-600 text-white':'text-primary-200 hover:bg-primary-800/50 hover:text-white'"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 group">
+          <i class="fa-solid fa-gauge-high w-4 text-center flex-shrink-0"></i>
+          <span x-show="!sidebarCollapsed" class="font-medium">Dashboard</span>
+        </button>
+      </template>
+
+      <!-- Section builder via sidebar items -->
+      <template x-for="section in filteredSidebarSections()" :key="section.id">
+        <div>
+          <!-- Section title -->
+          <p x-show="!sidebarCollapsed" class="text-primary-500 text-[10px] font-bold uppercase tracking-widest px-3 pt-3 pb-1" x-text="section.label"></p>
+
+          <template x-for="item in section.items" :key="item.id">
+            <div>
+              <!-- Has children -->
+              <template x-if="item.children">
+                <div>
+                  <button @click="toggleDropdown(item.id)"
+                          :class="isChildActive(item)?'bg-primary-800/60 text-white':'text-primary-200 hover:bg-primary-800/40 hover:text-white'"
+                          class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-150">
+                    <div class="flex items-center gap-3">
+                      <i :class="item.icon" class="w-4 text-center flex-shrink-0"></i>
+                      <span x-show="!sidebarCollapsed" class="font-medium" x-text="item.label"></span>
+                    </div>
+                    <i x-show="!sidebarCollapsed" :class="openDropdowns.includes(item.id)?'fa-solid fa-chevron-up':'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                  </button>
+                  <!-- Children -->
+                  <div :class="openDropdowns.includes(item.id)?'max-h-[500px]':'max-h-0'" class="overflow-hidden transition-all duration-300 ml-3" x-show="!sidebarCollapsed">
+                    <template x-for="child in item.children" :key="child.id">
+                      <button @click="navigate(child.id)"
+                              :class="activePage===child.id?'bg-primary-600/80 text-white':'text-primary-300 hover:bg-primary-800/30 hover:text-white'"
+                              class="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all duration-150 mt-0.5">
+                        <i class="fa-solid fa-circle text-[6px] flex-shrink-0 ml-1"></i>
+                        <span x-text="child.label"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+
+              <!-- No children -->
+              <template x-if="!item.children">
+                <button @click="navigate(item.id)"
+                        :class="activePage===item.id?'bg-primary-600 text-white':'text-primary-200 hover:bg-primary-800/50 hover:text-white'"
+                        class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150">
+                  <i :class="item.icon" class="w-4 text-center flex-shrink-0"></i>
+                  <span x-show="!sidebarCollapsed" class="font-medium" x-text="item.label"></span>
+                </button>
+              </template>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Logout -->
+      <div class="pt-2">
+        <button @click="logout()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-primary-300 hover:bg-red-900/40 hover:text-red-400 transition-all duration-150">
+          <i class="fa-solid fa-right-from-bracket w-4 text-center flex-shrink-0"></i>
+          <span x-show="!sidebarCollapsed" class="font-medium">Logout</span>
+        </button>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- ============================================================
+       MAIN CONTENT AREA
+       ============================================================ -->
+  <div class="flex-1 flex flex-col overflow-hidden main-content">
+
+    <!-- TOP NAVBAR -->
+    <header class="navbar-bg flex items-center justify-between px-4 h-14 flex-shrink-0 relative z-30">
+      <!-- Left: Hamburger + Breadcrumb -->
+      <div class="flex items-center gap-3">
+        <button @click="sidebarOpen=!sidebarOpen" class="p-2 rounded-lg transition-colors lg:hidden"
+                :class="darkMode?'text-primary-300 hover:bg-primary-900':'text-primary-700 hover:bg-primary-50'">
+          <i class="fa-solid fa-bars text-sm"></i>
+        </button>
+        <button @click="sidebarCollapsed=!sidebarCollapsed" class="p-2 rounded-lg transition-colors hidden lg:block"
+                :class="darkMode?'text-primary-300 hover:bg-primary-900':'text-primary-700 hover:bg-primary-50'">
+          <i class="fa-solid fa-bars text-sm"></i>
+        </button>
+        <div class="hidden sm:flex items-center gap-2">
+          <span class="text-xs font-medium" :class="darkMode?'text-primary-400':'text-primary-500'">FEEDTAN DIGITAL</span>
+          <i class="fa-solid fa-chevron-right text-[10px]" :class="darkMode?'text-primary-700':'text-primary-300'"></i>
+          <span class="text-xs font-semibold" :class="darkMode?'text-primary-200':'text-primary-800'" x-text="getPageTitle()"></span>
+        </div>
+      </div>
+
+      <!-- Center: Search -->
+      <div class="hidden md:flex flex-1 max-w-xs mx-4">
+        <div class="relative w-full">
+          <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs" :class="darkMode?'text-primary-500':'text-primary-400'"></i>
+          <input type="text" placeholder="Search members, loans, transactions..."
+                 class="form-input input-field pl-8 text-xs py-2"
+                 :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-primary-50 border-primary-200 text-primary-900'"/>
+        </div>
+      </div>
+
+      <!-- Right: Actions -->
+      <div class="flex items-center gap-2">
+        <!-- Dark mode toggle -->
+        <button @click="darkMode=!darkMode;saveDarkMode()" class="p-2 rounded-lg transition-all duration-200"
+                :class="darkMode?'text-yellow-400 hover:bg-yellow-900/30':'text-primary-600 hover:bg-primary-100'">
+          <i :class="darkMode?'fa-solid fa-sun':'fa-solid fa-moon'" class="text-sm"></i>
+        </button>
+
+        <!-- Quick Actions -->
+        <button @click="showModal('quickAction')" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+          <i class="fa-solid fa-plus"></i><span class="hidden lg:inline">Quick Action</span>
+        </button>
+
+        <!-- Notifications -->
+        <div class="relative" x-data="{open:false}">
+          <button @click="open=!open" class="relative p-2 rounded-lg transition-colors"
+                  :class="darkMode?'text-primary-300 hover:bg-primary-900/50':'text-primary-700 hover:bg-primary-100'">
+            <i class="fa-solid fa-bell text-sm"></i>
+            <span class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-primary-900"></span>
+          </button>
+          <div x-show="open" @click.away="open=false" x-transition
+               class="absolute right-0 top-10 w-80 rounded-2xl shadow-2xl z-50 overflow-hidden"
+               :class="darkMode?'bg-[#0d1f16] border border-[#1a3328]':'bg-white border border-primary-100'">
+            <div class="p-4 border-b" :class="darkMode?'border-[#1a3328]':'border-primary-100'">
+              <div class="flex justify-between items-center">
+                <h3 class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'">Notifications</h3>
+                <span class="badge badge-green text-[10px]">8 New</span>
+              </div>
+            </div>
+            <div class="max-h-72 overflow-y-auto">
+              <template x-for="n in notifications.slice(0,5)" :key="n.id">
+                <div class="p-3 border-b transition-colors cursor-pointer"
+                     :class="[darkMode?'border-[#1a3328] hover:bg-primary-900/30':'border-primary-50 hover:bg-primary-50',n.unread?'':'opacity-60']">
+                  <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs"
+                         :class="n.type==='loan'?'bg-blue-900 text-blue-300':n.type==='deposit'?'bg-green-900 text-green-300':'bg-yellow-900 text-yellow-300'">
+                      <i :class="n.icon"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-xs font-semibold truncate" :class="darkMode?'text-white':'text-primary-900'" x-text="n.title"></p>
+                      <p class="text-[11px] mt-0.5" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="n.message"></p>
+                      <p class="text-[10px] mt-1 text-primary-500" x-text="n.time"></p>
+                    </div>
+                    <div x-show="n.unread" class="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-1"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+            <div class="p-3">
+              <button @click="navigate('notif-sms');open=false" class="w-full text-center text-xs text-primary-500 hover:text-primary-400 font-semibold py-1">View all notifications →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- User Profile -->
+        <div class="relative" x-data="{open:false}">
+          <button @click="open=!open" class="flex items-center gap-2 p-1.5 rounded-xl transition-colors"
+                  :class="darkMode?'hover:bg-primary-900/50':'hover:bg-primary-100'">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-700 flex items-center justify-center text-white font-bold text-sm"
+                 x-text="currentUser.name.charAt(0)"></div>
+            <div class="hidden lg:block text-left">
+              <p class="text-xs font-semibold leading-tight" :class="darkMode?'text-white':'text-primary-900'" x-text="currentUser.name"></p>
+              <p class="text-[10px]" :class="darkMode?'text-primary-400':'text-primary-500'" x-text="currentUser.branch"></p>
+            </div>
+            <i class="fa-solid fa-chevron-down text-[10px] hidden lg:block" :class="darkMode?'text-primary-400':'text-primary-400'"></i>
+          </button>
+          <div x-show="open" @click.away="open=false" x-transition
+               class="absolute right-0 top-11 w-56 rounded-2xl shadow-2xl z-50 py-2"
+               :class="darkMode?'bg-[#0d1f16] border border-[#1a3328]':'bg-white border border-primary-100'">
+            <div class="px-4 py-2 border-b" :class="darkMode?'border-[#1a3328]':'border-primary-100'">
+              <p class="text-xs font-bold" :class="darkMode?'text-white':'text-primary-900'" x-text="currentUser.name"></p>
+              <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="currentUser.email"></p>
+            </div>
+            <button @click="navigate('settings');open=false" class="w-full flex items-center gap-3 px-4 py-2.5 text-xs hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors text-left"
+                    :class="darkMode?'text-primary-300':'text-gray-700'">
+              <i class="fa-solid fa-gear w-4"></i> Settings
+            </button>
+            <button @click="navigate('profile');open=false" class="w-full flex items-center gap-3 px-4 py-2.5 text-xs hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors text-left"
+                    :class="darkMode?'text-primary-300':'text-gray-700'">
+              <i class="fa-solid fa-user w-4"></i> My Profile
+            </button>
+            <div class="border-t my-1" :class="darkMode?'border-[#1a3328]':'border-primary-100'"></div>
+            <button @click="logout();open=false" class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-left">
+              <i class="fa-solid fa-right-from-bracket w-4"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGES CONTAINER -->
+    <main class="flex-1 overflow-y-auto p-4 lg:p-6" :class="darkMode?'bg-[#0a140e]':'bg-[#f0fdf4]'">
+
+      <!-- ============================================================
+           DASHBOARD PAGE
+           ============================================================ -->
+      <div x-show="activePage==='dashboard'" class="animate-[fadeIn_0.4s_ease] space-y-6">
+
+        <!-- Role-based welcome -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold" :class="darkMode?'text-white':'text-primary-900'">
+              Good morning, <span x-text="currentUser.name.split(' ')[0]"></span> 👋
+            </h2>
+            <p class="text-sm mt-0.5" :class="darkMode?'text-primary-400':'text-primary-600'"
+               x-text="getDashboardSubtitle()"></p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-mono" :class="darkMode?'text-primary-400':'text-primary-500'" x-text="new Date().toLocaleDateString('sw-TZ',{weekday:'long',day:'numeric',month:'long',year:'numeric'})"></span>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="kpiCards">
+          <template x-for="(card,i) in getDashboardCards()" :key="card.id">
+            <div class="stat-card card" :style="`animation-delay:${i*80}ms`" style="animation:fadeIn 0.4s ease both">
+              <div class="bg-blob rounded-full" :style="`background:${card.color}`"></div>
+              <div class="flex items-start justify-between mb-4">
+                <div class="icon-wrap" :style="`background:${card.color}22`">
+                  <i :class="card.icon" :style="`color:${card.color}`"></i>
+                </div>
+                <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                      :style="`background:${card.trend>0?'#d1fae5':'#fee2e2'};color:${card.trend>0?'#065f46':'#991b1b'}`">
+                  <i :class="card.trend>0?'fa-solid fa-arrow-up':'fa-solid fa-arrow-down'" class="text-[10px]"></i>
+                  <span x-text="Math.abs(card.trend)+'%'"></span>
+                </span>
+              </div>
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-wider mb-1" :class="darkMode?'text-primary-400':'text-primary-500'" x-text="card.label"></p>
+                <p class="text-xl font-bold font-mono" :class="darkMode?'text-white':'text-primary-900'" x-text="card.value"></p>
+                <p class="text-[11px] mt-1" :class="darkMode?'text-primary-500':'text-gray-500'" x-text="card.sub"></p>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Loan Disbursement Chart -->
+          <div class="card rounded-2xl p-5 lg:col-span-2">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'">Loan Disbursements & Collections</h3>
+                <p class="text-xs mt-0.5" :class="darkMode?'text-primary-400':'text-gray-500'">Monthly trends — 2024</p>
+              </div>
+              <div class="flex gap-2">
+                <button class="text-[11px] px-3 py-1 rounded-lg bg-primary-600 text-white font-semibold">Monthly</button>
+                <button class="text-[11px] px-3 py-1 rounded-lg text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30 font-medium">Quarterly</button>
+              </div>
+            </div>
+            <canvas id="loanChart" height="200"></canvas>
+          </div>
+
+          <!-- Savings Breakdown Pie -->
+          <div class="card rounded-2xl p-5">
+            <div class="mb-4">
+              <h3 class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'">Savings Portfolio</h3>
+              <p class="text-xs mt-0.5" :class="darkMode?'text-primary-400':'text-gray-500'">By product type</p>
+            </div>
+            <canvas id="savingsChart" height="180"></canvas>
+            <div class="mt-4 space-y-2">
+              <template x-for="(item,i) in savingsBreakdown" :key="i">
+                <div class="flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-sm" :style="`background:${item.color}`"></div>
+                    <span :class="darkMode?'text-primary-300':'text-gray-600'" x-text="item.label"></span>
+                  </div>
+                  <span class="font-semibold font-mono" :class="darkMode?'text-white':'text-primary-900'" x-text="item.pct+'%'"></span>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Second Charts Row -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Member Growth -->
+          <div class="card rounded-2xl p-5">
+            <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-white':'text-primary-900'">Member Growth</h3>
+            <canvas id="memberChart" height="180"></canvas>
+          </div>
+
+          <!-- Investment ROI -->
+          <div class="card rounded-2xl p-5">
+            <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-white':'text-primary-900'">Investment ROI</h3>
+            <canvas id="investChart" height="180"></canvas>
+          </div>
+
+          <!-- Collection Rate -->
+          <div class="card rounded-2xl p-5">
+            <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-white':'text-primary-900'">Loan Collection Rate</h3>
+            <canvas id="collectionChart" height="180"></canvas>
+          </div>
+        </div>
+
+        <!-- Recent Transactions + Top Members -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <!-- Recent Transactions -->
+          <div class="card rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'">Recent Transactions</h3>
+              <button @click="navigate('savings-stmt')" class="text-xs text-primary-500 hover:text-primary-400 font-semibold">View All →</button>
+            </div>
+            <div class="space-y-3">
+              <template x-for="tx in recentTransactions.slice(0,7)" :key="tx.id">
+                <div class="flex items-center gap-3 p-2.5 rounded-xl transition-colors" :class="darkMode?'hover:bg-primary-900/20':'hover:bg-primary-50'">
+                  <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs flex-shrink-0"
+                       :class="tx.type==='deposit'?'bg-green-900/40 text-green-400':tx.type==='withdrawal'?'bg-red-900/40 text-red-400':'bg-blue-900/40 text-blue-400'">
+                    <i :class="tx.type==='deposit'?'fa-solid fa-arrow-down':tx.type==='withdrawal'?'fa-solid fa-arrow-up':'fa-solid fa-repeat'"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold truncate" :class="darkMode?'text-white':'text-primary-900'" x-text="tx.member"></p>
+                    <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="tx.desc"></p>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <p class="text-xs font-bold font-mono" :class="tx.type==='deposit'?'text-green-500':'text-red-500'"
+                       x-text="(tx.type==='deposit'?'+':'-')+'TZS '+tx.amount.toLocaleString()"></p>
+                    <p class="text-[10px]" :class="darkMode?'text-primary-500':'text-gray-400'" x-text="tx.time"></p>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <!-- Pending Approvals (role-based) -->
+          <div class="card rounded-2xl p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'">Pending Approvals</h3>
+              <span class="badge badge-yellow" x-text="pendingLoans.filter(l=>l.status==='pending').length+' Pending'"></span>
+            </div>
+            <div class="space-y-3">
+              <template x-for="loan in pendingLoans.slice(0,5)" :key="loan.id">
+                <div class="flex items-center gap-3 p-3 rounded-xl border" :class="darkMode?'border-[#1a3328]':'border-primary-100'">
+                  <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                       x-text="loan.member.charAt(0)"></div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold truncate" :class="darkMode?'text-white':'text-primary-900'" x-text="loan.member"></p>
+                    <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'">TZS <span x-text="loan.amount.toLocaleString()"></span> • <span x-text="loan.purpose"></span></p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span class="badge" :class="loan.status==='pending'?'badge-yellow':loan.status==='approved'?'badge-green':'badge-red'" x-text="loan.status"></span>
+                    <template x-if="(currentUser.role==='admin'||currentUser.role==='manager') && loan.status==='pending'">
+                      <button @click="approveLoan(loan)" class="w-6 h-6 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-[10px] flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-check"></i>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member Dashboard (only for member role) -->
+        <template x-if="currentUser.role==='member'">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-white':'text-primary-900'">My Savings Summary</h3>
+              <div class="space-y-3">
+                <template x-for="acc in memberAccounts" :key="acc.id">
+                  <div class="p-3 rounded-xl border" :class="darkMode?'border-[#1a3328]':'border-primary-100'">
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="acc.product"></span>
+                      <span class="badge badge-green" x-text="acc.status"></span>
+                    </div>
+                    <p class="text-lg font-bold font-mono text-primary-500">TZS <span x-text="acc.balance.toLocaleString()"></span></p>
+                    <div class="progress-bar mt-2">
+                      <div class="progress-fill" :style="`width:${acc.pct}%`"></div>
+                    </div>
+                    <p class="text-[11px] mt-1" :class="darkMode?'text-primary-400':'text-gray-500'">Target: TZS <span x-text="acc.target.toLocaleString()"></span></p>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-white':'text-primary-900'">My Active Loan</h3>
+              <template x-if="memberLoan">
+                <div>
+                  <div class="p-4 rounded-xl bg-gradient-to-br from-primary-800 to-primary-900 text-white">
+                    <p class="text-xs opacity-70 mb-1">Loan Balance</p>
+                    <p class="text-2xl font-bold font-mono">TZS <span x-text="memberLoan.balance.toLocaleString()"></span></p>
+                    <div class="grid grid-cols-2 gap-3 mt-4 text-xs">
+                      <div><p class="opacity-70">Principal</p><p class="font-bold" x-text="'TZS '+memberLoan.principal.toLocaleString()"></p></div>
+                      <div><p class="opacity-70">Interest Rate</p><p class="font-bold" x-text="memberLoan.rate+'% p.a'"></p></div>
+                      <div><p class="opacity-70">Next Payment</p><p class="font-bold" x-text="memberLoan.nextDate"></p></div>
+                      <div><p class="opacity-70">Installment</p><p class="font-bold" x-text="'TZS '+memberLoan.installment.toLocaleString()"></p></div>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- ============================================================
+           ACTIVE MEMBERS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='members-active'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Active Members</h2>
+          <div class="flex gap-2 flex-wrap">
+            <button @click="showModal('addMember')" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+              <i class="fa-solid fa-plus"></i> Add Member
+            </button>
+            <button class="flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-semibold transition-colors"
+                    :class="darkMode?'border-[#1a3328] text-primary-300 hover:bg-primary-900/30':'border-primary-200 text-primary-700 hover:bg-primary-50'">
+              <i class="fa-solid fa-file-excel"></i> Export
+            </button>
+          </div>
+        </div>
+
+        <div class="card rounded-2xl p-5">
+          <!-- Search & Filters -->
+          <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <div class="relative flex-1">
+              <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-xs" :class="darkMode?'text-primary-500':'text-primary-400'"></i>
+              <input type="text" x-model="memberSearch" placeholder="Search by name, phone, NIDA..."
+                     class="form-input input-field pl-8 text-xs py-2"
+                     :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+            </div>
+            <select class="form-input input-field text-xs py-2 w-full sm:w-auto"
+                    :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+              <option>All Regions</option>
+              <option>Dar es Salaam</option>
+              <option>Mwanza</option>
+              <option>Arusha</option>
+              <option>Mbeya</option>
+              <option>Dodoma</option>
+            </select>
+            <select class="form-input input-field text-xs py-2 w-full sm:w-auto"
+                    :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+              <option>All Types</option>
+              <option>Regular</option>
+              <option>Group</option>
+              <option>Junior</option>
+            </select>
+          </div>
+
+          <!-- Table -->
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="text-left">Member</th>
+                  <th class="text-left">NIDA / ID</th>
+                  <th class="text-left">Region</th>
+                  <th class="text-left">Savings</th>
+                  <th class="text-left">Loans</th>
+                  <th class="text-left">Joined</th>
+                  <th class="text-left">Status</th>
+                  <th class="text-left">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="(m,i) in filteredMembers()" :key="m.id">
+                  <tr class="table-row" x-show="i < memberPage*15 && i >= (memberPage-1)*15">
+                    <td>
+                      <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                             x-text="m.name.charAt(0)"></div>
+                        <div>
+                          <p class="font-semibold text-xs" :class="darkMode?'text-white':'text-primary-900'" x-text="m.name"></p>
+                          <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="m.phone"></p>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="font-mono text-[11px]" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="m.nida"></td>
+                    <td class="text-xs" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="m.region"></td>
+                    <td class="font-mono text-xs text-green-500 font-semibold" x-text="'TZS '+m.savings.toLocaleString()"></td>
+                    <td class="font-mono text-xs" :class="m.loans>0?'text-yellow-500 font-semibold':darkMode?'text-primary-400':'text-gray-400'"
+                        x-text="m.loans>0?'TZS '+m.loans.toLocaleString():'None'"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="m.joined"></td>
+                    <td><span class="badge" :class="m.status==='Active'?'badge-green':m.status==='Inactive'?'badge-red':'badge-yellow'" x-text="m.status"></span></td>
+                    <td>
+                      <div class="flex items-center gap-1">
+                        <button @click="navigate('member-profile')" class="p-1.5 rounded-lg text-primary-500 hover:bg-primary-100 dark:hover:bg-primary-900/30 text-[11px] transition-colors" title="View">
+                          <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button class="p-1.5 rounded-lg text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-[11px] transition-colors" title="Edit">
+                          <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="p-1.5 rounded-lg text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 text-[11px] transition-colors" title="Disable">
+                          <i class="fa-solid fa-ban"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="flex items-center justify-between mt-4">
+            <p class="text-xs" :class="darkMode?'text-primary-400':'text-gray-500'">Showing <span x-text="(memberPage-1)*15+1"></span>–<span x-text="Math.min(memberPage*15,filteredMembers().length)"></span> of <span x-text="filteredMembers().length"></span> members</p>
+            <div class="flex items-center gap-1">
+              <button @click="memberPage>1&&memberPage--" class="p-1.5 rounded-lg text-xs transition-colors"
+                      :class="darkMode?'text-primary-300 hover:bg-primary-900/30':'text-primary-700 hover:bg-primary-100'">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <template x-for="p in Math.ceil(filteredMembers().length/15)" :key="p">
+                <button @click="memberPage=p" class="w-7 h-7 rounded-lg text-xs font-semibold transition-colors"
+                        :class="memberPage===p?'bg-primary-600 text-white':darkMode?'text-primary-300 hover:bg-primary-900/30':'text-primary-700 hover:bg-primary-100'"
+                        x-text="p" x-show="p<=5"></button>
+              </template>
+              <button @click="memberPage<Math.ceil(filteredMembers().length/15)&&memberPage++" class="p-1.5 rounded-lg text-xs transition-colors"
+                      :class="darkMode?'text-primary-300 hover:bg-primary-900/30':'text-primary-700 hover:bg-primary-100'">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           MEMBER REGISTRATION PAGE
+           ============================================================ -->
+      <div x-show="activePage==='member-register'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Register New Member</h2>
+
+        <div class="card rounded-2xl p-6 space-y-6">
+          <!-- Personal Info -->
+          <div>
+            <h3 class="text-sm font-bold mb-4 flex items-center gap-2" :class="darkMode?'text-primary-200':'text-primary-800'">
+              <span class="w-6 h-6 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center">1</span>
+              Personal Information
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Full Name *</label>
+                <input type="text" class="form-input input-field" placeholder="Jina Kamili" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Gender *</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>Chagua Jinsia</option><option>Male</option><option>Female</option></select></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">NIDA Number *</label>
+                <input type="text" class="form-input input-field" placeholder="19XXXXXXXXXXXXXXXXXXX" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Date of Birth *</label>
+                <input type="date" class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Marital Status</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>Single</option><option>Married</option><option>Divorced</option><option>Widowed</option></select></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Mobile Number *</label>
+                <input type="tel" class="form-input input-field" placeholder="+255 7XX XXX XXX" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Email Address</label>
+                <input type="email" class="form-input input-field" placeholder="email@example.com" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Occupation</label>
+                <input type="text" class="form-input input-field" placeholder="e.g. Teacher, Farmer" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Employer</label>
+                <input type="text" class="form-input input-field" placeholder="Employer/Company Name" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+            </div>
+          </div>
+
+          <!-- Address -->
+          <div>
+            <h3 class="text-sm font-bold mb-4 flex items-center gap-2" :class="darkMode?'text-primary-200':'text-primary-800'">
+              <span class="w-6 h-6 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center">2</span>
+              Address Information
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Region *</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>Dar es Salaam</option><option>Mwanza</option><option>Arusha</option>
+                  <option>Mbeya</option><option>Dodoma</option><option>Morogoro</option>
+                  <option>Tanga</option><option>Kilimanjaro</option><option>Kagera</option>
+                </select></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">District *</label>
+                <input type="text" class="form-input input-field" placeholder="District" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Ward</label>
+                <input type="text" class="form-input input-field" placeholder="Ward" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Street</label>
+                <input type="text" class="form-input input-field" placeholder="Street" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">P.O. Box</label>
+                <input type="text" class="form-input input-field" placeholder="S.L.P" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+            </div>
+          </div>
+
+          <!-- Membership -->
+          <div>
+            <h3 class="text-sm font-bold mb-4 flex items-center gap-2" :class="darkMode?'text-primary-200':'text-primary-800'">
+              <span class="w-6 h-6 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center">3</span>
+              Membership Details
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Membership Type *</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>Regular Member</option><option>Group Member</option><option>Junior Member</option><option>Institutional</option></select></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Branch *</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>Dar es Salaam HQ</option><option>Mwanza Branch</option><option>Arusha Branch</option></select></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Share Capital (TZS)</label>
+                <input type="number" class="form-input input-field" placeholder="100,000" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+            </div>
+          </div>
+
+          <!-- Next of Kin -->
+          <div>
+            <h3 class="text-sm font-bold mb-4 flex items-center gap-2" :class="darkMode?'text-primary-200':'text-primary-800'">
+              <span class="w-6 h-6 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center">4</span>
+              Next of Kin / Beneficiaries
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Next of Kin Name *</label>
+                <input type="text" class="form-input input-field" placeholder="Full Name" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Relationship *</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>Spouse</option><option>Parent</option><option>Sibling</option><option>Child</option></select></div>
+              <div><label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Next of Kin Phone</label>
+                <input type="tel" class="form-input input-field" placeholder="+255 7XX XXX XXX" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+            </div>
+          </div>
+
+          <!-- Document Upload -->
+          <div>
+            <h3 class="text-sm font-bold mb-4 flex items-center gap-2" :class="darkMode?'text-primary-200':'text-primary-800'">
+              <span class="w-6 h-6 rounded-full bg-primary-600 text-white text-xs flex items-center justify-center">5</span>
+              Documents
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
+                   :class="darkMode?'border-[#1a3328] hover:border-primary-600':'border-primary-200 hover:border-primary-500'">
+                <i class="fa-solid fa-camera text-2xl mb-2" :class="darkMode?'text-primary-400':'text-primary-400'"></i>
+                <p class="text-xs font-semibold" :class="darkMode?'text-primary-300':'text-primary-700'">Passport Photo</p>
+                <p class="text-[11px] mt-1" :class="darkMode?'text-primary-500':'text-gray-400'">Click to upload or drag & drop</p>
+              </div>
+              <div class="border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors"
+                   :class="darkMode?'border-[#1a3328] hover:border-primary-600':'border-primary-200 hover:border-primary-500'">
+                <i class="fa-solid fa-id-card text-2xl mb-2" :class="darkMode?'text-primary-400':'text-primary-400'"></i>
+                <p class="text-xs font-semibold" :class="darkMode?'text-primary-300':'text-primary-700'">NIDA Card / ID</p>
+                <p class="text-[11px] mt-1" :class="darkMode?'text-primary-500':'text-gray-400'">Click to upload or drag & drop</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-3 justify-end">
+            <button class="px-6 py-2.5 rounded-xl border text-xs font-semibold transition-colors"
+                    :class="darkMode?'border-[#1a3328] text-primary-300 hover:bg-primary-900/30':'border-primary-200 text-primary-700 hover:bg-primary-50'">
+              Cancel
+            </button>
+            <button @click="showToast('Member registered successfully!','success')"
+                    class="px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+              <i class="fa-solid fa-user-plus mr-2"></i> Register Member
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SAVINGS - DEPOSIT MONEY PAGE
+           ============================================================ -->
+      <div x-show="activePage==='savings-deposit'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Deposit Money</h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Deposit Form -->
+          <div class="card rounded-2xl p-6 lg:col-span-2 space-y-4">
+            <h3 class="font-bold text-sm mb-2" :class="darkMode?'text-primary-200':'text-primary-800'">New Deposit Transaction</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Member *</label>
+                <input type="text" class="form-input input-field" placeholder="Search member name or phone..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Account / Product *</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>RDA – Regular Deposit Account</option>
+                  <option>Emergency Savings Fund</option>
+                  <option>FLEX – Flexible Savings</option>
+                  <option>SWF – Share Welfare Fund</option>
+                  <option>Share Capital</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Amount (TZS) *</label>
+                <input type="number" class="form-input input-field" placeholder="0.00" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Payment Channel *</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>Cash</option><option>M-Pesa</option><option>Airtel Money</option>
+                  <option>TigoPesa</option><option>HaloPesa</option><option>Bank Transfer</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Transaction Date *</label>
+                <input type="date" class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Reference Number</label>
+                <input type="text" class="form-input input-field" placeholder="Auto-generated" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div class="md:col-span-2">
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Narration</label>
+                <textarea rows="2" class="form-input input-field" placeholder="Deposit narration..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"></textarea>
+              </div>
+            </div>
+            <div class="flex justify-end gap-3">
+              <button class="px-6 py-2.5 rounded-xl border text-xs font-semibold transition-colors"
+                      :class="darkMode?'border-[#1a3328] text-primary-300 hover:bg-primary-900/30':'border-primary-200 text-primary-700 hover:bg-primary-50'">Reset</button>
+              <button @click="showToast('Deposit processed successfully! Receipt generated.','success')"
+                      class="px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+                <i class="fa-solid fa-money-bill-transfer mr-2"></i> Process Deposit
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Summary -->
+          <div class="space-y-4">
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-xs mb-4" :class="darkMode?'text-primary-300':'text-primary-700'">Today's Deposits</h3>
+              <div class="space-y-3">
+                <div>
+                  <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'">Total Collected</p>
+                  <p class="text-xl font-bold font-mono text-primary-500">TZS 48,750,000</p>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="p-2.5 rounded-xl" :class="darkMode?'bg-primary-900/30':'bg-primary-50'">
+                    <p class="text-[10px]" :class="darkMode?'text-primary-400':'text-gray-500'">Transactions</p>
+                    <p class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'">127</p>
+                  </div>
+                  <div class="p-2.5 rounded-xl" :class="darkMode?'bg-primary-900/30':'bg-primary-50'">
+                    <p class="text-[10px]" :class="darkMode?'text-primary-400':'text-gray-500'">Via Mobile</p>
+                    <p class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'">89</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-xs mb-3" :class="darkMode?'text-primary-300':'text-primary-700'">Channel Breakdown</h3>
+              <div class="space-y-2.5">
+                <template x-for="ch in depositChannels" :key="ch.name">
+                  <div>
+                    <div class="flex justify-between text-[11px] mb-1">
+                      <span :class="darkMode?'text-primary-300':'text-gray-600'" x-text="ch.name"></span>
+                      <span class="font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="ch.pct+'%'"></span>
+                    </div>
+                    <div class="progress-bar">
+                      <div class="progress-fill" :style="`width:${ch.pct}%`"></div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Deposits Table -->
+        <div class="card rounded-2xl p-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'">Recent Deposit Transactions</h3>
+            <div class="flex gap-2">
+              <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                      :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">
+                <i class="fa-solid fa-file-pdf"></i> PDF
+              </button>
+              <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                      :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">
+                <i class="fa-solid fa-file-excel"></i> Excel
+              </button>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">Member</th>
+                <th class="text-left">Product</th>
+                <th class="text-left">Reference</th>
+                <th class="text-left">Channel</th>
+                <th class="text-right">Amount (TZS)</th>
+                <th class="text-right">Balance (TZS)</th>
+                <th class="text-left">Date</th>
+                <th class="text-left">Status</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="d in recentDeposits.slice(0,10)" :key="d.id">
+                  <tr class="table-row">
+                    <td class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="d.member"></td>
+                    <td><span class="badge badge-blue text-[10px]" x-text="d.product"></span></td>
+                    <td class="font-mono text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="d.ref"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="d.channel"></td>
+                    <td class="text-right font-mono text-xs font-semibold text-green-500" x-text="d.amount.toLocaleString()"></td>
+                    <td class="text-right font-mono text-xs" :class="darkMode?'text-primary-300':'text-gray-700'" x-text="d.balance.toLocaleString()"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="d.date"></td>
+                    <td><span class="badge badge-green text-[10px]">Completed</span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           LOAN APPLICATION PAGE
+           ============================================================ -->
+      <div x-show="activePage==='loan-apply'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Loan Application</h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="lg:col-span-2 card rounded-2xl p-6 space-y-5">
+            <h3 class="font-bold text-sm" :class="darkMode?'text-primary-200':'text-primary-800'">Loan Application Form</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Applicant Member *</label>
+                <input type="text" class="form-input input-field" placeholder="Search member..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Loan Type *</label>
+                <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>Emergency Loan</option><option>Development Loan</option>
+                  <option>Business Loan</option><option>Education Loan</option>
+                  <option>Housing Loan</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Principal Amount (TZS) *</label>
+                <input type="number" x-model="loanCalc.principal" @input="calcLoan()" class="form-input input-field" placeholder="e.g. 5,000,000" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Interest Rate (% p.a.) *</label>
+                <input type="number" x-model="loanCalc.rate" @input="calcLoan()" class="form-input input-field" value="18" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Repayment Period (Months) *</label>
+                <input type="number" x-model="loanCalc.months" @input="calcLoan()" class="form-input input-field" value="12" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Disbursement Date *</label>
+                <input type="date" class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Guarantor 1 *</label>
+                <input type="text" class="form-input input-field" placeholder="Search guarantor..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Guarantor 2</label>
+                <input type="text" class="form-input input-field" placeholder="Search guarantor..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div class="md:col-span-2">
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Loan Purpose *</label>
+                <textarea rows="2" class="form-input input-field" placeholder="Describe the purpose of this loan..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"></textarea>
+              </div>
+            </div>
+            <div class="flex justify-end gap-3">
+              <button class="px-6 py-2.5 rounded-xl border text-xs font-semibold transition-colors"
+                      :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">Cancel</button>
+              <button @click="showToast('Loan application submitted for approval!','success')"
+                      class="px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+                <i class="fa-solid fa-file-invoice-dollar mr-2"></i> Submit Application
+              </button>
+            </div>
+          </div>
+
+          <!-- Loan Calculator -->
+          <div class="space-y-4">
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-xs mb-4" :class="darkMode?'text-primary-300':'text-primary-700'">
+                <i class="fa-solid fa-calculator mr-2"></i>Loan Calculator
+              </h3>
+              <div class="space-y-3">
+                <div class="flex justify-between">
+                  <span class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'">Principal</span>
+                  <span class="text-xs font-bold font-mono" :class="darkMode?'text-white':'text-primary-900'" x-text="'TZS '+(loanCalc.principal||0).toLocaleString()"></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'">Total Interest</span>
+                  <span class="text-xs font-bold font-mono text-yellow-500" x-text="'TZS '+loanCalc.interest.toLocaleString()"></span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'">Processing Fee (1%)</span>
+                  <span class="text-xs font-bold font-mono" :class="darkMode?'text-white':'text-primary-900'" x-text="'TZS '+(Math.round((loanCalc.principal||0)*0.01)).toLocaleString()"></span>
+                </div>
+                <div class="border-t pt-3" :class="darkMode?'border-[#1a3328]':'border-primary-100'">
+                  <div class="flex justify-between">
+                    <span class="text-xs font-bold" :class="darkMode?'text-primary-200':'text-primary-800'">Total Payable</span>
+                    <span class="text-sm font-bold font-mono text-primary-500" x-text="'TZS '+loanCalc.total.toLocaleString()"></span>
+                  </div>
+                </div>
+                <div class="p-3 rounded-xl" :class="darkMode?'bg-primary-900/30':'bg-primary-50'">
+                  <p class="text-[10px] mb-1" :class="darkMode?'text-primary-400':'text-gray-500'">Monthly Installment</p>
+                  <p class="text-lg font-bold font-mono text-primary-500" x-text="'TZS '+loanCalc.monthly.toLocaleString()"></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Eligibility Check -->
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-xs mb-3" :class="darkMode?'text-primary-300':'text-primary-700'">
+                <i class="fa-solid fa-shield-check mr-2 text-primary-500"></i>Eligibility
+              </h3>
+              <div class="space-y-2.5">
+                <template x-for="e in eligibilityChecks" :key="e.label">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px]" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="e.label"></span>
+                    <i :class="e.pass?'fa-solid fa-circle-check text-green-500':'fa-solid fa-circle-xmark text-red-500'" class="text-sm"></i>
+                  </div>
+                </template>
+              </div>
+              <div class="mt-3 p-2.5 rounded-xl bg-green-900/20 border border-green-800">
+                <p class="text-[11px] text-green-400 font-semibold">✓ Member is eligible for this loan</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           ACTIVE LOANS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='loan-active'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Active Loans</h2>
+          <div class="flex gap-2">
+            <button @click="navigate('loan-apply')" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+              <i class="fa-solid fa-plus"></i> New Loan
+            </button>
+          </div>
+        </div>
+
+        <!-- Loan Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="card rounded-xl p-4">
+            <p class="text-[11px] font-semibold" :class="darkMode?'text-primary-400':'text-primary-500'">Active Loans</p>
+            <p class="text-xl font-bold font-mono mt-1" :class="darkMode?'text-white':'text-primary-900'">247</p>
+          </div>
+          <div class="card rounded-xl p-4">
+            <p class="text-[11px] font-semibold" :class="darkMode?'text-primary-400':'text-primary-500'">Total Disbursed</p>
+            <p class="text-xl font-bold font-mono mt-1 text-primary-500">1.82B</p>
+          </div>
+          <div class="card rounded-xl p-4">
+            <p class="text-[11px] font-semibold" :class="darkMode?'text-primary-400':'text-primary-500'">Total Outstanding</p>
+            <p class="text-xl font-bold font-mono mt-1 text-yellow-500">987.5M</p>
+          </div>
+          <div class="card rounded-xl p-4">
+            <p class="text-[11px] font-semibold" :class="darkMode?'text-primary-400':'text-primary-500'">Overdue</p>
+            <p class="text-xl font-bold font-mono mt-1 text-red-500">18</p>
+          </div>
+        </div>
+
+        <div class="card rounded-2xl p-5">
+          <div class="flex flex-col sm:flex-row gap-3 mb-4">
+            <input type="text" placeholder="Search loans..." class="form-input input-field text-xs py-2 flex-1"
+                   :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+            <select class="form-input input-field text-xs py-2 w-full sm:w-auto"
+                    :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+              <option>All Types</option><option>Emergency</option><option>Development</option><option>Business</option>
+            </select>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">Member</th>
+                <th class="text-left">Loan Type</th>
+                <th class="text-right">Principal</th>
+                <th class="text-right">Interest</th>
+                <th class="text-right">Balance</th>
+                <th class="text-left">Installment</th>
+                <th class="text-left">Due Date</th>
+                <th class="text-left">Status</th>
+                <th class="text-left">Actions</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="loan in activeLoans.slice(0,12)" :key="loan.id">
+                  <tr class="table-row">
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-full bg-primary-800 flex items-center justify-center text-primary-300 text-xs font-bold" x-text="loan.member.charAt(0)"></div>
+                        <div>
+                          <p class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="loan.member"></p>
+                          <p class="text-[10px]" :class="darkMode?'text-primary-500':'text-gray-400'" x-text="loan.id"></p>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="badge badge-blue text-[10px]" x-text="loan.type"></span></td>
+                    <td class="text-right font-mono text-xs" :class="darkMode?'text-primary-300':'text-gray-700'" x-text="loan.principal.toLocaleString()"></td>
+                    <td class="text-right font-mono text-xs text-yellow-500" x-text="loan.interest.toLocaleString()"></td>
+                    <td class="text-right font-mono text-xs font-bold text-red-500" x-text="loan.balance.toLocaleString()"></td>
+                    <td class="text-xs" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="'TZS '+loan.installment.toLocaleString()"></td>
+                    <td class="text-xs" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="loan.dueDate"></td>
+                    <td><span class="badge" :class="loan.status==='Current'?'badge-green':loan.status==='Overdue'?'badge-red':'badge-yellow'" x-text="loan.status"></span></td>
+                    <td>
+                      <div class="flex items-center gap-1">
+                        <button class="p-1.5 rounded-lg text-primary-500 hover:bg-primary-100 dark:hover:bg-primary-900/30 text-[11px]"><i class="fa-solid fa-eye"></i></button>
+                        <button @click="showModal('repayment')" class="p-1.5 rounded-lg text-green-500 hover:bg-green-100 dark:hover:bg-green-900/30 text-[11px]"><i class="fa-solid fa-money-bill"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SAVINGS ACCOUNTS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='savings-accounts'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Savings Accounts</h2>
+        </div>
+
+        <!-- Product Summary -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <template x-for="p in savingsProducts" :key="p.id">
+            <div class="card rounded-xl p-4 cursor-pointer hover:border-primary-500 transition-colors border"
+                 :class="darkMode?'border-[#1a3328] hover:border-primary-600':'border-transparent hover:border-primary-400'">
+              <div class="flex items-center justify-between mb-3">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-xs" :style="`background:${p.color}22;color:${p.color}`">
+                  <i :class="p.icon"></i>
+                </div>
+                <span class="text-[10px] font-bold" :style="`color:${p.color}`" x-text="p.rate+'% p.a'"></span>
+              </div>
+              <p class="text-[11px] font-bold mb-1" :class="darkMode?'text-primary-300':'text-primary-700'" x-text="p.code"></p>
+              <p class="text-lg font-bold font-mono" :class="darkMode?'text-white':'text-primary-900'" x-text="'TZS '+(p.total/1000000).toFixed(1)+'M'"></p>
+              <p class="text-[10px] mt-1" :class="darkMode?'text-primary-500':'text-gray-400'" x-text="p.members+' accounts'"></p>
+            </div>
+          </template>
+        </div>
+
+        <div class="card rounded-2xl p-5">
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">Member</th><th class="text-left">Account No.</th>
+                <th class="text-left">Product</th><th class="text-right">Balance</th>
+                <th class="text-right">Interest Earned</th><th class="text-left">Last Activity</th><th class="text-left">Status</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="acc in savingsAccounts.slice(0,12)" :key="acc.id">
+                  <tr class="table-row">
+                    <td class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="acc.member"></td>
+                    <td class="font-mono text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="acc.accNo"></td>
+                    <td><span class="badge badge-blue text-[10px]" x-text="acc.product"></span></td>
+                    <td class="text-right font-mono text-xs text-green-500 font-bold" x-text="'TZS '+acc.balance.toLocaleString()"></td>
+                    <td class="text-right font-mono text-xs text-yellow-500" x-text="'TZS '+acc.interest.toLocaleString()"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="acc.lastActivity"></td>
+                    <td><span class="badge badge-green text-[10px]">Active</span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           INVESTMENTS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='investments-active'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Active Investments</h2>
+          <button @click="showModal('addInvestment')" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+            <i class="fa-solid fa-plus"></i> New Investment
+          </button>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="card rounded-xl p-4">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Total Invested</p>
+            <p class="text-xl font-bold font-mono mt-1" :class="darkMode?'text-white':'text-primary-900'">TZS 3.4B</p>
+          </div>
+          <div class="card rounded-xl p-4">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Total ROI</p>
+            <p class="text-xl font-bold font-mono mt-1 text-primary-500">TZS 612M</p>
+          </div>
+          <div class="card rounded-xl p-4">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Active Plans</p>
+            <p class="text-xl font-bold font-mono mt-1 text-blue-500">48</p>
+          </div>
+          <div class="card rounded-xl p-4">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Maturing Soon</p>
+            <p class="text-xl font-bold font-mono mt-1 text-yellow-500">7</p>
+          </div>
+        </div>
+
+        <div class="card rounded-2xl p-5">
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">Member</th><th class="text-left">Plan</th>
+                <th class="text-right">Principal</th><th class="text-right">ROI %</th>
+                <th class="text-right">Returns</th><th class="text-left">Start</th>
+                <th class="text-left">Maturity</th><th class="text-left">Status</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="inv in investments.slice(0,12)" :key="inv.id">
+                  <tr class="table-row">
+                    <td class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="inv.member"></td>
+                    <td><span class="badge badge-blue text-[10px]" x-text="inv.plan"></span></td>
+                    <td class="text-right font-mono text-xs" :class="darkMode?'text-primary-300':'text-gray-700'" x-text="'TZS '+inv.principal.toLocaleString()"></td>
+                    <td class="text-right font-mono text-xs text-primary-500 font-bold" x-text="inv.roi+'%'"></td>
+                    <td class="text-right font-mono text-xs text-green-500" x-text="'TZS '+inv.returns.toLocaleString()"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="inv.start"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="inv.maturity"></td>
+                    <td><span class="badge" :class="inv.status==='Active'?'badge-green':inv.status==='Matured'?'badge-blue':'badge-yellow'" x-text="inv.status"></span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           ACCOUNTING – GENERAL LEDGER
+           ============================================================ -->
+      <div x-show="activePage==='accounting-ledger'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">General Ledger</h2>
+          <div class="flex gap-2">
+            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary-600 hover:bg-primary-500 text-white transition-all">
+              <i class="fa-solid fa-file-pdf"></i> PDF
+            </button>
+            <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors"
+                    :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">
+              <i class="fa-solid fa-print"></i> Print
+            </button>
+          </div>
+        </div>
+
+        <!-- Balance Overview -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="card rounded-xl p-4 border-l-4 border-green-500">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Total Assets</p>
+            <p class="text-2xl font-bold font-mono mt-1 text-green-500">TZS 8.74B</p>
+          </div>
+          <div class="card rounded-xl p-4 border-l-4 border-red-500">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Total Liabilities</p>
+            <p class="text-2xl font-bold font-mono mt-1 text-red-500">TZS 5.12B</p>
+          </div>
+          <div class="card rounded-xl p-4 border-l-4 border-blue-500">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Members' Equity</p>
+            <p class="text-2xl font-bold font-mono mt-1 text-blue-500">TZS 3.62B</p>
+          </div>
+        </div>
+
+        <div class="card rounded-2xl p-5">
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">Account Code</th><th class="text-left">Account Name</th>
+                <th class="text-left">Category</th><th class="text-right">Debit (TZS)</th>
+                <th class="text-right">Credit (TZS)</th><th class="text-right">Balance (TZS)</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="entry in ledgerEntries" :key="entry.code">
+                  <tr class="table-row">
+                    <td class="font-mono text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="entry.code"></td>
+                    <td class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="entry.name"></td>
+                    <td><span class="badge text-[10px]" :class="entry.cat==='Asset'?'badge-green':entry.cat==='Liability'?'badge-red':entry.cat==='Income'?'badge-blue':'badge-yellow'" x-text="entry.cat"></span></td>
+                    <td class="text-right font-mono text-xs" :class="darkMode?'text-primary-300':'text-gray-700'" x-text="entry.debit.toLocaleString()"></td>
+                    <td class="text-right font-mono text-xs" :class="darkMode?'text-primary-300':'text-gray-700'" x-text="entry.credit.toLocaleString()"></td>
+                    <td class="text-right font-mono text-xs font-bold" :class="entry.balance>=0?'text-green-500':'text-red-500'" x-text="entry.balance.toLocaleString()"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           REPORTS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='reports-financial'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Financial Reports</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="r in reportTypes" :key="r.id">
+            <div class="card rounded-2xl p-5 cursor-pointer hover:border-primary-500 transition-all border"
+                 :class="darkMode?'border-[#1a3328] hover:border-primary-600':'border-transparent hover:border-primary-400'">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center mb-4" :style="`background:${r.color}22;color:${r.color}`">
+                <i :class="r.icon" class="text-lg"></i>
+              </div>
+              <h3 class="font-bold text-sm mb-1" :class="darkMode?'text-white':'text-primary-900'" x-text="r.title"></h3>
+              <p class="text-xs mb-4" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="r.desc"></p>
+              <div class="flex gap-2">
+                <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold bg-primary-600 text-white hover:bg-primary-500 transition-colors">
+                  <i class="fa-solid fa-file-pdf"></i> PDF
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors"
+                        :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">
+                  <i class="fa-solid fa-file-excel"></i> Excel
+                </button>
+                <button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold border transition-colors"
+                        :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">
+                  <i class="fa-solid fa-print"></i>
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           PAYMENTS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='payments-mpesa'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Mobile Money Integration</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <template x-for="provider in paymentProviders" :key="provider.id">
+            <div class="card rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white" :style="`background:${provider.color}`"
+                       x-text="provider.code"></div>
+                  <div>
+                    <p class="font-bold text-sm" :class="darkMode?'text-white':'text-primary-900'" x-text="provider.name"></p>
+                    <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="provider.desc"></p>
+                  </div>
+                </div>
+                <span class="badge" :class="provider.active?'badge-green':'badge-red'" x-text="provider.active?'Active':'Inactive'"></span>
+              </div>
+              <div class="grid grid-cols-2 gap-3 text-center">
+                <div class="p-2.5 rounded-xl" :class="darkMode?'bg-primary-900/30':'bg-primary-50'">
+                  <p class="text-[10px]" :class="darkMode?'text-primary-400':'text-gray-500'">Today</p>
+                  <p class="font-bold text-sm font-mono" :class="darkMode?'text-white':'text-primary-900'" x-text="'TZS '+provider.today.toLocaleString()"></p>
+                </div>
+                <div class="p-2.5 rounded-xl" :class="darkMode?'bg-primary-900/30':'bg-primary-50'">
+                  <p class="text-[10px]" :class="darkMode?'text-primary-400':'text-gray-500'">This Month</p>
+                  <p class="font-bold text-sm font-mono" :class="darkMode?'text-white':'text-primary-900'" x-text="'TZS '+(provider.month/1000000).toFixed(1)+'M'"></p>
+                </div>
+              </div>
+              <button class="mt-3 w-full py-2 rounded-xl text-xs font-semibold transition-colors"
+                      :class="provider.active?'bg-primary-600 hover:bg-primary-500 text-white':'border border-gray-500 text-gray-400'">
+                <span x-text="provider.active?'Manage Integration':'Enable Integration'"></span>
+              </button>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           SETTINGS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='settings'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">System Settings</h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- General Settings -->
+          <div class="lg:col-span-2 space-y-4">
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-primary-200':'text-primary-800'">General Settings</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Organization Name</label>
+                  <input type="text" value="FEEDTAN Cooperative Society" class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+                </div>
+                <div>
+                  <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Registration No.</label>
+                  <input type="text" value="CO/DSM/2018/001234" class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+                </div>
+                <div>
+                  <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Default Currency</label>
+                  <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                    <option selected>TZS – Tanzanian Shilling</option>
+                    <option>USD – US Dollar</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Fiscal Year Start</label>
+                  <select class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                    <option>January</option><option>July</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-primary-200':'text-primary-800'">Loan Configuration</h3>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Default Interest Rate</label>
+                  <input type="number" value="18" class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+                </div>
+                <div>
+                  <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Processing Fee (%)</label>
+                  <input type="number" value="1" class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+                </div>
+                <div>
+                  <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Penalty Rate (%)</label>
+                  <input type="number" value="5" class="form-input input-field" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+                </div>
+              </div>
+            </div>
+
+            <!-- Theme Settings -->
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-primary-200':'text-primary-800'">Appearance</h3>
+              <div class="flex items-center justify-between p-3 rounded-xl border" :class="darkMode?'border-[#1a3328]':'border-primary-100'">
+                <div>
+                  <p class="text-sm font-semibold" :class="darkMode?'text-white':'text-primary-900'">Dark Mode</p>
+                  <p class="text-xs" :class="darkMode?'text-primary-400':'text-gray-500'">Enable dark/night mode</p>
+                </div>
+                <button @click="darkMode=!darkMode;saveDarkMode()"
+                        class="relative w-11 h-6 rounded-full transition-colors duration-200"
+                        :class="darkMode?'bg-primary-500':'bg-gray-300'">
+                  <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform duration-200"
+                        :class="darkMode?'translate-x-5':'translate-x-0'"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Settings Sidebar -->
+          <div class="space-y-4">
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-xs mb-4" :class="darkMode?'text-primary-300':'text-primary-700'">Notifications</h3>
+              <div class="space-y-3">
+                <template x-for="setting in notifSettings" :key="setting.id">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs" :class="darkMode?'text-primary-300':'text-gray-700'" x-text="setting.label"></span>
+                    <button class="relative w-9 h-5 rounded-full transition-colors duration-200"
+                            :class="setting.on?'bg-primary-500':'bg-gray-400'"
+                            @click="setting.on=!setting.on">
+                      <span class="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200"
+                            :class="setting.on?'translate-x-4':'translate-x-0'"></span>
+                    </button>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <div class="card rounded-2xl p-5">
+              <h3 class="font-bold text-xs mb-4" :class="darkMode?'text-primary-300':'text-primary-700'">Branches</h3>
+              <div class="space-y-2.5">
+                <template x-for="b in branches" :key="b.id">
+                  <div class="flex items-center justify-between p-2 rounded-xl" :class="darkMode?'bg-primary-900/30':'bg-primary-50'">
+                    <div>
+                      <p class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="b.name"></p>
+                      <p class="text-[10px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="b.region"></p>
+                    </div>
+                    <span class="badge badge-green text-[10px]">Active</span>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           NOTIFICATIONS / SMS LOGS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='notif-sms'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">SMS / Notification Logs</h2>
+        <div class="card rounded-2xl p-5">
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">Recipient</th><th class="text-left">Phone</th>
+                <th class="text-left">Message</th><th class="text-left">Type</th>
+                <th class="text-left">Sent At</th><th class="text-left">Status</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="n in smsLogs" :key="n.id">
+                  <tr class="table-row">
+                    <td class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="n.member"></td>
+                    <td class="font-mono text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="n.phone"></td>
+                    <td class="text-[11px] max-w-xs truncate" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="n.message"></td>
+                    <td><span class="badge text-[10px]" :class="n.type==='deposit'?'badge-green':n.type==='loan'?'badge-blue':'badge-yellow'" x-text="n.type"></span></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="n.sentAt"></td>
+                    <td><span class="badge badge-green text-[10px]">Delivered</span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           ADMINISTRATION – USERS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='admin-users'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">System Users</h2>
+          <button @click="showModal('addUser')" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+            <i class="fa-solid fa-plus"></i> Add User
+          </button>
+        </div>
+        <div class="card rounded-2xl p-5">
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">User</th><th class="text-left">Role</th><th class="text-left">Branch</th>
+                <th class="text-left">Last Login</th><th class="text-left">Status</th><th class="text-left">Actions</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="u in systemUsers" :key="u.id">
+                  <tr class="table-row">
+                    <td>
+                      <div class="flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-800 flex items-center justify-center text-white text-xs font-bold" x-text="u.name.charAt(0)"></div>
+                        <div>
+                          <p class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="u.name"></p>
+                          <p class="text-[10px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="u.email"></p>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span class="role-tag" :class="'role-'+u.role" x-text="u.roleLabel"></span></td>
+                    <td class="text-xs" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="u.branch"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="u.lastLogin"></td>
+                    <td><span class="badge" :class="u.active?'badge-green':'badge-red'" x-text="u.active?'Active':'Inactive'"></span></td>
+                    <td>
+                      <div class="flex gap-1">
+                        <button class="p-1.5 rounded-lg text-blue-500 text-[11px] hover:bg-blue-900/20 transition-colors"><i class="fa-solid fa-pen"></i></button>
+                        <button class="p-1.5 rounded-lg text-red-500 text-[11px] hover:bg-red-900/20 transition-colors"><i class="fa-solid fa-trash"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           WITHDRAWAL PAGE
+           ============================================================ -->
+      <div x-show="activePage==='withdrawal-requests'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Withdrawal Requests</h2>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="card rounded-xl p-4 border-l-4 border-green-500">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Total Savings</p>
+            <p class="text-xl font-bold font-mono mt-1 text-green-500">TZS 4.32B</p>
+          </div>
+          <div class="card rounded-xl p-4 border-l-4 border-yellow-500">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Held (Collateral)</p>
+            <p class="text-xl font-bold font-mono mt-1 text-yellow-500">TZS 1.28B</p>
+          </div>
+          <div class="card rounded-xl p-4 border-l-4 border-blue-500">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Available</p>
+            <p class="text-xl font-bold font-mono mt-1 text-blue-500">TZS 3.04B</p>
+          </div>
+          <div class="card rounded-xl p-4 border-l-4 border-red-500">
+            <p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Pending Requests</p>
+            <p class="text-xl font-bold font-mono mt-1 text-red-500">23</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <!-- Request Form -->
+          <div class="card rounded-2xl p-5">
+            <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-primary-200':'text-primary-800'">New Withdrawal Request</h3>
+            <div class="space-y-3">
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Member *</label>
+                <input type="text" class="form-input input-field text-xs" placeholder="Search member..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Account *</label>
+                <select class="form-input input-field text-xs" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+                  <option>RDA Account</option><option>FLEX Account</option><option>Emergency Fund</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Amount (TZS) *</label>
+                <input type="number" class="form-input input-field text-xs" placeholder="0.00" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/>
+              </div>
+              <div>
+                <label class="form-label" :class="darkMode?'text-primary-300':'text-primary-700'">Reason *</label>
+                <textarea rows="2" class="form-input input-field text-xs" placeholder="Reason for withdrawal..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"></textarea>
+              </div>
+              <button @click="showToast('Withdrawal request submitted!','success')"
+                      class="w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+                <i class="fa-solid fa-money-bill-wave mr-2"></i> Submit Request
+              </button>
+            </div>
+          </div>
+
+          <!-- Pending Requests Table -->
+          <div class="lg:col-span-2 card rounded-2xl p-5">
+            <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-primary-200':'text-primary-800'">Pending Withdrawal Requests</h3>
+            <div class="overflow-x-auto">
+              <table class="data-table">
+                <thead><tr>
+                  <th class="text-left">Member</th><th class="text-left">Account</th>
+                  <th class="text-right">Amount</th><th class="text-left">Date</th>
+                  <th class="text-left">Status</th><th class="text-left">Actions</th>
+                </tr></thead>
+                <tbody>
+                  <template x-for="w in withdrawalRequests" :key="w.id">
+                    <tr class="table-row">
+                      <td class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="w.member"></td>
+                      <td><span class="badge badge-blue text-[10px]" x-text="w.account"></span></td>
+                      <td class="text-right font-mono text-xs font-bold" :class="darkMode?'text-white':'text-primary-900'" x-text="'TZS '+w.amount.toLocaleString()"></td>
+                      <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="w.date"></td>
+                      <td><span class="badge" :class="w.status==='Pending'?'badge-yellow':w.status==='Approved'?'badge-green':'badge-red'" x-text="w.status"></span></td>
+                      <td>
+                        <div class="flex gap-1" x-show="currentUser.role==='admin'||currentUser.role==='manager'">
+                          <button @click="w.status='Approved';showToast('Withdrawal approved!','success')" x-show="w.status==='Pending'"
+                                  class="p-1.5 rounded-lg text-green-500 hover:bg-green-900/20 text-[11px] transition-colors"><i class="fa-solid fa-check"></i></button>
+                          <button @click="w.status='Rejected';showToast('Withdrawal rejected','error')" x-show="w.status==='Pending'"
+                                  class="p-1.5 rounded-lg text-red-500 hover:bg-red-900/20 text-[11px] transition-colors"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           MEMBER PROFILE PAGE
+           ============================================================ -->
+      <div x-show="activePage==='member-profile'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <div class="flex items-center gap-3">
+          <button @click="navigate('members-active')" class="p-2 rounded-lg transition-colors"
+                  :class="darkMode?'text-primary-300 hover:bg-primary-900/30':'text-primary-700 hover:bg-primary-100'">
+            <i class="fa-solid fa-arrow-left text-sm"></i>
+          </button>
+          <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Member Profile</h2>
+        </div>
+
+        <!-- Profile Header -->
+        <div class="card rounded-2xl p-6">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-400 to-primary-700 flex items-center justify-center text-white text-3xl font-bold flex-shrink-0">
+              A
+            </div>
+            <div class="flex-1">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+                <h3 class="text-xl font-bold" :class="darkMode?'text-white':'text-primary-900'">Amina Salim Hassan</h3>
+                <span class="badge badge-green">Active Member</span>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                <div><p :class="darkMode?'text-primary-400':'text-gray-500'">Member No.</p><p class="font-bold font-mono" :class="darkMode?'text-white':'text-primary-900'">FDT/2019/00421</p></div>
+                <div><p :class="darkMode?'text-primary-400':'text-gray-500'">Phone</p><p class="font-bold" :class="darkMode?'text-white':'text-primary-900'">+255 754 123 456</p></div>
+                <div><p :class="darkMode?'text-primary-400':'text-gray-500'">Region</p><p class="font-bold" :class="darkMode?'text-white':'text-primary-900'">Dar es Salaam</p></div>
+                <div><p :class="darkMode?'text-primary-400':'text-gray-500'">Joined</p><p class="font-bold" :class="darkMode?'text-white':'text-primary-900'">15 March 2019</p></div>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="px-4 py-2 rounded-xl text-xs font-semibold border transition-colors"
+                      :class="darkMode?'border-[#1a3328] text-primary-300 hover:bg-primary-900/30':'border-primary-200 text-primary-700 hover:bg-primary-50'">
+                <i class="fa-solid fa-pen mr-1"></i> Edit
+              </button>
+              <button @click="showToast('Statement emailed to member!','success')" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+                <i class="fa-solid fa-envelope mr-1"></i> Send Statement
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="card rounded-xl p-4"><p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Total Savings</p><p class="text-xl font-bold font-mono mt-1 text-green-500">TZS 4.8M</p></div>
+          <div class="card rounded-xl p-4"><p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Active Loans</p><p class="text-xl font-bold font-mono mt-1 text-yellow-500">TZS 6.5M</p></div>
+          <div class="card rounded-xl p-4"><p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Investments</p><p class="text-xl font-bold font-mono mt-1 text-blue-500">TZS 2.0M</p></div>
+          <div class="card rounded-xl p-4"><p class="text-[11px]" :class="darkMode?'text-primary-400':'text-primary-500'">Share Capital</p><p class="text-xl font-bold font-mono mt-1" :class="darkMode?'text-white':'text-primary-900'">TZS 500K</p></div>
+        </div>
+
+        <!-- Transaction History -->
+        <div class="card rounded-2xl p-5">
+          <h3 class="font-bold text-sm mb-4" :class="darkMode?'text-primary-200':'text-primary-800'">Transaction History</h3>
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">Date</th><th class="text-left">Type</th><th class="text-left">Product</th>
+                <th class="text-left">Reference</th><th class="text-left">Channel</th>
+                <th class="text-right">Amount</th><th class="text-right">Balance</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="tx in memberTransactions" :key="tx.id">
+                  <tr class="table-row">
+                    <td class="text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="tx.date"></td>
+                    <td><span class="badge text-[10px]" :class="tx.type==='Deposit'?'badge-green':tx.type==='Withdrawal'?'badge-red':'badge-blue'" x-text="tx.type"></span></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="tx.product"></td>
+                    <td class="font-mono text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="tx.ref"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="tx.channel"></td>
+                    <td class="text-right font-mono text-xs font-bold" :class="tx.type==='Deposit'?'text-green-500':'text-red-500'" x-text="(tx.type==='Deposit'?'+':'-')+'TZS '+tx.amount.toLocaleString()"></td>
+                    <td class="text-right font-mono text-xs" :class="darkMode?'text-primary-300':'text-gray-700'" x-text="'TZS '+tx.balance.toLocaleString()"></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+           AUDIT LOGS PAGE
+           ============================================================ -->
+      <div x-show="activePage==='admin-audit'" class="animate-[fadeIn_0.4s_ease] space-y-4">
+        <h2 class="text-lg font-bold" :class="darkMode?'text-white':'text-primary-900'">Audit Logs</h2>
+        <div class="card rounded-2xl p-5">
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead><tr>
+                <th class="text-left">Timestamp</th><th class="text-left">User</th>
+                <th class="text-left">Action</th><th class="text-left">Module</th>
+                <th class="text-left">IP Address</th><th class="text-left">Status</th>
+              </tr></thead>
+              <tbody>
+                <template x-for="log in auditLogs" :key="log.id">
+                  <tr class="table-row">
+                    <td class="font-mono text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="log.time"></td>
+                    <td class="text-xs font-semibold" :class="darkMode?'text-white':'text-primary-900'" x-text="log.user"></td>
+                    <td class="text-[11px]" :class="darkMode?'text-primary-300':'text-gray-600'" x-text="log.action"></td>
+                    <td><span class="badge badge-blue text-[10px]" x-text="log.module"></span></td>
+                    <td class="font-mono text-[11px]" :class="darkMode?'text-primary-400':'text-gray-500'" x-text="log.ip"></td>
+                    <td><span class="badge" :class="log.success?'badge-green':'badge-red'" x-text="log.success?'Success':'Failed'"></span></td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODALS
+     ============================================================ -->
+
+<!-- Add Member Modal -->
+<div x-show="activeModal==='addMember'" class="modal-overlay" @click.self="activeModal=null">
+  <div class="modal-box card p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-bold text-base" :class="darkMode?'text-white':'text-primary-900'">Register New Member</h3>
+      <button @click="activeModal=null" class="w-8 h-8 rounded-full flex items-center justify-center transition-colors" :class="darkMode?'hover:bg-primary-900/50':'hover:bg-gray-100'">
+        <i class="fa-solid fa-xmark text-sm" :class="darkMode?'text-primary-300':'text-gray-500'"></i>
+      </button>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="col-span-2"><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Full Name *</label>
+        <input class="form-input input-field text-xs" placeholder="Jina Kamili" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Phone *</label>
+        <input class="form-input input-field text-xs" placeholder="+255 7XX XXX XXX" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">NIDA *</label>
+        <input class="form-input input-field text-xs" placeholder="NIDA Number" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Region *</label>
+        <select class="form-input input-field text-xs" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+          <option>Dar es Salaam</option><option>Mwanza</option><option>Arusha</option></select></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Membership Type</label>
+        <select class="form-input input-field text-xs" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+          <option>Regular</option><option>Group</option><option>Junior</option></select></div>
+    </div>
+    <div class="flex justify-end gap-3 mt-5">
+      <button @click="activeModal=null" class="px-4 py-2 rounded-xl border text-xs font-semibold transition-colors"
+              :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">Cancel</button>
+      <button @click="activeModal=null;showToast('Member registered successfully!','success')"
+              class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+        <i class="fa-solid fa-user-plus mr-1.5"></i> Register
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Repayment Modal -->
+<div x-show="activeModal==='repayment'" class="modal-overlay" @click.self="activeModal=null">
+  <div class="modal-box card p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-bold text-base" :class="darkMode?'text-white':'text-primary-900'">Record Loan Repayment</h3>
+      <button @click="activeModal=null" class="w-8 h-8 rounded-full flex items-center justify-center" :class="darkMode?'hover:bg-primary-900/50':'hover:bg-gray-100'">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    <div class="space-y-3">
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Loan Reference</label>
+        <input class="form-input input-field text-xs" value="LN/2024/00156" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Amount Paid (TZS)</label>
+        <input type="number" class="form-input input-field text-xs" placeholder="0.00" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Payment Channel</label>
+        <select class="form-input input-field text-xs" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+          <option>Cash</option><option>M-Pesa</option><option>Bank Transfer</option></select></div>
+    </div>
+    <div class="flex justify-end gap-3 mt-5">
+      <button @click="activeModal=null" class="px-4 py-2 rounded-xl border text-xs font-semibold" :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">Cancel</button>
+      <button @click="activeModal=null;showToast('Repayment recorded successfully!','success')"
+              class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+        <i class="fa-solid fa-money-bill mr-1.5"></i> Record Payment
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Investment Modal -->
+<div x-show="activeModal==='addInvestment'" class="modal-overlay" @click.self="activeModal=null">
+  <div class="modal-box card p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-bold text-base" :class="darkMode?'text-white':'text-primary-900'">New Investment</h3>
+      <button @click="activeModal=null" class="w-8 h-8 rounded-full flex items-center justify-center" :class="darkMode?'hover:bg-primary-900/50':'hover:bg-gray-100'">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    <div class="space-y-3">
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Member</label>
+        <input class="form-input input-field text-xs" placeholder="Search member..." :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Investment Plan</label>
+        <select class="form-input input-field text-xs" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+          <option>Fixed Deposit – 12 Months (18% p.a.)</option>
+          <option>Fixed Deposit – 24 Months (20% p.a.)</option>
+          <option>Treasury Bond Fund (16% p.a.)</option>
+        </select></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Amount (TZS)</label>
+        <input type="number" class="form-input input-field text-xs" placeholder="Min: TZS 500,000" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+    </div>
+    <div class="flex justify-end gap-3 mt-5">
+      <button @click="activeModal=null" class="px-4 py-2 rounded-xl border text-xs font-semibold" :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">Cancel</button>
+      <button @click="activeModal=null;showToast('Investment created successfully!','success')"
+              class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+        <i class="fa-solid fa-chart-line mr-1.5"></i> Create Investment
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Action Modal -->
+<div x-show="activeModal==='quickAction'" class="modal-overlay" @click.self="activeModal=null">
+  <div class="modal-box card p-6" style="max-width:400px">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-bold text-base" :class="darkMode?'text-white':'text-primary-900'">Quick Actions</h3>
+      <button @click="activeModal=null" class="w-8 h-8 rounded-full flex items-center justify-center" :class="darkMode?'hover:bg-primary-900/50':'hover:bg-gray-100'">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <button @click="navigate('member-register');activeModal=null" class="p-4 rounded-xl text-center transition-all hover:scale-105"
+              :class="darkMode?'bg-primary-900/50 hover:bg-primary-900':'bg-primary-50 hover:bg-primary-100'">
+        <i class="fa-solid fa-user-plus text-xl text-primary-500 mb-2 block"></i>
+        <span class="text-xs font-semibold" :class="darkMode?'text-primary-200':'text-primary-800'">Add Member</span>
+      </button>
+      <button @click="navigate('savings-deposit');activeModal=null" class="p-4 rounded-xl text-center transition-all hover:scale-105"
+              :class="darkMode?'bg-primary-900/50 hover:bg-primary-900':'bg-primary-50 hover:bg-primary-100'">
+        <i class="fa-solid fa-money-bill-transfer text-xl text-green-500 mb-2 block"></i>
+        <span class="text-xs font-semibold" :class="darkMode?'text-primary-200':'text-primary-800'">Deposit</span>
+      </button>
+      <button @click="navigate('loan-apply');activeModal=null" class="p-4 rounded-xl text-center transition-all hover:scale-105"
+              :class="darkMode?'bg-primary-900/50 hover:bg-primary-900':'bg-primary-50 hover:bg-primary-100'">
+        <i class="fa-solid fa-file-invoice-dollar text-xl text-blue-500 mb-2 block"></i>
+        <span class="text-xs font-semibold" :class="darkMode?'text-primary-200':'text-primary-800'">Apply Loan</span>
+      </button>
+      <button @click="navigate('withdrawal-requests');activeModal=null" class="p-4 rounded-xl text-center transition-all hover:scale-105"
+              :class="darkMode?'bg-primary-900/50 hover:bg-primary-900':'bg-primary-50 hover:bg-primary-100'">
+        <i class="fa-solid fa-money-bill-wave text-xl text-yellow-500 mb-2 block"></i>
+        <span class="text-xs font-semibold" :class="darkMode?'text-primary-200':'text-primary-800'">Withdrawal</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div x-show="activeModal==='addUser'" class="modal-overlay" @click.self="activeModal=null">
+  <div class="modal-box card p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="font-bold text-base" :class="darkMode?'text-white':'text-primary-900'">Add System User</h3>
+      <button @click="activeModal=null" class="w-8 h-8 rounded-full flex items-center justify-center" :class="darkMode?'hover:bg-primary-900/50':'hover:bg-gray-100'">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="col-span-2"><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Full Name *</label>
+        <input class="form-input input-field text-xs" placeholder="Full Name" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Email *</label>
+        <input type="email" class="form-input input-field text-xs" placeholder="user@feedtan.co.tz" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Role *</label>
+        <select class="form-input input-field text-xs" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+          <option>Admin</option><option>Manager</option><option>Teller</option><option>Auditor</option></select></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Branch *</label>
+        <select class="form-input input-field text-xs" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'">
+          <option>Dar es Salaam HQ</option><option>Mwanza Branch</option><option>Arusha Branch</option></select></div>
+      <div><label class="form-label text-[11px]" :class="darkMode?'text-primary-300':'text-primary-700'">Password *</label>
+        <input type="password" class="form-input input-field text-xs" placeholder="Temporary password" :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200'"/></div>
+    </div>
+    <div class="flex justify-end gap-3 mt-5">
+      <button @click="activeModal=null" class="px-4 py-2 rounded-xl border text-xs font-semibold" :class="darkMode?'border-[#1a3328] text-primary-300':'border-primary-200 text-primary-700'">Cancel</button>
+      <button @click="activeModal=null;showToast('User account created successfully!','success')"
+              class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold transition-all">
+        <i class="fa-solid fa-user-shield mr-1.5"></i> Create User
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     ALPINE JS APPLICATION
+     ============================================================ -->
+<script>
+function FeedtanApp() {
+  return {
+    // ============================================================
+    // AUTH STATE
+    // ============================================================
+    loggedIn: false,
+    loginEmail: 'admin@feedtan.co.tz',
+    loginPassword: '',
+    loginRole: 'admin',
+
+    darkMode: localStorage.getItem('feedtan_dark') === 'true',
+    sidebarOpen: false,
+    sidebarCollapsed: false,
+    activePage: 'dashboard',
+    activeModal: null,
+    openDropdowns: [],
+    memberPage: 1,
+    memberSearch: '',
+
+    // ============================================================
+    // USER PROFILES (role-based)
+    // ============================================================
+    users: {
+      admin: { name:'Hamisi Juma Makwetta', email:'admin@feedtan.co.tz', role:'admin', roleLabel:'Admin', branch:'Dar es Salaam HQ', phone:'+255 713 000 001' },
+      manager: { name:'Fatuma Rashid Ally', email:'manager@feedtan.co.tz', role:'manager', roleLabel:'Manager', branch:'Mwanza Branch', phone:'+255 754 000 002' },
+      teller: { name:'Joseph Mwangi Oduya', email:'teller@feedtan.co.tz', role:'teller', roleLabel:'Teller', branch:'Dar es Salaam HQ', phone:'+255 622 000 003' },
+      member: { name:'Amina Salim Hassan', email:'member@feedtan.co.tz', role:'member', roleLabel:'Member', branch:'Dar es Salaam HQ', phone:'+255 784 000 004' },
+      auditor: { name:'David Kimani Njoroge', email:'auditor@feedtan.co.tz', role:'auditor', roleLabel:'Auditor', branch:'Head Office', phone:'+255 655 000 005' }
+    },
+    currentUser: {},
+
+    // ============================================================
+    // LOAN CALCULATOR
+    // ============================================================
+    loanCalc: { principal: 5000000, rate: 18, months: 12, interest: 0, total: 0, monthly: 0 },
+
+    calcLoan() {
+      const p = parseFloat(this.loanCalc.principal)||0;
+      const r = (parseFloat(this.loanCalc.rate)||18)/100/12;
+      const n = parseInt(this.loanCalc.months)||12;
+      if (p > 0 && r > 0 && n > 0) {
+        const m = p * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1);
+        this.loanCalc.monthly = Math.round(m);
+        this.loanCalc.total = Math.round(m * n);
+        this.loanCalc.interest = this.loanCalc.total - p;
+      }
+    },
+
+    // ============================================================
+    // SAMPLE DATA
+    // ============================================================
+    tanzNames: [
+      'Amina Hassan','Juma Bakari','Fatuma Ali','Mohamed Salim','Grace Nyambo',
+      'Emmanuel Kiiza','Zuhura Rashid','Patrick Mwangi','Mwanahamisi Iddi',
+      'Baraka Cosmas','Neema Okonkwo','Yusuf Kombo','Rehema Said','Daniel Mganga',
+      'Salma Mwinyi','Henry Ndagala','Zawadi Maganga','Francis Msigwa',
+      'Khadija Omar','Simon Malecela','Upendo Chonde','Rashid Kweka',
+      'Pendo Shirima','Albert Makundi','Nasra Luambano','Jerome Minja',
+      'Halima Tarimo','Oscar Mremi','Amani Mapunda','Dotto Ndunguru',
+      'Sabrina Msokwe','Athanas Rwambike','Hawa Kanombe','Leonard Lema',
+      'Zainabu Mwanga','Gabriel Mwaifumo','Mariamu Shida','Cosmas Kilonzo',
+      'Anita Mwaisaka','Abdallah Mgimba','Veronica Kazimoto','Ramadhani Buberwa',
+      'Lucia Mbuya','Selemani Nyundo','Prisca Kilima','Nasoro Makame',
+      'Vumilia Njau','Ibrahim Lugogo','Esther Mhando','Paulo Chacha'
+    ],
+    tanzRegions: ['Dar es Salaam','Mwanza','Arusha','Mbeya','Dodoma','Morogoro','Tanga','Kilimanjaro','Kagera','Rukwa'],
+    tanzPhones: () => '+255 ' + ['71','74','75','76','77','78','68','62','65','69'][Math.floor(Math.random()*10)] + ' ' + Math.floor(Math.random()*900+100) + ' ' + Math.floor(Math.random()*900+100),
+
+    // Members array
+    members: [],
+    // Transactions
+    recentTransactions: [],
+    // Pending loans
+    pendingLoans: [],
+    // Active loans
+    activeLoans: [],
+    // Deposits
+    recentDeposits: [],
+    // Investments
+    investments: [],
+    // Savings accounts
+    savingsAccounts: [],
+    // Notifications
+    notifications: [],
+    // SMS logs
+    smsLogs: [],
+    // Ledger entries
+    ledgerEntries: [],
+    // System users
+    systemUsers: [],
+    // Withdrawal requests
+    withdrawalRequests: [],
+    // Member-specific
+    memberAccounts: [],
+    memberLoan: null,
+    memberTransactions: [],
+    // Audit logs
+    auditLogs: [],
+
+    // Savings breakdown
+    savingsBreakdown: [
+      { label:'RDA', color:'#10b981', pct:42 },
+      { label:'Emergency', color:'#f59e0b', pct:18 },
+      { label:'FLEX', color:'#3b82f6', pct:22 },
+      { label:'SWF', color:'#8b5cf6', pct:10 },
+      { label:'Share Capital', color:'#ef4444', pct:8 },
+    ],
+
+    // Deposit channels
+    depositChannels: [
+      { name:'M-Pesa', pct:42 },
+      { name:'Airtel Money', pct:22 },
+      { name:'Cash', pct:20 },
+      { name:'TigoPesa', pct:10 },
+      { name:'Bank Transfer', pct:6 },
+    ],
+
+    // Savings products
+    savingsProducts: [
+      { id:'rda', code:'RDA', icon:'fa-solid fa-piggy-bank', color:'#10b981', rate:8, total:1820000000, members:1243 },
+      { id:'emergency', code:'Emergency', icon:'fa-solid fa-shield-halved', color:'#f59e0b', rate:6, total:780000000, members:892 },
+      { id:'flex', code:'FLEX', icon:'fa-solid fa-arrows-rotate', color:'#3b82f6', rate:10, total:955000000, members:621 },
+      { id:'swf', code:'SWF', icon:'fa-solid fa-hand-holding-heart', color:'#8b5cf6', rate:5, total:432000000, members:1243 },
+      { id:'share', code:'Share Cap.', icon:'fa-solid fa-certificate', color:'#ef4444', rate:12, total:346000000, members:1243 },
+    ],
+
+    // Payment providers
+    paymentProviders: [
+      { id:'mpesa', name:'M-Pesa', code:'MP', desc:'Vodacom Tanzania', color:'#E31837', active:true, today:12400000, month:387000000 },
+      { id:'airtel', name:'Airtel Money', code:'AM', desc:'Airtel Tanzania', color:'#FF0000', active:true, today:5800000, month:184000000 },
+      { id:'tigo', name:'TigoPesa', code:'TP', desc:'Tigo Tanzania', color:'#0099D8', active:true, today:4200000, month:126000000 },
+      { id:'halo', name:'HaloPesa', code:'HP', desc:'TTCL / HaloTel', color:'#FF6B00', active:false, today:0, month:42000000 },
+      { id:'clickpesa', name:'ClickPesa', code:'CP', desc:'ClickPesa Ltd', color:'#1a56db', active:true, today:7100000, month:213000000 },
+    ],
+
+    // Report types
+    reportTypes: [
+      { id:'member', title:'Member Report', desc:'Full member listing with demographics and account status', icon:'fa-solid fa-users', color:'#10b981' },
+      { id:'loan', title:'Loan Report', desc:'Disbursements, repayments, overdue and collection rate', icon:'fa-solid fa-file-invoice-dollar', color:'#3b82f6' },
+      { id:'savings', title:'Savings Report', desc:'Savings balances by product, interest accrued', icon:'fa-solid fa-piggy-bank', color:'#8b5cf6' },
+      { id:'investment', title:'Investment Report', desc:'ROI analysis, maturity schedule, portfolio performance', icon:'fa-solid fa-chart-line', color:'#f59e0b' },
+      { id:'financial', title:'Financial Statements', desc:'Income statement, balance sheet, cash flow', icon:'fa-solid fa-balance-scale', color:'#ef4444' },
+      { id:'audit', title:'Audit Trail Report', desc:'Complete system activity and change log', icon:'fa-solid fa-history', color:'#6b7280' },
+    ],
+
+    // Eligibility checks
+    eligibilityChecks: [
+      { label:'Active member (≥6 months)', pass:true },
+      { label:'No overdue loans', pass:true },
+      { label:'Savings ≥ 25% of loan', pass:true },
+      { label:'Guarantors available', pass:true },
+      { label:'Loan limit not exceeded', pass:true },
+    ],
+
+    // Notification settings
+    notifSettings: [
+      { id:'sms', label:'SMS Notifications', on:true },
+      { id:'email', label:'Email Alerts', on:true },
+      { id:'push', label:'Push Notifications', on:false },
+      { id:'loan', label:'Loan Approvals', on:true },
+      { id:'deposit', label:'Deposit Confirmations', on:true },
+    ],
+
+    // Branches
+    branches: [
+      { id:1, name:'Dar es Salaam HQ', region:'Dar es Salaam' },
+      { id:2, name:'Mwanza Branch', region:'Mwanza' },
+      { id:3, name:'Arusha Branch', region:'Arusha' },
+      { id:4, name:'Mbeya Branch', region:'Mbeya' },
+    ],
+
+    // ============================================================
+    // SIDEBAR DEFINITIONS (role-based)
+    // ============================================================
+    sidebarSections: {
+      // Available to ALL
+      common: [
+        { id:'dashboard', icon:'fa-solid fa-gauge-high', label:'Dashboard' },
+      ],
+      // Admin gets everything
+      admin: [
+        {
+          id:'members', label:'Members', items:[
+            { id:'members', icon:'fa-solid fa-users', label:'Members', children:[
+              {id:'members-active',label:'Active Members'},
+              {id:'member-register',label:'Register Member'},
+              {id:'members-group',label:'Group Members'},
+              {id:'members-stmt',label:'Member Statements'},
+              {id:'members-beneficiaries',label:'Beneficiaries'},
+              {id:'members-guarantors',label:'Guarantors'},
+            ]},
+          ]
+        },
+        {
+          id:'savings-section', label:'Savings', items:[
+            { id:'savings', icon:'fa-solid fa-piggy-bank', label:'Savings', children:[
+              {id:'savings-plans',label:'Saving Plans'},
+              {id:'savings-deposit',label:'Deposit Money'},
+              {id:'savings-accounts',label:'Savings Accounts'},
+              {id:'savings-stmt',label:'Savings Statements'},
+              {id:'savings-interest',label:'Interest Payable'},
+            ]},
+          ]
+        },
+        {
+          id:'withdrawals-section', label:'Withdrawals', items:[
+            { id:'withdrawals', icon:'fa-solid fa-money-bill-wave', label:'Withdrawals', children:[
+              {id:'withdrawal-requests',label:'Withdrawal Requests'},
+              {id:'withdrawal-approved',label:'Approved Withdrawals'},
+              {id:'withdrawal-pending',label:'Pending Withdrawals'},
+              {id:'withdrawal-penalties',label:'Penalty Reports'},
+            ]},
+          ]
+        },
+        {
+          id:'loans-section', label:'Loans', items:[
+            { id:'loans', icon:'fa-solid fa-hand-holding-dollar', label:'Loans', children:[
+              {id:'loan-apply',label:'Apply Loan'},
+              {id:'loan-active',label:'Active Loans'},
+              {id:'loan-approvals',label:'Loan Approvals'},
+              {id:'loan-repayments',label:'Loan Repayments'},
+              {id:'loan-overdue',label:'Overdue Loans'},
+              {id:'loan-statements',label:'Loan Statements'},
+            ]},
+          ]
+        },
+        {
+          id:'investments-section', label:'Investments', items:[
+            { id:'investments', icon:'fa-solid fa-chart-line', label:'Investments', children:[
+              {id:'investments-plans',label:'Investment Plans'},
+              {id:'investments-active',label:'Active Investments'},
+              {id:'investments-maturity',label:'Maturity Reports'},
+              {id:'investments-roi',label:'ROI Reports'},
+            ]},
+          ]
+        },
+        {
+          id:'accounting-section', label:'Accounting', items:[
+            { id:'accounting', icon:'fa-solid fa-calculator', label:'Accounting', children:[
+              {id:'accounting-ledger',label:'General Ledger'},
+              {id:'accounting-journal',label:'Journal Entries'},
+              {id:'accounting-trial',label:'Trial Balance'},
+              {id:'accounting-balance',label:'Balance Sheet'},
+              {id:'accounting-income',label:'Income Statement'},
+              {id:'accounting-cashflow',label:'Cash Flow'},
+            ]},
+          ]
+        },
+        {
+          id:'reports-section', label:'Reports', items:[
+            { id:'reports', icon:'fa-solid fa-chart-bar', label:'Reports', children:[
+              {id:'reports-members',label:'Member Reports'},
+              {id:'reports-loans',label:'Loan Reports'},
+              {id:'reports-savings',label:'Savings Reports'},
+              {id:'reports-investments',label:'Investment Reports'},
+              {id:'reports-financial',label:'Financial Reports'},
+            ]},
+          ]
+        },
+        {
+          id:'notif-section', label:'Notifications', items:[
+            { id:'notif', icon:'fa-solid fa-bell', label:'Notifications', children:[
+              {id:'notif-sms',label:'SMS Logs'},
+              {id:'notif-email',label:'Email Logs'},
+              {id:'notif-push',label:'Push Notifications'},
+            ]},
+          ]
+        },
+        {
+          id:'payments-section', label:'Payments', items:[
+            { id:'payments', icon:'fa-solid fa-mobile-screen-button', label:'Payments', children:[
+              {id:'payments-clickpesa',label:'ClickPesa'},
+              {id:'payments-mpesa',label:'M-Pesa'},
+              {id:'payments-airtel',label:'Airtel Money'},
+              {id:'payments-tigo',label:'TigoPesa'},
+              {id:'payments-halo',label:'HaloPesa'},
+            ]},
+          ]
+        },
+        {
+          id:'admin-section', label:'Administration', items:[
+            { id:'admin', icon:'fa-solid fa-shield-halved', label:'Administration', children:[
+              {id:'admin-users',label:'Users'},
+              {id:'admin-roles',label:'Roles'},
+              {id:'admin-permissions',label:'Permissions'},
+              {id:'admin-branches',label:'Branches'},
+              {id:'admin-audit',label:'Audit Logs'},
+              {id:'settings',label:'System Settings'},
+            ]},
+          ]
+        },
+      ],
+      // Manager – no admin section
+      manager: [
+        {
+          id:'members', label:'Members', items:[
+            { id:'members', icon:'fa-solid fa-users', label:'Members', children:[
+              {id:'members-active',label:'Active Members'},
+              {id:'member-register',label:'Register Member'},
+              {id:'members-group',label:'Group Members'},
+            ]},
+          ]
+        },
+        {
+          id:'savings-section', label:'Savings', items:[
+            { id:'savings', icon:'fa-solid fa-piggy-bank', label:'Savings', children:[
+              {id:'savings-deposit',label:'Deposit Money'},
+              {id:'savings-accounts',label:'Savings Accounts'},
+            ]},
+          ]
+        },
+        {
+          id:'withdrawals-section', label:'Withdrawals', items:[
+            { id:'withdrawals', icon:'fa-solid fa-money-bill-wave', label:'Withdrawals', children:[
+              {id:'withdrawal-requests',label:'Withdrawal Requests'},
+              {id:'withdrawal-approved',label:'Approved Withdrawals'},
+            ]},
+          ]
+        },
+        {
+          id:'loans-section', label:'Loans', items:[
+            { id:'loans', icon:'fa-solid fa-hand-holding-dollar', label:'Loans', children:[
+              {id:'loan-active',label:'Active Loans'},
+              {id:'loan-approvals',label:'Loan Approvals'},
+              {id:'loan-overdue',label:'Overdue Loans'},
+            ]},
+          ]
+        },
+        {
+          id:'reports-section', label:'Reports', items:[
+            { id:'reports', icon:'fa-solid fa-chart-bar', label:'Reports', children:[
+              {id:'reports-loans',label:'Loan Reports'},
+              {id:'reports-savings',label:'Savings Reports'},
+              {id:'reports-financial',label:'Financial Reports'},
+            ]},
+          ]
+        },
+        {
+          id:'notif-section', label:'Notifications', items:[
+            { id:'notif', icon:'fa-solid fa-bell', label:'Notifications', children:[
+              {id:'notif-sms',label:'SMS Logs'},
+            ]},
+          ]
+        },
+        { id:'settings-section', label:'Settings', items:[
+          { id:'settings-item', icon:'fa-solid fa-gear', label:'Settings', children:[
+            {id:'settings',label:'System Settings'},
+          ]},
+        ]},
+      ],
+      // Teller – only deposits, withdrawals
+      teller: [
+        {
+          id:'members', label:'Members', items:[
+            { id:'members', icon:'fa-solid fa-users', label:'Members', children:[
+              {id:'members-active',label:'Active Members'},
+              {id:'member-register',label:'Register Member'},
+            ]},
+          ]
+        },
+        {
+          id:'savings-section', label:'Savings', items:[
+            { id:'savings', icon:'fa-solid fa-piggy-bank', label:'Savings', children:[
+              {id:'savings-deposit',label:'Deposit Money'},
+              {id:'savings-accounts',label:'Savings Accounts'},
+              {id:'savings-stmt',label:'Savings Statements'},
+            ]},
+          ]
+        },
+        {
+          id:'withdrawals-section', label:'Withdrawals', items:[
+            { id:'withdrawals', icon:'fa-solid fa-money-bill-wave', label:'Withdrawals', children:[
+              {id:'withdrawal-requests',label:'Withdrawal Requests'},
+              {id:'withdrawal-pending',label:'Pending Withdrawals'},
+            ]},
+          ]
+        },
+        {
+          id:'loans-section', label:'Loans', items:[
+            { id:'loans', icon:'fa-solid fa-hand-holding-dollar', label:'Loans', children:[
+              {id:'loan-apply',label:'Apply Loan'},
+              {id:'loan-repayments',label:'Loan Repayments'},
+            ]},
+          ]
+        },
+        {
+          id:'notif-section', label:'Notifications', items:[
+            { id:'notif', icon:'fa-solid fa-bell', label:'Notifications', children:[
+              {id:'notif-sms',label:'SMS Logs'},
+            ]},
+          ]
+        },
+      ],
+      // Member – only their own data
+      member: [
+        {
+          id:'savings-section', label:'My Savings', items:[
+            { id:'savings', icon:'fa-solid fa-piggy-bank', label:'Savings', children:[
+              {id:'savings-accounts',label:'My Accounts'},
+              {id:'savings-stmt',label:'My Statements'},
+              {id:'savings-deposit',label:'Deposit Request'},
+            ]},
+          ]
+        },
+        {
+          id:'loans-section', label:'My Loans', items:[
+            { id:'loans', icon:'fa-solid fa-hand-holding-dollar', label:'Loans', children:[
+              {id:'loan-apply',label:'Apply for Loan'},
+              {id:'loan-active',label:'My Active Loans'},
+              {id:'loan-repayments',label:'Repayment Schedule'},
+            ]},
+          ]
+        },
+        {
+          id:'withdrawals-section', label:'Withdrawals', items:[
+            { id:'withdrawals', icon:'fa-solid fa-money-bill-wave', label:'Withdrawals', children:[
+              {id:'withdrawal-requests',label:'Withdrawal Request'},
+            ]},
+          ]
+        },
+        {
+          id:'investments-section', label:'Investments', items:[
+            { id:'investments', icon:'fa-solid fa-chart-line', label:'Investments', children:[
+              {id:'investments-active',label:'My Investments'},
+            ]},
+          ]
+        },
+      ],
+      // Auditor – read-only access
+      auditor: [
+        {
+          id:'reports-section', label:'Reports', items:[
+            { id:'reports', icon:'fa-solid fa-chart-bar', label:'Reports', children:[
+              {id:'reports-members',label:'Member Reports'},
+              {id:'reports-loans',label:'Loan Reports'},
+              {id:'reports-savings',label:'Savings Reports'},
+              {id:'reports-financial',label:'Financial Reports'},
+            ]},
+          ]
+        },
+        {
+          id:'accounting-section', label:'Accounting', items:[
+            { id:'accounting', icon:'fa-solid fa-calculator', label:'Accounting', children:[
+              {id:'accounting-ledger',label:'General Ledger'},
+              {id:'accounting-trial',label:'Trial Balance'},
+              {id:'accounting-balance',label:'Balance Sheet'},
+              {id:'accounting-income',label:'Income Statement'},
+            ]},
+          ]
+        },
+        {
+          id:'admin-section', label:'Administration', items:[
+            { id:'admin', icon:'fa-solid fa-shield-halved', label:'Administration', children:[
+              {id:'admin-audit',label:'Audit Logs'},
+            ]},
+          ]
+        },
+      ]
+    },
+
+    // ============================================================
+    // METHODS
+    // ============================================================
+
+    doLogin() {
+      this.currentUser = this.users[this.loginRole] || this.users.admin;
+      this.loggedIn = true;
+      this.activePage = 'dashboard';
+      this.$nextTick(() => {
+        this.initCharts();
+        this.calcLoan();
+      });
+      this.showToast(`Welcome back, ${this.currentUser.name}!`, 'success');
+    },
+
+    logout() {
+      this.loggedIn = false;
+      this.activePage = 'dashboard';
+      this.sidebarOpen = false;
+    },
+
+    saveDarkMode() {
+      localStorage.setItem('feedtan_dark', this.darkMode);
+    },
+
+    navigate(page) {
+      this.activePage = page;
+      this.sidebarOpen = false;
+      if (page === 'dashboard') {
+        this.$nextTick(() => this.initCharts());
+      }
+    },
+
+    hasAccess(page) {
+      return true; // dashboard always visible
+    },
+
+    filteredSidebarSections() {
+      const role = this.currentUser.role || 'admin';
+      const sections = this.sidebarSections[role] || this.sidebarSections.admin;
+      return sections;
+    },
+
+    toggleDropdown(id) {
+      if (this.openDropdowns.includes(id)) {
+        this.openDropdowns = this.openDropdowns.filter(d => d !== id);
+      } else {
+        this.openDropdowns.push(id);
+      }
+    },
+
+    isChildActive(item) {
+      if (!item.children) return false;
+      return item.children.some(c => c.id === this.activePage);
+    },
+
+    getPageTitle() {
+      const titles = {
+        'dashboard':'Dashboard', 'members-active':'Active Members',
+        'member-register':'Register Member', 'member-profile':'Member Profile',
+        'savings-deposit':'Deposit Money', 'savings-accounts':'Savings Accounts',
+        'savings-stmt':'Savings Statements', 'loan-apply':'Apply Loan',
+        'loan-active':'Active Loans', 'loan-approvals':'Loan Approvals',
+        'investments-active':'Active Investments', 'accounting-ledger':'General Ledger',
+        'reports-financial':'Financial Reports', 'payments-mpesa':'Payment Integration',
+        'admin-users':'System Users', 'admin-audit':'Audit Logs',
+        'withdrawal-requests':'Withdrawal Requests', 'notif-sms':'SMS Logs', 'settings':'Settings'
+      };
+      return titles[this.activePage] || this.activePage.replace('-',' ').replace(/\b\w/g,c=>c.toUpperCase());
+    },
+
+    getDashboardSubtitle() {
+      const subtitles = {
+        admin: 'Full system overview — Dar es Salaam HQ',
+        manager: 'Branch performance overview — Mwanza Branch',
+        teller: 'Today\'s transactions and pending actions',
+        member: 'Your financial summary and account overview',
+        auditor: 'Compliance and financial audit overview'
+      };
+      return subtitles[this.currentUser.role] || 'System overview';
+    },
+
+    getDashboardCards() {
+      const role = this.currentUser.role;
+      if (role === 'member') {
+        return [
+          { id:'savings', label:'My Total Savings', value:'TZS 4.8M', sub:'Across all accounts', icon:'fa-solid fa-piggy-bank', color:'#10b981', trend:5.2 },
+          { id:'loans', label:'Loan Balance', value:'TZS 6.5M', sub:'Active loan outstanding', icon:'fa-solid fa-hand-holding-dollar', color:'#f59e0b', trend:-2.1 },
+          { id:'investments', label:'Investments', value:'TZS 2.0M', sub:'18% p.a. returns', icon:'fa-solid fa-chart-line', color:'#3b82f6', trend:8.4 },
+          { id:'dividend', label:'Dividend Earned', value:'TZS 284K', sub:'FY 2024 distribution', icon:'fa-solid fa-coins', color:'#8b5cf6', trend:12.0 },
+        ];
+      }
+      if (role === 'teller') {
+        return [
+          { id:'deposits', label:'Today Deposits', value:'TZS 48.7M', sub:'127 transactions', icon:'fa-solid fa-money-bill-transfer', color:'#10b981', trend:18.3 },
+          { id:'withdrawals', label:'Today Withdrawals', value:'TZS 12.4M', sub:'43 transactions', icon:'fa-solid fa-money-bill-wave', color:'#f59e0b', trend:-5.1 },
+          { id:'loans', label:'Repayments Today', value:'TZS 23.1M', sub:'68 payments', icon:'fa-solid fa-hand-holding-dollar', color:'#3b82f6', trend:9.7 },
+          { id:'members', label:'New Members Today', value:'7', sub:'Since 8:00 AM', icon:'fa-solid fa-user-plus', color:'#8b5cf6', trend:40.0 },
+        ];
+      }
+      if (role === 'auditor') {
+        return [
+          { id:'exceptions', label:'Audit Exceptions', value:'3', sub:'Requires review', icon:'fa-solid fa-triangle-exclamation', color:'#ef4444', trend:200 },
+          { id:'compliance', label:'Compliance Score', value:'97.4%', sub:'Above threshold', icon:'fa-solid fa-shield-check', color:'#10b981', trend:1.2 },
+          { id:'transactions', label:'Transactions Reviewed', value:'1,284', sub:'This month', icon:'fa-solid fa-list-check', color:'#3b82f6', trend:22.3 },
+          { id:'reports', label:'Reports Generated', value:'18', sub:'This quarter', icon:'fa-solid fa-file-chart-pie', color:'#8b5cf6', trend:12.5 },
+        ];
+      }
+      // Admin + Manager
+      return [
+        { id:'members', label:'Total Members', value:'1,243', sub:'47 new this month', icon:'fa-solid fa-users', color:'#10b981', trend:3.8 },
+        { id:'loans', label:'Active Loans', value:'247', sub:'TZS 987.5M outstanding', icon:'fa-solid fa-hand-holding-dollar', color:'#f59e0b', trend:12.4 },
+        { id:'savings', label:'Total Savings', value:'TZS 4.32B', sub:'Across all products', icon:'fa-solid fa-piggy-bank', color:'#3b82f6', trend:8.1 },
+        { id:'investments', label:'Investments', value:'TZS 3.4B', sub:'48 active plans', icon:'fa-solid fa-chart-line', color:'#8b5cf6', trend:15.7 },
+        { id:'withdrawals', label:'Pending Withdrawals', value:'23', sub:'TZS 68.4M total', icon:'fa-solid fa-money-bill-wave', color:'#ef4444', trend:-18.2 },
+        { id:'approvals', label:'Pending Approvals', value:'14', sub:'Loan applications', icon:'fa-solid fa-clipboard-check', color:'#6366f1', trend:-7.3 },
+        { id:'collections', label:'Monthly Collections', value:'TZS 287M', sub:'89.4% collection rate', icon:'fa-solid fa-circle-dollar-to-slot', color:'#14b8a6', trend:5.6 },
+        { id:'revenue', label:'Revenue (MTD)', value:'TZS 42.8M', sub:'Interest + fees', icon:'fa-solid fa-coins', color:'#f97316', trend:11.2 },
+      ];
+    },
+
+    approveLoan(loan) {
+      loan.status = 'approved';
+      this.showToast(`Loan for ${loan.member} approved!`, 'success');
+    },
+
+    // ============================================================
+    // TOAST
+    // ============================================================
+    showToast(msg, type='success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      const icons = { success:'fa-solid fa-circle-check', error:'fa-solid fa-circle-xmark', info:'fa-solid fa-circle-info' };
+      toast.innerHTML = `<i class="${icons[type]||icons.info}"></i><span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity 0.3s'; setTimeout(()=>toast.remove(),300); }, 3500);
+    },
+
+    // ============================================================
+    // MODAL
+    // ============================================================
+    showModal(name) {
+      this.activeModal = name;
+    },
+
+    // ============================================================
+    // DATA GENERATION
+    // ============================================================
+    generateSampleData() {
+      const rnd = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
+      const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+      const phones = ['+255 713','+ 255 754','+255 622','+255 784','+255 655','+255 762','+255 675','+255 782'];
+
+      // Generate 250 members
+      this.members = Array.from({length:250}, (_,i) => ({
+        id: i+1,
+        name: this.tanzNames[i % this.tanzNames.length] + (i>=this.tanzNames.length?' '+(Math.floor(i/this.tanzNames.length)+1):''),
+        phone: pick(phones)+' '+rnd(100,999)+' '+rnd(100,999),
+        nida: '19'+rnd(10000000000000,99999999999999)+'TZ',
+        region: pick(this.tanzRegions),
+        savings: rnd(200000, 15000000),
+        loans: rnd(0,1) ? rnd(500000, 20000000) : 0,
+        joined: `${rnd(1,28)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][rnd(0,11)]} ${rnd(2015,2023)}`,
+        status: pick(['Active','Active','Active','Active','Inactive','Suspended']),
+        type: pick(['Regular','Group','Junior']),
+      }));
+
+      // Generate recent transactions
+      const txTypes = ['deposit','withdrawal','loan-repayment'];
+      this.recentTransactions = Array.from({length:50}, (_,i) => ({
+        id:i+1,
+        member: pick(this.tanzNames),
+        type: pick(txTypes),
+        amount: rnd(50000,5000000),
+        desc: pick(['Monthly savings','Loan repayment','Emergency deposit','Share capital','FLEX deposit']),
+        time: `${rnd(1,23)}:${rnd(10,59)} ${rnd(1,28)}/${rnd(1,12)}/2024`,
+      }));
+
+      // Generate pending loans
+      this.pendingLoans = Array.from({length:20}, (_,i) => ({
+        id:i+1,
+        member: pick(this.tanzNames),
+        amount: rnd(500000,20000000),
+        purpose: pick(['Business','Education','Emergency','Housing','Development']),
+        status: i<10?'pending':i<15?'approved':'rejected',
+      }));
+
+      // Active loans
+      this.activeLoans = Array.from({length:60}, (_,i) => ({
+        id: `LN/2024/${String(i+1).padStart(5,'0')}`,
+        member: pick(this.tanzNames),
+        type: pick(['Emergency','Development','Business','Education','Housing']),
+        principal: rnd(500000,20000000),
+        interest: rnd(50000,4000000),
+        balance: rnd(100000,18000000),
+        installment: rnd(50000,1500000),
+        dueDate: `${rnd(1,28)}/${rnd(1,12)}/2025`,
+        status: pick(['Current','Current','Current','Overdue','Grace Period']),
+      }));
+
+      // Recent deposits
+      this.recentDeposits = Array.from({length:30}, (_,i) => {
+        const amount = rnd(50000, 3000000);
+        return {
+          id:i+1,
+          member: pick(this.tanzNames),
+          product: pick(['RDA','Emergency','FLEX','SWF','Share Capital']),
+          ref: 'DEP/'+rnd(10000000,99999999),
+          channel: pick(['M-Pesa','Airtel Money','Cash','TigoPesa','Bank Transfer']),
+          amount,
+          balance: amount + rnd(200000, 5000000),
+          date: `${rnd(1,31)} ${['Jan','Feb','Mar','Apr','May','Jun'][rnd(0,5)]} 2024`,
+        };
+      });
+
+      // Investments
+      const plans = ['Fixed Deposit 12M','Fixed Deposit 24M','Treasury Bond','Real Estate Fund'];
+      this.investments = Array.from({length:50}, (_,i) => {
+        const principal = rnd(500000, 10000000);
+        const roi = pick([14,16,18,20,22]);
+        return {
+          id:i+1,
+          member: pick(this.tanzNames),
+          plan: pick(plans),
+          principal,
+          roi,
+          returns: Math.round(principal*roi/100),
+          start: `${rnd(1,28)} Jan 2024`,
+          maturity: `${rnd(1,28)} Dec ${rnd(2024,2026)}`,
+          status: pick(['Active','Active','Active','Matured','Pending']),
+        };
+      });
+
+      // Savings accounts
+      this.savingsAccounts = Array.from({length:50}, (_,i) => ({
+        id:i+1,
+        member: pick(this.tanzNames),
+        accNo: 'FDT/SAV/'+String(rnd(10000,99999)),
+        product: pick(['RDA','Emergency','FLEX','SWF','Share Capital']),
+        balance: rnd(100000,10000000),
+        interest: rnd(5000,500000),
+        lastActivity: `${rnd(1,28)} ${['Oct','Nov','Dec'][rnd(0,2)]} 2024`,
+      }));
+
+      // Notifications
+      this.notifications = [
+        {id:1,type:'loan',icon:'fa-solid fa-hand-holding-dollar',title:'Loan Application Received',message:'Juma Bakari applied for TZS 5,000,000 Emergency Loan',time:'2 min ago',unread:true},
+        {id:2,type:'deposit',icon:'fa-solid fa-money-bill-transfer',title:'Large Deposit Alert',message:'Amina Hassan deposited TZS 8,500,000 via M-Pesa',time:'15 min ago',unread:true},
+        {id:3,type:'withdrawal',icon:'fa-solid fa-money-bill-wave',title:'Withdrawal Request',message:'Fatuma Ali requested TZS 2,000,000 withdrawal',time:'1 hr ago',unread:true},
+        {id:4,type:'loan',icon:'fa-solid fa-hand-holding-dollar',title:'Overdue Loan Alert',message:'Mohamed Salim loan is 14 days overdue',time:'2 hrs ago',unread:true},
+        {id:5,type:'deposit',icon:'fa-solid fa-money-bill-transfer',title:'Savings Interest Credited',message:'Monthly interest credited to 1,243 accounts',time:'Yesterday',unread:false},
+        {id:6,type:'loan',icon:'fa-solid fa-hand-holding-dollar',title:'Loan Approved',message:'Grace Nyambo\'s loan of TZS 3,000,000 was approved',time:'Yesterday',unread:false},
+        {id:7,type:'deposit',icon:'fa-solid fa-money-bill-transfer',title:'New Member Registered',message:'Emmanuel Kiiza joined as Regular Member',time:'2 days ago',unread:false},
+        {id:8,type:'withdrawal',icon:'fa-solid fa-money-bill-wave',title:'Withdrawal Processed',message:'Zuhura Rashid withdrawal of TZS 500,000 completed',time:'3 days ago',unread:false},
+      ];
+
+      // SMS Logs
+      this.smsLogs = Array.from({length:25}, (_,i) => ({
+        id:i+1,
+        member: pick(this.tanzNames),
+        phone: pick(phones)+' '+rnd(100,999)+' '+rnd(100,999),
+        message: pick([
+          'Amri: Akaunti yako imepokea TZS 500,000. Salio: TZS 2,345,000',
+          'Mkopo wa TZS 5,000,000 umeidhinishwa. Tarehe ya kwanza kulipa: 01/02/2025',
+          'Ombi lako la kujitoa limefanikiwa. Kiasi: TZS 200,000',
+          'Kumbuka: Malipo ya mkopo ya TZS 125,000 inadhihirika 15/01/2025',
+        ]),
+        type: pick(['deposit','loan','withdrawal']),
+        sentAt: `${rnd(1,28)} Dec 2024 ${rnd(8,20)}:${rnd(10,59)}`,
+      }));
+
+      // Ledger entries
+      this.ledgerEntries = [
+        {code:'1001',name:'Cash on Hand',cat:'Asset',debit:245000000,credit:198000000,balance:47000000},
+        {code:'1002',name:'Bank – NMB Account',cat:'Asset',debit:1820000000,credit:984000000,balance:836000000},
+        {code:'1003',name:'Member Loans Receivable',cat:'Asset',debit:1820000000,credit:832500000,balance:987500000},
+        {code:'1004',name:'Investments – Fixed Deposit',cat:'Asset',debit:3400000000,credit:0,balance:3400000000},
+        {code:'1005',name:'Fixed Assets',cat:'Asset',debit:450000000,credit:0,balance:450000000},
+        {code:'2001',name:'Members Savings – RDA',cat:'Liability',debit:0,credit:1820000000,balance:-1820000000},
+        {code:'2002',name:'Members Savings – FLEX',cat:'Liability',debit:0,credit:955000000,balance:-955000000},
+        {code:'2003',name:'Members Savings – Emergency',cat:'Liability',debit:0,credit:780000000,balance:-780000000},
+        {code:'2004',name:'Share Capital Payable',cat:'Liability',debit:0,credit:346000000,balance:-346000000},
+        {code:'2005',name:'Loans Payable – External',cat:'Liability',debit:0,credit:1220000000,balance:-1220000000},
+        {code:'3001',name:'Retained Earnings',cat:'Equity',debit:0,credit:1200000000,balance:-1200000000},
+        {code:'4001',name:'Interest Income – Loans',cat:'Income',debit:0,credit:287000000,balance:-287000000},
+        {code:'4002',name:'Processing Fees',cat:'Income',debit:0,credit:18200000,balance:-18200000},
+        {code:'5001',name:'Staff Salaries',cat:'Expense',debit:124000000,credit:0,balance:124000000},
+        {code:'5002',name:'Office Expenses',cat:'Expense',debit:34500000,credit:0,balance:34500000},
+      ];
+
+      // System users
+      this.systemUsers = [
+        {id:1,name:'Hamisi Juma Makwetta',email:'admin@feedtan.co.tz',role:'admin',roleLabel:'Admin',branch:'Dar es Salaam HQ',lastLogin:'Today 08:24',active:true},
+        {id:2,name:'Fatuma Rashid Ally',email:'manager.mwanza@feedtan.co.tz',role:'manager',roleLabel:'Manager',branch:'Mwanza Branch',lastLogin:'Today 09:11',active:true},
+        {id:3,name:'Joseph Mwangi Oduya',email:'teller1@feedtan.co.tz',role:'teller',roleLabel:'Teller',branch:'Dar es Salaam HQ',lastLogin:'Today 07:58',active:true},
+        {id:4,name:'Grace Nyambo Mloka',email:'teller2@feedtan.co.tz',role:'teller',roleLabel:'Teller',branch:'Arusha Branch',lastLogin:'Yesterday 17:32',active:true},
+        {id:5,name:'David Kimani Njoroge',email:'auditor@feedtan.co.tz',role:'auditor',roleLabel:'Auditor',branch:'Head Office',lastLogin:'2 days ago',active:true},
+        {id:6,name:'Neema Cosmas Mganga',email:'manager.arusha@feedtan.co.tz',role:'manager',roleLabel:'Manager',branch:'Arusha Branch',lastLogin:'Today 10:05',active:true},
+        {id:7,name:'Emmanuel Kiiza Rugaba',email:'teller3@feedtan.co.tz',role:'teller',roleLabel:'Teller',branch:'Mwanza Branch',lastLogin:'Today 08:47',active:false},
+      ];
+
+      // Withdrawal requests
+      this.withdrawalRequests = Array.from({length:15}, (_,i) => ({
+        id:i+1,
+        member: pick(this.tanzNames),
+        account: pick(['RDA','FLEX','Emergency']),
+        amount: rnd(100000,3000000),
+        date: `${rnd(1,28)} Dec 2024`,
+        status: pick(['Pending','Pending','Approved','Rejected']),
+      }));
+
+      // Member accounts (for member role)
+      this.memberAccounts = [
+        {id:1,product:'RDA – Regular Deposit',balance:2840000,target:5000000,pct:57,status:'Active'},
+        {id:2,product:'FLEX – Flexible Savings',balance:1200000,target:3000000,pct:40,status:'Active'},
+        {id:3,product:'Emergency Fund',balance:800000,target:2000000,pct:40,status:'Active'},
+      ];
+
+      // Member loan
+      this.memberLoan = {
+        principal:6500000, balance:4823000, rate:18, months:24,
+        installment:327000, nextDate:'15 Jan 2025'
+      };
+
+      // Member transactions
+      this.memberTransactions = [
+        {id:1,date:'28 Dec 2024',type:'Deposit',product:'RDA',ref:'DEP/00891234',channel:'M-Pesa',amount:500000,balance:2840000},
+        {id:2,date:'15 Dec 2024',type:'Loan Repayment',product:'Dev. Loan',ref:'LRP/00234501',channel:'Cash',amount:327000,balance:2340000},
+        {id:3,date:'01 Dec 2024',type:'Deposit',product:'FLEX',ref:'DEP/00889100',channel:'Airtel Money',amount:200000,balance:1200000},
+        {id:4,date:'28 Nov 2024',type:'Deposit',product:'RDA',ref:'DEP/00878800',channel:'M-Pesa',amount:500000,balance:2340000},
+        {id:5,date:'15 Nov 2024',type:'Loan Repayment',product:'Dev. Loan',ref:'LRP/00221400',channel:'Cash',amount:327000,balance:1840000},
+        {id:6,date:'02 Nov 2024',type:'Withdrawal',product:'RDA',ref:'WDR/00012100',channel:'Cash',amount:300000,balance:1840000},
+      ];
+
+      // Audit logs
+      this.auditLogs = Array.from({length:20}, (_,i) => ({
+        id:i+1,
+        time: `2024-12-${String(rnd(1,31)).padStart(2,'0')} ${rnd(8,20)}:${String(rnd(0,59)).padStart(2,'0')}:${String(rnd(0,59)).padStart(2,'0')}`,
+        user: pick(['hamisi@feedtan.co.tz','fatuma@feedtan.co.tz','joseph@feedtan.co.tz']),
+        action: pick(['Login','Approved Loan','Processed Deposit','Updated Member','Generated Report','Changed Settings','Deleted Record']),
+        module: pick(['Loans','Savings','Members','Reports','Settings','Administration']),
+        ip: `192.168.${rnd(1,5)}.${rnd(10,250)}`,
+        success: rnd(0,9) > 1,
+      }));
+    },
+
+    filteredMembers() {
+      if (!this.memberSearch) return this.members;
+      const q = this.memberSearch.toLowerCase();
+      return this.members.filter(m => m.name.toLowerCase().includes(q) || m.phone.includes(q) || m.nida.includes(q));
+    },
+
+    // ============================================================
+    // CHARTS
+    // ============================================================
+    charts: {},
+
+    initCharts() {
+      const isDark = this.darkMode;
+      const textColor = isDark ? '#6ee7b7' : '#047857';
+      const gridColor = isDark ? '#1a3328' : '#d1fae5';
+      const bgColor = isDark ? '#0d1f16' : '#ffffff';
+
+      // Destroy existing charts
+      Object.values(this.charts).forEach(c => { try { c.destroy(); } catch(e){} });
+      this.charts = {};
+
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+      // Loan Chart
+      const loanCtx = document.getElementById('loanChart');
+      if (loanCtx) {
+        this.charts.loan = new Chart(loanCtx, {
+          type: 'bar',
+          data: {
+            labels: months,
+            datasets: [
+              { label:'Disbursed', data:[120,145,132,168,155,187,198,210,185,225,248,287].map(v=>v*1000000), backgroundColor:'rgba(16,185,129,0.8)', borderRadius:6, order:2 },
+              { label:'Collections', data:[95,118,108,142,128,162,175,188,160,198,218,252].map(v=>v*1000000), backgroundColor:'rgba(52,211,153,0.5)', borderRadius:6, order:3 },
+              { label:'Target', data:[130,130,145,155,170,185,195,205,205,220,240,270].map(v=>v*1000000), type:'line', borderColor:'#f59e0b', backgroundColor:'transparent', borderWidth:2, pointRadius:3, order:1 },
+            ]
+          },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ labels:{ color:textColor, font:{size:11} }}, tooltip:{ callbacks:{ label: ctx => 'TZS '+Math.round(ctx.raw/1000000)+'M' }}},
+            scales: { x:{ ticks:{color:textColor,font:{size:10}}, grid:{color:gridColor} }, y:{ ticks:{color:textColor,font:{size:10}, callback:v=>'TZS '+(v/1000000).toFixed(0)+'M'}, grid:{color:gridColor} } }
+          }
+        });
+      }
+
+      // Savings Pie
+      const savCtx = document.getElementById('savingsChart');
+      if (savCtx) {
+        this.charts.savings = new Chart(savCtx, {
+          type: 'doughnut',
+          data: {
+            labels:['RDA','Emergency','FLEX','SWF','Share Capital'],
+            datasets:[{ data:[42,18,22,10,8], backgroundColor:['#10b981','#f59e0b','#3b82f6','#8b5cf6','#ef4444'], borderWidth:2, borderColor:bgColor }]
+          },
+          options: { responsive:true, maintainAspectRatio:false, cutout:'65%', plugins:{ legend:{display:false} } }
+        });
+      }
+
+      // Member growth
+      const memCtx = document.getElementById('memberChart');
+      if (memCtx) {
+        this.charts.members = new Chart(memCtx, {
+          type:'line',
+          data: {
+            labels: months,
+            datasets:[{ label:'Members', data:[980,1005,1024,1062,1089,1112,1134,1156,1178,1198,1221,1243], borderColor:'#10b981', backgroundColor:'rgba(16,185,129,0.1)', fill:true, tension:0.4, pointRadius:3, pointBackgroundColor:'#10b981' }]
+          },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+            scales:{ x:{ticks:{color:textColor,font:{size:10}},grid:{color:gridColor}}, y:{ticks:{color:textColor,font:{size:10}},grid:{color:gridColor}} } }
+        });
+      }
+
+      // Investment ROI
+      const invCtx = document.getElementById('investChart');
+      if (invCtx) {
+        this.charts.invest = new Chart(invCtx, {
+          type:'bar',
+          data: {
+            labels:['Fixed 12M','Fixed 24M','Treasury','Real Estate','Bonds'],
+            datasets:[
+              { label:'Principal', data:[1200,800,650,450,300].map(v=>v*1000000), backgroundColor:'rgba(59,130,246,0.6)', borderRadius:6 },
+              { label:'Returns', data:[216,160,104,90,48].map(v=>v*1000000), backgroundColor:'rgba(16,185,129,0.8)', borderRadius:6 },
+            ]
+          },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:textColor,font:{size:10}}}},
+            scales:{ x:{ticks:{color:textColor,font:{size:10}},grid:{color:gridColor}}, y:{ticks:{color:textColor,font:{size:10},callback:v=>'TZS '+(v/1000000).toFixed(0)+'M'},grid:{color:gridColor}} } }
+        });
+      }
+
+      // Collection rate doughnut
+      const colCtx = document.getElementById('collectionChart');
+      if (colCtx) {
+        this.charts.collection = new Chart(colCtx, {
+          type:'doughnut',
+          data: {
+            labels:['Collected','Overdue','Grace Period'],
+            datasets:[{ data:[89,7,4], backgroundColor:['#10b981','#ef4444','#f59e0b'], borderWidth:2, borderColor:bgColor }]
+          },
+          options: { responsive:true, maintainAspectRatio:false, cutout:'70%',
+            plugins:{ legend:{labels:{color:textColor,font:{size:10}}}, tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.raw+'%'}} } }
+        });
+      }
+    },
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    init() {
+      // Check for stored dark preference
+      const stored = localStorage.getItem('feedtan_dark');
+      if (stored !== null) this.darkMode = stored === 'true';
+
+      // Generate all sample data
+      this.generateSampleData();
+
+      // Set default user (will be overridden on login)
+      this.currentUser = this.users.admin;
+
+      // Calc loan
+      this.calcLoan();
+
+      // Watch dark mode
+      this.$watch('darkMode', () => {
+        if (this.loggedIn && this.activePage === 'dashboard') {
+          this.$nextTick(() => this.initCharts());
+        }
+      });
+
+      // Watch login
+      this.$watch('loggedIn', (val) => {
+        if (val) this.$nextTick(() => this.initCharts());
+      });
+    }
+  }
+}
+</script>
+</body>
+</html>

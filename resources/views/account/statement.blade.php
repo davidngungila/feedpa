@@ -1,190 +1,144 @@
 @extends('layouts.app')
 
+@section('title', 'Account Statement')
+
 @section('content')
-<section class="content mt-4">
-    <div class="container-fluid">
-        <!-- Filters -->
-        <div class="card shadow-sm mb-4">
-            <div class="card-body">
-                <form method="GET" action="{{ route('account.statement') }}" class="row g-3">
-                    <input type="hidden" name="tab" value="{{ $activeTab }}">
-                    <input type="hidden" name="status" value="{{ $statusFilter }}">
-                    <div class="col-md-3">
-                        <label class="form-label">Currency</label>
-                        <select class="form-select" name="currency">
-                            <option value="TZS" {{ $currency == 'TZS' ? 'selected' : '' }}>TZS (Tanzanian Shilling)</option>
-                            <option value="USD" {{ $currency == 'USD' ? 'selected' : '' }}>USD (US Dollar)</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Start Date</label>
-                        <input type="date" class="form-control" name="start_date" value="{{ $startDate }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">End Date</label>
-                        <input type="date" class="form-control" name="end_date" value="{{ $endDate }}">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">&nbsp;</label>
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="fas fa-sync-alt me-1"></i> Update Results
-                        </button>
-                    </div>
-                </form>
+<div class="space-y-6">
+    <!-- Filters Card -->
+    <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-sm text-primary-900 dark:text-white flex items-center gap-2">
+                <i class="fas fa-filter text-primary-500"></i> Statement Filters
+            </h3>
+            <div class="flex gap-2">
+                <a href="{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}" class="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-bold hover:bg-red-600 hover:text-white transition-all">
+                    <i class="fas fa-file-pdf me-1"></i> PDF
+                </a>
+                <a href="{{ request()->fullUrlWithQuery(['export' => 'excel']) }}" class="px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-lg text-xs font-bold hover:bg-green-600 hover:text-white transition-all">
+                    <i class="fas fa-file-excel me-1"></i> Excel
+                </a>
             </div>
         </div>
+        
+        <form method="GET" action="{{ route('account.statement') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Source</label>
+                <select name="tab" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                    <option value="database" {{ $activeTab === 'database' ? 'selected' : '' }}>Internal Database</option>
+                    <option value="api" {{ $activeTab === 'api' ? 'selected' : '' }}>ClickPesa API</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Status</label>
+                <select name="status" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                    <option value="all" {{ $statusFilter === 'all' ? 'selected' : '' }}>All Status</option>
+                    <option value="settled" {{ $statusFilter === 'settled' ? 'selected' : '' }}>Settled</option>
+                    <option value="failed" {{ $statusFilter === 'failed' ? 'selected' : '' }}>Failed</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Currency</label>
+                <select name="currency" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                    <option value="TZS" {{ $currencyFilter === 'TZS' ? 'selected' : '' }}>TZS</option>
+                    <option value="USD" {{ $currencyFilter === 'USD' ? 'selected' : '' }}>USD</option>
+                </select>
+            </div>
+            <div class="flex items-end">
+                <button type="submit" class="w-full bg-primary-600 hover:bg-primary-500 text-white py-2 rounded-lg text-xs font-bold transition-all">
+                    Generate Statement
+                </button>
+            </div>
+        </form>
+    </div>
 
-        @if($error)
-            <div class="alert alert-warning shadow-sm mb-4">
-                <i class="fas fa-exclamation-triangle me-2"></i> {{ $error }}
+    <!-- Statement Table Card -->
+    <div class="card overflow-hidden">
+        <div class="p-4 border-b border-primary-50 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30">
+            <h3 class="font-bold text-xs text-primary-700 dark:text-primary-300 uppercase tracking-widest">
+                Showing Records from: {{ $activeTab === 'api' ? 'ClickPesa API' : 'Internal Database' }}
+            </h3>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Reference</th>
+                        <th>Details</th>
+                        <th>Status</th>
+                        <th class="text-right">Amount</th>
+                        @if($activeTab === 'api')
+                            <th class="text-center">Sync</th>
+                        @endif
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
+                    @forelse($displayTransactions as $transaction)
+                        @php
+                            $t = (object)$transaction;
+                            $isSettled = in_array(strtoupper($t->status ?? ''), ['SETTLED', 'SUCCESS']);
+                            $isFailed = in_array(strtoupper($t->status ?? ''), ['FAILED', 'CANCELLED']);
+                        @endphp
+                        <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
+                            <td class="whitespace-nowrap">
+                                <div class="font-bold text-primary-900 dark:text-white">
+                                    {{ isset($t->created_at) ? \Carbon\Carbon::parse($t->created_at)->format('d M, Y') : (isset($t->createdAt) ? \Carbon\Carbon::parse($t->createdAt)->format('d M, Y') : 'N/A') }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="font-mono text-[11px] text-primary-600 dark:text-primary-400">
+                                    {{ $t->order_reference ?? $t->orderReference ?? 'N/A' }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-xs font-bold text-primary-900 dark:text-white">
+                                    {{ $t->customer_name ?? $t->payer_name ?? ($t->customer['customerName'] ?? 'N/A') }}
+                                </div>
+                                <div class="text-[10px] text-primary-500 italic truncate max-w-[150px]">
+                                    {{ $t->description ?? ($t->narrative ?? 'N/A') }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {{ $isSettled ? 'badge-green' : ($isFailed ? 'badge-red' : 'badge-yellow') }}">
+                                    {{ $t->status }}
+                                </span>
+                            </td>
+                            <td class="text-right font-mono font-bold text-primary-900 dark:text-white">
+                                {{ number_format($t->amount ?? ($t->collectedAmount ?? 0), 2) }}
+                            </td>
+                            @if($activeTab === 'api')
+                                <td class="text-center">
+                                    @if($t->is_synced)
+                                        <i class="fas fa-check-double text-primary-500" title="Synced to DB"></i>
+                                    @else
+                                        <i class="fas fa-cloud-download-alt text-gray-300" title="API Only"></i>
+                                    @endif
+                                </td>
+                            @endif
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="{{ $activeTab === 'api' ? 6 : 5 }}" class="text-center py-20">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
+                                        <i class="fas fa-search text-2xl text-primary-200"></i>
+                                    </div>
+                                    <h4 class="font-bold text-primary-900 dark:text-white">No records found</h4>
+                                    <p class="text-xs text-primary-500">Adjust your filters or dates to find transactions.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+        
+        @if(method_exists($displayTransactions, 'links'))
+            <div class="p-4 bg-primary-50/30 dark:bg-dark-900/30 border-t border-primary-50 dark:border-dark-border">
+                {{ $displayTransactions->links() }}
             </div>
         @endif
-
-        <!-- MAIN TABS (Source) -->
-        <div class="card shadow-sm mb-0 rounded-bottom-0">
-            <div class="card-header bg-white p-0">
-                <ul class="nav nav-tabs nav-fill" id="statementTabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link py-3 {{ $activeTab === 'database' ? 'active fw-bold border-bottom border-primary border-3' : 'text-muted' }}" 
-                           href="{{ request()->fullUrlWithQuery(['tab' => 'database']) }}">
-                            <i class="fas fa-database me-2"></i> DATABASE RECORDS
-                            <span class="badge bg-secondary ms-2">{{ $dbCount }}</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link py-3 {{ $activeTab === 'api' ? 'active fw-bold border-bottom border-primary border-3' : 'text-muted' }}" 
-                           href="{{ request()->fullUrlWithQuery(['tab' => 'api']) }}">
-                            <i class="fas fa-cloud me-2"></i> CLICKPESA API
-                            <span class="badge bg-secondary ms-2">{{ $apiCount }}</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- SUB TABS (Status) -->
-        <div class="card shadow-sm mb-4 border-top-0 rounded-top-0">
-            <div class="card-header bg-light py-2">
-                <ul class="nav nav-pills card-header-pills small">
-                    <li class="nav-item">
-                        <a class="nav-link {{ $statusFilter === 'all' ? 'active' : '' }}" 
-                           href="{{ request()->fullUrlWithQuery(['status' => 'all']) }}">
-                           All Status
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ $statusFilter === 'settled' ? 'active' : '' }}" 
-                           href="{{ request()->fullUrlWithQuery(['status' => 'settled']) }}">
-                           Settled / Success <span class="badge bg-white text-dark ms-1">{{ $settledCount }}</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {{ $statusFilter === 'failed' ? 'active' : '' }}" 
-                           href="{{ request()->fullUrlWithQuery(['status' => 'failed']) }}">
-                           Failed <span class="badge bg-white text-dark ms-1">{{ $failedCount }}</span>
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="ps-4">Date & Time</th>
-                                <th>Reference / ID</th>
-                                <th>Description / Purpose</th>
-                                @if($activeTab === 'api')
-                                    <th>Status in DB</th>
-                                @endif
-                                <th>Status</th>
-                                <th class="text-end pe-4">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($transactions as $transaction)
-                                <tr>
-                                    <td class="ps-4">
-                                        <div class="fw-bold">{{ \Carbon\Carbon::parse($transaction['date'])->format('M d, Y') }}</div>
-                                        <small class="text-muted">{{ \Carbon\Carbon::parse($transaction['date'])->format('H:i A') }}</small>
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold">
-                                            <a href="{{ route('payments.status', ['reference' => $transaction['reference']]) }}" class="text-decoration-none" title="View Full Details">
-                                                <code>{{ $transaction['reference'] ?? 'N/A' }}</code>
-                                                <i class="fas fa-external-link-alt small ms-1 text-muted"></i>
-                                            </a>
-                                        </div>
-                                        <small class="text-muted">{{ $transaction['transaction_id'] ?? 'No Transaction ID' }}</small>
-                                    </td>
-                                    <td>
-                                        <div class="text-wrap" style="max-width: 300px;">
-                                            {{ $transaction['description'] ?? 'N/A' }}
-                                        </div>
-                                        @if(isset($transaction['payer_name']))
-                                            <small class="text-muted d-block">Payer: {{ $transaction['payer_name'] }}</small>
-                                        @endif
-                                    </td>
-                                    @if($activeTab === 'api')
-                                        <td>
-                                            @if($transaction['is_synced'])
-                                                <span class="badge bg-light text-success border border-success">
-                                                    <i class="fas fa-check-circle me-1"></i> Recorded
-                                                </span>
-                                            @else
-                                                <span class="badge bg-light text-muted border">
-                                                    <i class="fas fa-minus-circle me-1"></i> API Only
-                                                </span>
-                                            @endif
-                                        </td>
-                                    @endif
-                                    <td>
-                                        @php
-                                            $status = strtoupper($transaction['status'] ?? 'UNKNOWN');
-                                            $statusClass = match($status) {
-                                                'SUCCESS', 'SETTLED' => 'bg-success',
-                                                'PENDING', 'PROCESSING' => 'bg-warning text-dark',
-                                                'FAILED' => 'bg-danger',
-                                                default => 'bg-secondary'
-                                            };
-                                        @endphp
-                                        <span class="badge {{ $statusClass }}">{{ $status }}</span>
-                                    </td>
-                                    <td class="text-end pe-4">
-                                        @php
-                                            $isDebit = ($transaction['entry'] ?? 'CREDIT') == 'DEBIT';
-                                        @endphp
-                                        <div class="fw-bold {{ $isDebit ? 'text-danger' : 'text-success' }}">
-                                            {{ $isDebit ? '-' : '+' }} {{ number_format($transaction['amount'], 2) }}
-                                        </div>
-                                        <small class="text-muted">{{ $currency }}</small>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="{{ $activeTab === 'api' ? 6 : 5 }}" class="text-center py-5">
-                                        <div class="text-muted mb-3"><i class="fas fa-search fs-1"></i></div>
-                                        <h5>No records found in {{ strtoupper($activeTab) }}{{ $activeTab === 'database' ? ' with status ' . strtoupper($statusFilter) : '' }}</h5>
-                                        <p>Adjust your filters or dates to find transactions.</p>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
     </div>
-</section>
-
-@push('styles')
-<style>
-    .card { border-radius: 12px; border: none; }
-    .nav-tabs .nav-link { border: none; transition: all 0.3s; }
-    .nav-tabs .nav-link:hover { background-color: #f8f9fa; }
-    .nav-pills .nav-link { border-radius: 6px; padding: 5px 15px; }
-    .table thead th { font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.5px; }
-</style>
-@endpush
+</div>
 @endsection

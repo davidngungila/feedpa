@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('transactions', function (Blueprint $table) {
-            $table->string('type')->default('payment')->after('description');
-        });
+        if (!Schema::hasColumn('transactions', 'type')) {
+            Schema::table('transactions', function (Blueprint $table) {
+                $table->string('type')->default('payment')->after('description');
+            });
+        }
     }
 
     /**

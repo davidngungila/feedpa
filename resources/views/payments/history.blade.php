@@ -120,12 +120,11 @@
                                 <div class="col-md-3">
                                     <label class="form-label">Status</label>
                                     <select class="form-select" name="status">
-                                        <option value="">All Status</option>
+                                        <option value="SETTLED" {{ request('status', 'SETTLED') == 'SETTLED' ? 'selected' : '' }}>SETTLED</option>
+                                        <option value="FAILED" {{ request('status') == 'FAILED' ? 'selected' : '' }}>FAILED</option>
                                         <option value="SUCCESS" {{ request('status') == 'SUCCESS' ? 'selected' : '' }}>SUCCESS</option>
-                                        <option value="SETTLED" {{ request('status') == 'SETTLED' ? 'selected' : '' }}>SETTLED</option>
                                         <option value="PENDING" {{ request('status') == 'PENDING' ? 'selected' : '' }}>PENDING</option>
                                         <option value="PROCESSING" {{ request('status') == 'PROCESSING' ? 'selected' : '' }}>PROCESSING</option>
-                                        <option value="FAILED" {{ request('status') == 'FAILED' ? 'selected' : '' }}>FAILED</option>
                                     </select>
                                 </div>
                                 <div class="col-md-3">
@@ -167,13 +166,7 @@
             <div class="card-header bg-white p-0">
                 <ul class="nav nav-tabs nav-fill" id="statusTabs" role="tablist">
                     <li class="nav-item">
-                        <a class="nav-link py-3 {{ !request('status') ? 'active fw-bold border-bottom border-primary border-3' : 'text-muted' }}" 
-                           href="{{ request()->fullUrlWithQuery(['status' => null]) }}">
-                            <i class="fas fa-list me-2"></i> ALL TRANSACTIONS
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link py-3 {{ request('status') === 'SETTLED' ? 'active fw-bold border-bottom border-primary border-3' : 'text-muted' }}" 
+                        <a class="nav-link py-3 {{ request('status', 'SETTLED') === 'SETTLED' ? 'active fw-bold border-bottom border-primary border-3' : 'text-muted' }}" 
                            href="{{ request()->fullUrlWithQuery(['status' => 'SETTLED']) }}">
                             <i class="fas fa-check-circle me-2"></i> SETTLED
                         </a>

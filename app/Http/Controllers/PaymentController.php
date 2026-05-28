@@ -355,11 +355,12 @@ class PaymentController extends Controller
      */
     public function history(Request $request)
     {
+        $status = $request->get('status', 'SETTLED');
         $query = Transaction::query()->where('type', 'payment');
 
         // Apply filters
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
+        if ($status) {
+            $query->where('status', $status);
         }
         if ($request->filled('currency')) {
             $query->where('currency', $request->currency);

@@ -126,14 +126,10 @@ class SyncPayments extends Command
                      'payer_name' => $apiPayerName,
                      'customer_name' => $transaction ? ($transaction->customer_name ?? $apiCustomerName) : $apiCustomerName,
                      'email' => $paymentData['customer']['customerEmail'] ?? $paymentData['email'] ?? null,
+                     'description' => ($transaction && !empty($transaction->description) && $transaction->description !== 'N/A') ? $transaction->description : ($apiDescription ?: ($transaction->description ?? 'Malipo ya FEEDTAN')),
                      'payment_method' => $paymentData['channel'] ?? $paymentData['paymentMethod'] ?? null,
                      'updated_at' => isset($paymentData['updatedAt']) ? Carbon::parse($paymentData['updatedAt']) : now(),
                  ];
-
-                 // Only set description if it's a new transaction
-                 if (!$transaction) {
-                     $data['description'] = $apiDescription;
-                 }
 
                 $isNew = false;
                 $statusChanged = false;

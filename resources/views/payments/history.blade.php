@@ -240,7 +240,7 @@
                                             </td>
                                             <td>
                                                 <div class="text-wrap" style="max-width: 200px;">
-                                                    {{ $payment->description ?? 'N/A' }}
+                                                    {{ $payment->description && $payment->description !== 'N/A' ? $payment->description : 'Malipo ya FEEDTAN' }}
                                                 </div>
                                             </td>
                                             <td>

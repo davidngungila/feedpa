@@ -48,7 +48,7 @@ class PaymentController extends Controller
             $amount = $this->api->formatAmount($validated['amount']);
             $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);
             $payerName = $validated['payer_name'];
-            $description = $validated['description'] ?? '';
+            $description = $request->input('description') ?: 'Malipo ya FEEDTAN';
             $orderReference = $this->api->generateOrderReference();
 
             if (!$phoneNumber) {
@@ -208,7 +208,8 @@ class PaymentController extends Controller
                                 'phone' => $apiData['customer']['customerPhoneNumber'] ?? $apiData['paymentPhoneNumber'] ?? $transaction->phone,
                                 'payer_name' => $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? $transaction->payer_name,
                                 'email' => $apiData['customer']['customerEmail'] ?? $apiData['email'] ?? $transaction->email,
-                                'description' => $apiData['description'] ?? $apiData['narrative'] ?? $transaction->description,
+                                // Strictly preserve local description if it has any content
+                                'description' => (!empty($transaction->description) && $transaction->description !== 'N/A') ? $transaction->description : ($apiData['description'] ?? $apiData['narrative'] ?? $transaction->description),
                                 'updated_at' => now()
                             ]);
                             
@@ -282,7 +283,7 @@ class PaymentController extends Controller
                                 'phone' => $apiPaymentData['customer']['customerPhoneNumber'] ?? $apiPaymentData['paymentPhoneNumber'] ?? null,
                                 'payer_name' => $apiPaymentData['customer']['customerName'] ?? $apiPaymentData['payer_name'] ?? null,
                                 'payment_method' => $apiPaymentData['channel'] ?? $apiPaymentData['paymentMethod'] ?? null,
-                                'description' => $apiPaymentData['description'] ?? null,
+                                'description' => $apiPaymentData['description'] ?? $apiPaymentData['narrative'] ?? null,
                                 'type' => 'payment',
                                 'sms_sent' => false,
                                 'sms_message' => null,

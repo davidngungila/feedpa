@@ -140,7 +140,7 @@
                                 <div>
                                     <label class="text-xs text-muted uppercase font-bold mb-2 d-block" style="font-size: 0.7rem;">Description / Notes</label>
                                     <div class="p-3 bg-light rounded-lg text-sm italic min-h-[60px]" style="font-size: 0.9rem; min-height: 60px;">
-                                        {{ $payment['description'] ?? $payment['message'] ?? 'No additional notes provided for this transaction.' }}
+                                        {{ (!empty($payment['description']) && $payment['description'] !== 'N/A') ? $payment['description'] : ($payment['message'] ?? 'Malipo ya FEEDTAN') }}
                                     </div>
                                 </div>
 

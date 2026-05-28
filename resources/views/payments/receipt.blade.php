@@ -202,7 +202,7 @@
                  </tr> 
                  <tr> 
                      <td class="label">Description:</td> 
-                     <td class="value">{{ strtoupper($paymentData['description'] ?? 'PAYMENT TRANSACTION') }}</td> 
+                     <td class="value">{{ strtoupper((!empty($paymentData['description']) && $paymentData['description'] !== 'N/A') ? $paymentData['description'] : ($paymentData['message'] ?? 'Malipo ya FEEDTAN')) }}</td> 
                  </tr> 
                  <tr> 
                      <td class="label">Payment Mode:</td> 

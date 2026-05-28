@@ -73,10 +73,10 @@ class CallbackController extends Controller
 
                 // Update transaction status
                 $transaction->update([
-                    'status' => $status,
-                    'transaction_id' => $transactionId,
-                    'amount' => $amount,
-                    'phone' => $phone,
+                    'status' => $status ?? $transaction->status,
+                    'transaction_id' => $transactionId ?? $transaction->transaction_id,
+                    'amount' => $amount ?? $transaction->amount,
+                    'phone' => $phone ?? $transaction->phone,
                     'payer_name' => $finalPayerName,
                     'customer_name' => $finalCustomerName,
                     'callback_data' => $data,

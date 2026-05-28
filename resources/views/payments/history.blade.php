@@ -54,6 +54,49 @@
         </form>
     </div>
 
+    <!-- Export Card -->
+    <div x-data="{ showExport: false }" class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-sm text-primary-900 dark:text-white flex items-center gap-2">
+                <i class="fas fa-file-export text-primary-500"></i> Export Report
+            </h3>
+            <button @click="showExport = !showExport" class="text-xs text-primary-600 font-bold hover:underline">
+                <span x-text="showExport ? 'Hide Export Options' : 'Show Export Options'"></span>
+            </button>
+        </div>
+
+        <form x-show="showExport" x-transition method="GET" action="{{ route('payments.export.pdf') }}" class="space-y-4">
+            <input type="hidden" name="status" value="{{ request('status', 'SETTLED') }}">
+            <input type="hidden" name="search" value="{{ request('search') }}">
+            <input type="hidden" name="start_date" value="{{ request('start_date') }}">
+            <input type="hidden" name="end_date" value="{{ request('end_date') }}">
+            <input type="hidden" name="currency" value="{{ request('currency') }}">
+
+            <div>
+                <p class="text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Choose columns to include</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    @foreach($availableColumns as $columnKey => $columnLabel)
+                        <label class="flex items-center gap-2 text-xs bg-primary-50 dark:bg-dark-900 px-3 py-2 rounded-lg border border-primary-100 dark:border-dark-border">
+                            <input type="checkbox" name="columns[]" value="{{ $columnKey }}"
+                                   {{ in_array($columnKey, $selectedColumns ?? []) ? 'checked' : '' }}
+                                   class="rounded border-primary-200 text-primary-600 focus:ring-primary-500">
+                            <span class="text-primary-700 dark:text-primary-300">{{ $columnLabel }}</span>
+                        </label>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition-all">
+                    <i class="fas fa-file-pdf me-1"></i> Export PDF
+                </button>
+                <button type="submit" formaction="{{ route('payments.export.excel') }}" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-lg text-xs font-bold transition-all">
+                    <i class="fas fa-file-excel me-1"></i> Export Excel
+                </button>
+            </div>
+        </form>
+    </div>
+
     <!-- Transactions Table -->
     <div class="card overflow-hidden">
         <div class="overflow-x-auto">

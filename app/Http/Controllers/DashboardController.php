@@ -136,7 +136,10 @@ class DashboardController extends Controller
                         return $payment;
                     };
                     
-                    $recentPayments = array_map($enhancePaymentData, array_slice($allRecentPayments, 0, 10));
+                    $recentSettledTransactions = array_values(array_filter($allRecentPayments, function ($payment) {
+                        return ($payment['status'] ?? '') === 'SETTLED';
+                    }));
+                    $recentPayments = array_map($enhancePaymentData, array_slice($recentSettledTransactions, 0, 10));
                     $successfulPayments = array_map($enhancePaymentData, array_slice($successfulTransactions, 0, 10));
                     $failedPayments = array_map($enhancePaymentData, array_slice($failedTransactions, 0, 10));
                 } else {

@@ -76,40 +76,61 @@
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
                     @forelse($displayTransactions as $transaction)
                         @php
-                            $t = (object)$transaction;
-                            $isSettled = in_array(strtoupper($t->status ?? ''), ['SETTLED', 'SUCCESS']);
-                            $isFailed = in_array(strtoupper($t->status ?? ''), ['FAILED', 'CANCELLED']);
+                            $t = (array) $transaction;
+
+                            $status = strtoupper($t['status'] ?? 'UNKNOWN');
+                            $isSettled = in_array($status, ['SETTLED', 'SUCCESS']);
+                            $isFailed = in_array($status, ['FAILED', 'CANCELLED', 'ERROR']);
+
+                            $rawDate = $t['created_at'] ?? $t['createdAt'] ?? $t['date'] ?? null;
+                            $formattedDate = $rawDate ? \Carbon\Carbon::parse($rawDate)->format('d M, Y') : 'N/A';
+
+                            $reference = $t['order_reference'] ?? $t['orderReference'] ?? $t['reference'] ?? 'N/A';
+                            $amount = (float) ($t['amount'] ?? $t['collectedAmount'] ?? 0);
+
+                            $customer = $t['customer'] ?? [];
+                            $customerName = $t['customer_name'] ?? $t['payer_name'] ?? $t['customerName'] ?? ($customer['customerName'] ?? 'N/A');
+                            $customerPhone = $t['phone'] ?? $t['paymentPhoneNumber'] ?? ($customer['customerPhoneNumber'] ?? 'N/A');
+                            $paymentMethod = $t['payment_method'] ?? $t['channel'] ?? $t['paymentMethod'] ?? 'N/A';
+                            $transactionId = $t['transaction_id'] ?? $t['id'] ?? 'N/A';
+                            $description = $t['description'] ?? $t['narrative'] ?? $t['message'] ?? 'No description';
                         @endphp
                         <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
                             <td class="whitespace-nowrap">
                                 <div class="font-bold text-primary-900 dark:text-white">
-                                    {{ isset($t->created_at) ? \Carbon\Carbon::parse($t->created_at)->format('d M, Y') : (isset($t->createdAt) ? \Carbon\Carbon::parse($t->createdAt)->format('d M, Y') : 'N/A') }}
+                                    {{ $formattedDate }}
                                 </div>
                             </td>
                             <td>
                                 <span class="font-mono text-[11px] text-primary-600 dark:text-primary-400">
-                                    {{ $t->order_reference ?? $t->orderReference ?? 'N/A' }}
+                                    {{ $reference }}
                                 </span>
                             </td>
                             <td>
                                 <div class="text-xs font-bold text-primary-900 dark:text-white">
-                                    {{ $t->customer_name ?? $t->payer_name ?? ($t->customer['customerName'] ?? 'N/A') }}
+                                    {{ $customerName }}
                                 </div>
-                                <div class="text-[10px] text-primary-500 italic truncate max-w-[150px]">
-                                    {{ $t->description ?? ($t->narrative ?? 'N/A') }}
+                                <div class="text-[10px] text-primary-500">
+                                    <span class="font-mono">{{ $customerPhone }}</span> • {{ $paymentMethod }}
+                                </div>
+                                <div class="text-[10px] text-primary-500">
+                                    TXID: <span class="font-mono">{{ $transactionId }}</span>
+                                </div>
+                                <div class="text-[10px] text-primary-500 italic truncate max-w-[220px]">
+                                    {{ $description }}
                                 </div>
                             </td>
                             <td>
                                 <span class="badge {{ $isSettled ? 'badge-green' : ($isFailed ? 'badge-red' : 'badge-yellow') }}">
-                                    {{ $t->status }}
+                                    {{ $status }}
                                 </span>
                             </td>
                             <td class="text-right font-mono font-bold text-primary-900 dark:text-white">
-                                {{ number_format($t->amount ?? ($t->collectedAmount ?? 0), 2) }}
+                                {{ number_format($amount, 2) }}
                             </td>
                             @if($activeTab === 'api')
                                 <td class="text-center">
-                                    @if($t->is_synced)
+                                    @if($t['is_synced'] ?? false)
                                         <i class="fas fa-check-double text-primary-500" title="Synced to DB"></i>
                                     @else
                                         <i class="fas fa-cloud-download-alt text-gray-300" title="API Only"></i>

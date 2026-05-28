@@ -356,6 +356,23 @@ class PaymentController extends Controller
     public function history(Request $request)
     {
         $status = $request->get('status', 'SETTLED');
+        $selectedColumns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']);
+        $availableColumns = [
+            'order_reference' => 'Reference',
+            'transaction_id' => 'Transaction ID',
+            'status' => 'Status',
+            'amount' => 'Amount',
+            'currency' => 'Currency',
+            'customer_name' => 'Member Name',
+            'payer_name' => 'Payer Name',
+            'phone' => 'Phone',
+            'email' => 'Email',
+            'description' => 'Description',
+            'payment_method' => 'Payment Method',
+            'created_at' => 'Created At',
+            'updated_at' => 'Updated At',
+        ];
+
         $query = Transaction::query()->where('type', 'payment');
 
         // Apply filters
@@ -365,7 +382,16 @@ class PaymentController extends Controller
         if ($request->filled('currency')) {
             $query->where('currency', $request->currency);
         }
-        if ($request->filled('order_reference')) {
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('order_reference', 'like', '%' . $search . '%')
+                    ->orWhere('transaction_id', 'like', '%' . $search . '%')
+                    ->orWhere('payer_name', 'like', '%' . $search . '%')
+                    ->orWhere('customer_name', 'like', '%' . $search . '%')
+                    ->orWhere('phone', 'like', '%' . $search . '%');
+            });
+        } elseif ($request->filled('order_reference')) {
             $query->where('order_reference', 'like', '%' . $request->order_reference . '%');
         }
         if ($request->filled('phone')) {
@@ -394,7 +420,7 @@ class PaymentController extends Controller
             'total' => $totalCount
         ]);
 
-        return view('payments.history', compact('payments', 'totalCount', 'successCount', 'pendingCount', 'failedCount'));
+        return view('payments.history', compact('payments', 'totalCount', 'successCount', 'pendingCount', 'failedCount', 'selectedColumns', 'availableColumns'));
     }
 
     /**
@@ -417,6 +443,16 @@ class PaymentController extends Controller
             if ($request->filled('currency')) {
                 $query->where('currency', $request->currency);
             }
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('order_reference', 'like', '%' . $search . '%')
+                        ->orWhere('transaction_id', 'like', '%' . $search . '%')
+                        ->orWhere('payer_name', 'like', '%' . $search . '%')
+                        ->orWhere('customer_name', 'like', '%' . $search . '%')
+                        ->orWhere('phone', 'like', '%' . $search . '%');
+                });
+            }
             if ($request->filled('start_date')) {
                 $query->whereDate('created_at', '>=', $request->start_date);
             }
@@ -427,7 +463,11 @@ class PaymentController extends Controller
             $payments = $query->orderBy('created_at', 'desc')->get()->toArray();
             
             // Selected columns
-            $columns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']);
+            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at'];
+            $columns = array_values(array_intersect($request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']), $allowedColumns));
+            if (empty($columns)) {
+                $columns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at'];
+            }
 
             $pdf = Pdf::loadView('payments.exports.pdf', [
                 'payments' => $payments,
@@ -458,6 +498,16 @@ class PaymentController extends Controller
             if ($request->filled('currency')) {
                 $query->where('currency', $request->currency);
             }
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('order_reference', 'like', '%' . $search . '%')
+                        ->orWhere('transaction_id', 'like', '%' . $search . '%')
+                        ->orWhere('payer_name', 'like', '%' . $search . '%')
+                        ->orWhere('customer_name', 'like', '%' . $search . '%')
+                        ->orWhere('phone', 'like', '%' . $search . '%');
+                });
+            }
             if ($request->filled('order_reference')) {
                 $query->where('order_reference', 'like', '%' . $request->order_reference . '%');
             }
@@ -471,7 +521,11 @@ class PaymentController extends Controller
             $payments = $query->orderBy('created_at', 'desc')->get()->toArray();
             
             // Selected columns
-            $columns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at']);
+            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at'];
+            $columns = array_values(array_intersect($request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at']), $allowedColumns));
+            if (empty($columns)) {
+                $columns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at'];
+            }
 
             return Excel::download(new \App\Exports\PaymentHistoryExport($payments, $columns), 'payment-history-' . date('Y-m-d') . '.xlsx');
         } catch (Exception $e) {

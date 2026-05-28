@@ -237,7 +237,9 @@ class AccountController extends Controller
         }
 
         return view('account.statement', [
-            'displayTransactions' => $displayTransactions->sortByDesc('date'),
+            'displayTransactions' => $displayTransactions->sortByDesc(function ($transaction) {
+                return $transaction['date'] ?? $transaction['created_at'] ?? $transaction['createdAt'] ?? null;
+            }),
             'stats' => $stats,
             'error' => $error,
             'currency' => $currency,

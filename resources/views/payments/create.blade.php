@@ -34,7 +34,7 @@
                                     <i class="fas fa-credit-card me-2"></i>
                                     FEEDTAN CMG Payment Gateway
                                 </h3>
-                                <p class="text-muted mb-0">Create secure payment transactions with instant processing</p>
+                                <p class="text-muted mb-0">Create secure payment requests with clear customer details and reliable tracking.</p>
                             </div>
                             <div class="text-end">
                                 <div class="badge bg-success fs-6">Live</div>
@@ -142,7 +142,7 @@
                                             <input type="number" class="form-control @error('amount') is-invalid @enderror" 
                                                    id="amount" name="amount" 
                                                    value="{{ old('amount') }}" 
-                                                   min="100" max="1000000" step="0.01" required>
+                                                   min="500" max="1000000" step="0.01" required>
                                         </div>
                                         @error('amount')
                                             <div class="invalid-feedback">
@@ -150,7 +150,7 @@
                                                 {{ $message }}
                                             </div>
                                         @enderror
-                                        <small class="form-text text-muted">Minimum: 100 TZS, Maximum: 1,000,000 TZS</small>
+                                        <small class="form-text text-muted">Minimum: 500 TZS, Maximum: 1,000,000 TZS</small>
                                     </div>
                                 </div>
                                 
@@ -189,12 +189,12 @@
                                     <div class="form-group mb-3">
                                         <label for="description" class="form-label">
                                             <i class="fas fa-comment me-1"></i>
-                                            Description (Optional)
+                                            Description
                                         </label>
                                         <textarea class="form-control @error('description') is-invalid @enderror" 
                                                   id="description" name="description" 
                                                   rows="3" maxlength="255" 
-                                                  placeholder="Enter payment description or notes">{{ old('description') }}</textarea>
+                                                  placeholder="Enter payment description or notes" required>{{ old('description') }}</textarea>
                                         @error('description')
                                             <div class="invalid-feedback">
                                                 <i class="fas fa-exclamation-circle me-1"></i>
@@ -202,7 +202,7 @@
                                             </div>
                                         @enderror
                                         <div class="d-flex justify-content-between">
-                                            <small class="form-text text-muted">Additional details about this payment</small>
+                                        <small class="form-text text-muted">Add a clear purpose for reconciliation and reporting.</small>
                                             <small class="form-text text-muted">
                                                 <span id="charCount">{{ 255 - strlen(old('description') ?? '') }}</span> characters remaining
                                             </small>
@@ -591,12 +591,12 @@ document.getElementById('phone_number').addEventListener('input', function() {
 // Amount validation
 document.getElementById('amount').addEventListener('input', function() {
     const amount = parseFloat(this.value);
-    const minAmount = 100;
+    const minAmount = 500;
     const maxAmount = 1000000;
     
     if (amount < minAmount) {
         this.classList.add('is-invalid');
-        showAmountError('Minimum amount is 100 TZS');
+        showAmountError('Minimum amount is 500 TZS');
     } else if (amount > maxAmount) {
         this.classList.add('is-invalid');
         showAmountError('Maximum amount is 1,000,000 TZS');
@@ -632,9 +632,9 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
     // Validate amount
     const amountInput = document.getElementById('amount');
     const amount = parseFloat(amountInput.value);
-    if (amount < 100 || amount > 1000000) {
+    if (amount < 500 || amount > 1000000) {
         e.preventDefault();
-        showAlert('error', 'Amount must be between 100 TZS and 1,000,000 TZS.');
+        showAlert('error', 'Amount must be between 500 TZS and 1,000,000 TZS.');
         amountInput.focus();
         return;
     }
@@ -681,7 +681,7 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
             // Reset form after successful submission
             this.reset();
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Process Payment';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Initiate Payment';
             
             // Update character count
             const charCountElement = document.getElementById('charCount');
@@ -696,7 +696,7 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
         } else {
             showAlert('error', result.message || 'Payment initiation failed. Please try again.');
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Process Payment';
+            submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Initiate Payment';
         }
     })
     .catch(error => {
@@ -706,7 +706,7 @@ document.getElementById('paymentForm').addEventListener('submit', function(e) {
         
         showAlert('error', 'Network error. Please try again.');
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-lock me-2"></i>Process Payment';
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Initiate Payment';
     });
 });
 

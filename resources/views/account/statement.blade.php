@@ -1,74 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="content-header">
+<section class="content mt-4">
     <div class="container-fluid">
-        <div class="row mb-2">
-            <div class="col-sm-6">
-                <h1 class="m-0" style="font-size: 1.5rem;">
-                    <i class="fas fa-file-invoice me-2"></i>
-                    Account Statement
-                </h1>
-            </div>
-            <div class="col-sm-6 text-end">
-                <div class="btn-group">
-                    <button type="button" class="btn btn-outline-danger dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="fas fa-file-pdf me-1"></i> Export PDF
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['export' => 'pdf']) }}">Current View</a></li>
-                    </ul>
-                    
-                    <button type="button" class="btn btn-outline-success dropdown-toggle" data-bs-toggle="dropdown">
-                        <i class="fas fa-file-excel me-1"></i> Export Excel
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{{ request()->fullUrlWithQuery(['export' => 'excel']) }}">Current View</a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<section class="content">
-    <div class="container-fluid">
-        <!-- Summary Stats Cards -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="card bg-primary text-white shadow-sm border-0">
-                    <div class="card-body">
-                        <h6 class="text-uppercase small mb-2">Total Unique Entries</h6>
-                        <h3 class="mb-0">{{ number_format($stats['total'] ?? 0) }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-success text-white shadow-sm border-0">
-                    <div class="card-body">
-                        <h6 class="text-uppercase small mb-2">Total Credits</h6>
-                        <h3 class="mb-0">{{ number_format($stats['total_credits'] ?? 0, 2) }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-danger text-white shadow-sm border-0">
-                    <div class="card-body">
-                        <h6 class="text-uppercase small mb-2">Total Debits</h6>
-                        <h3 class="mb-0">{{ number_format($stats['total_debits'] ?? 0, 2) }}</h3>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card bg-info text-white shadow-sm border-0">
-                    <div class="card-body">
-                        <h6 class="text-uppercase small mb-2">Successful Payments</h6>
-                        <h3 class="mb-0">{{ number_format($stats['successful'] ?? 0) }}</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- Filters -->
         <div class="card shadow-sm mb-4">
             <div class="card-body">

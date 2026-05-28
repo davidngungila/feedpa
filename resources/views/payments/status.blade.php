@@ -142,7 +142,7 @@
                 <i class="fas fa-info-circle"></i> Purpose / Description
             </h3>
             <div class="p-4 bg-primary-50 dark:bg-dark-900 rounded-xl italic text-sm text-primary-800 dark:text-primary-300 border border-primary-100 dark:border-dark-border">
-                {{ (!empty($payment['description']) && $payment['description'] !== 'N/A') ? $payment['description'] : ($payment['message'] ?? 'Malipo ya FEEDTAN') }}
+                {{ $payment['description'] ?? ($payment['message'] ?? 'Malipo ya FEEDTAN') }}
             </div>
         </div>
 

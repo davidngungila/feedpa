@@ -175,7 +175,7 @@ class AccountController extends Controller
                 'date' => $t->created_at->toIso8601String(),
                 'created_at' => $t->created_at->toIso8601String(),
                 'updated_at' => $t->updated_at?->toIso8601String(),
-                'description' => $t->description ?? 'Payment Transaction',
+                'description' => $t->resolvedDescription(),
                 'amount' => (float) $t->amount,
                 'currency' => $t->currency ?? 'TZS',
                 'entry' => 'CREDIT',

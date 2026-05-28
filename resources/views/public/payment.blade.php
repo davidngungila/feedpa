@@ -153,8 +153,9 @@
                                               id="description" 
                                               name="description"
                                               rows="3"
-                                              placeholder="Eleza madhumuni ya malipo"
-                                              maxlength="255"></textarea>
+                                              placeholder="Mfano: akiba, uwekezaji, malipo ya mkopo"
+                                              maxlength="500"
+                                              required></textarea>
                                     <div class="form-text small">Tafadhali eleza kwa ufupi madhumuni ya malipo yako (mstari wa 255)</div>
                                 </div>
                             </div>
@@ -282,10 +283,15 @@
                 return;
             }
             
-            // Validate description length
-            const description = descriptionInput.value;
-            if (description.length > 255) {
-                alert('Maelezo hayawezi kuwa zaidi ya herufi 255');
+            // Validate description
+            const description = descriptionInput.value.trim();
+            if (!description) {
+                alert('Tafadhali ingiza madhumuni ya malipo (mfano: akiba, uwekezaji, malipo ya mkopo).');
+                descriptionInput.focus();
+                return;
+            }
+            if (description.length > 500) {
+                alert('Maelezo hayawezi kuwa zaidi ya herufi 500');
                 descriptionInput.focus();
                 return;
             }

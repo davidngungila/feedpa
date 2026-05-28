@@ -256,7 +256,7 @@
                               id="description" 
                               name="description" 
                               rows="3" 
-                              placeholder="Andika maelezo ya malipo" required></textarea>
+                              placeholder="Mfano: akiba, uwekezaji, malipo ya mkopo" required></textarea>
                     <small class="text-muted">Maelezo ya ziada kuhusu malipo yako</small>
                 </div>
 

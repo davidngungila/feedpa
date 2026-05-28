@@ -38,6 +38,10 @@ class PaymentController extends Controller
      */
     public function store(Request $request)
     {
+        $request->merge([
+            'description' => trim((string) ($request->input('description') ?: $request->input('purpose', ''))),
+        ]);
+
         $validated = $request->validate([
             'amount' => 'required|numeric|min:500',
             'phone_number' => 'required|string',
@@ -76,7 +80,7 @@ class PaymentController extends Controller
                 return back()->with('error', 'No active payment methods available for this phone number');
             }
 
-            // Save transaction to database first
+            // Save transaction to database first (preserve member purpose for later API/sync updates)
             $transaction = Transaction::create([
                 'order_reference' => $orderReference,
                 'status' => 'PROCESSING',
@@ -87,7 +91,12 @@ class PaymentController extends Controller
                 'payer_name' => $memberName,
                 'description' => $description,
                 'type' => 'payment',
-                'callback_data' => null,
+                'callback_data' => TransactionFieldResolver::initialCallbackSnapshot(
+                    $description,
+                    $request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest'
+                        ? 'public_swahili_form'
+                        : 'payment_form'
+                ),
             ]);
 
             // Initiate the payment with customer details
@@ -185,7 +194,7 @@ class PaymentController extends Controller
                         'currency' => $transaction->currency,
                         'phone' => $transaction->phone,
                         'payer_name' => $transaction->payer_name,
-                        'description' => $transaction->description,
+                        'description' => $transaction->resolvedDescription(),
                         'type' => $transaction->type,
                         'payment_method' => $transaction->payment_method,
                         'sms_sent' => $transaction->sms_sent,
@@ -214,6 +223,17 @@ class PaymentController extends Controller
                         
                         // Update transaction with API data
                         if ($apiData && isset($apiData['status'])) {
+                            $mergedCallback = TransactionFieldResolver::mergeCallbackData(
+                                $transaction->callback_data,
+                                $apiData
+                            );
+                            $resolvedDescription = TransactionFieldResolver::description(
+                                $transaction->description,
+                                $apiData['description'] ?? $apiData['narrative'] ?? null,
+                                null,
+                                $mergedCallback
+                            );
+
                             $transaction->update([
                                 'status' => $apiData['status'],
                                 'transaction_id' => $apiData['id'] ?? $apiData['transaction_id'] ?? $transaction->transaction_id,
@@ -230,10 +250,8 @@ class PaymentController extends Controller
                                     $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? null
                                 ),
                                 'email' => $apiData['customer']['customerEmail'] ?? $apiData['email'] ?? $transaction->email,
-                                'description' => TransactionFieldResolver::description(
-                                    $transaction->description,
-                                    $apiData['description'] ?? $apiData['narrative'] ?? null
-                                ),
+                                'description' => $resolvedDescription,
+                                'callback_data' => $mergedCallback,
                                 'updated_at' => now()
                             ]);
                             
@@ -249,7 +267,9 @@ class PaymentController extends Controller
                                 'payer_name' => $transaction->payer_name,
                                 'customer_name' => $transaction->customer_name,
                                 'email' => $transaction->email,
-                                'description' => $transaction->description,
+                                'description' => $transaction->resolvedDescription(
+                                    $apiData['description'] ?? $apiData['narrative'] ?? null
+                                ),
                                 'type' => $transaction->type,
                                 'payment_method' => $transaction->payment_method,
                                 'sms_sent' => $transaction->sms_sent,
@@ -586,7 +606,7 @@ class PaymentController extends Controller
                     ],
                     'payer_name' => $transaction->payer_name,
                     'customer_name' => $transaction->customer_name,
-                    'description' => $transaction->description,
+                    'description' => $transaction->resolvedDescription(),
                     'createdAt' => $transaction->created_at,
                     'id' => $transaction->transaction_id
                 ];

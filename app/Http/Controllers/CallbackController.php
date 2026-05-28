@@ -69,9 +69,15 @@ class CallbackController extends Controller
                     $transaction->payer_name,
                     $remotePayerName
                 );
+                $mergedCallback = TransactionFieldResolver::mergeCallbackData(
+                    $transaction->callback_data,
+                    $data
+                );
                 $finalDescription = TransactionFieldResolver::description(
                     $transaction->description,
-                    $data['description'] ?? $data['narrative'] ?? null
+                    $data['description'] ?? $data['narrative'] ?? null,
+                    null,
+                    $mergedCallback
                 );
 
                 // Update transaction status
@@ -84,7 +90,7 @@ class CallbackController extends Controller
                     'customer_name' => $finalCustomerName,
                     'description' => $finalDescription,
                     'payment_method' => $data['channel'] ?? $data['paymentMethod'] ?? $transaction->payment_method,
-                    'callback_data' => $data,
+                    'callback_data' => $mergedCallback,
                     'callback_received_at' => now()
                 ]);
 

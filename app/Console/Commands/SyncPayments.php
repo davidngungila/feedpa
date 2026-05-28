@@ -106,6 +106,10 @@ class SyncPayments extends Command
 
                  $apiPayerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? null;
                  $apiDescription = $paymentData['description'] ?? $paymentData['narrative'] ?? null;
+                 $mergedCallback = TransactionFieldResolver::mergeCallbackData(
+                     $transaction?->callback_data,
+                     $paymentData
+                 );
 
                  $data = [
                      'order_reference' => $orderReference,
@@ -120,8 +124,10 @@ class SyncPayments extends Command
                      'description' => TransactionFieldResolver::description(
                          $transaction?->description,
                          $apiDescription,
-                         $transaction ? null : 'Malipo ya FEEDTAN'
+                         $transaction ? null : 'Malipo ya FEEDTAN',
+                         $mergedCallback
                      ),
+                     'callback_data' => $mergedCallback,
                      'payment_method' => $paymentData['channel'] ?? $paymentData['paymentMethod'] ?? null,
                      'updated_at' => isset($paymentData['updatedAt']) ? Carbon::parse($paymentData['updatedAt']) : now(),
                  ];

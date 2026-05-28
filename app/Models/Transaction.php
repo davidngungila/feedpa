@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\TransactionFieldResolver;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -73,5 +74,10 @@ class Transaction extends Model
     public function scopePayments($query)
     {
         return $query->where('type', 'payment');
+    }
+
+    public function resolvedDescription(?string $remote = null, string $default = 'Malipo ya FEEDTAN'): string
+    {
+        return TransactionFieldResolver::resolveForTransaction($this, $remote, $default);
     }
 }

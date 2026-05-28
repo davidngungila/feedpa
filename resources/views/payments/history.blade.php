@@ -145,17 +145,7 @@
                                 ?? $callbackCustomer['customerPhoneNumber']
                                 ?? 'N/A';
 
-                            $displayDescription = trim((string) ($payment->description ?? ''));
-                            if ($displayDescription === '' || strtoupper($displayDescription) === 'N/A') {
-                                $displayDescription = trim((string) (
-                                    $callbackData['description']
-                                    ?? $callbackData['narrative']
-                                    ?? ''
-                                ));
-                            }
-                            if ($displayDescription === '' || strtoupper($displayDescription) === 'N/A') {
-                                $displayDescription = 'Malipo ya FEEDTAN';
-                            }
+                            $displayDescription = $payment->resolvedDescription();
 
                             $status = strtoupper($payment->status ?? 'UNKNOWN');
                             $isSettled = in_array($status, ['SETTLED', 'SUCCESS']);

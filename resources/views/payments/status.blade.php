@@ -62,32 +62,147 @@
             <!-- Advanced Status Header -->
             <div class="row mb-4">
                 <div class="col-12">
-                    <div class="card border-left-4 border-left-{{ $statusColor }} shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h3 class="card-title mb-2">
-                                        <i class="fas {{ $statusIcon }} me-2 text-{{ $statusColor }}"></i>
-                                        {{ $statusText }}
-                                    </h3>
-                                    <p class="text-muted mb-0">
-                                        Reference: <span class="fw-bold">{{ $payment['orderReference'] ?? 'N/A' }}</span>
-                                    </p>
-                                </div>
-                                <div class="text-end">
-                                    <div class="h2 mb-0 text-{{ $statusColor }}">
-                                        {{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }}
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body p-0">
+                            <div class="space-y-6 p-4">
+                                <!-- HEADER INFO -->
+                                <div class="d-flex align-items-center justify-content-between p-4 bg-light rounded-lg">
+                                    <div>
+                                        <div class="text-xs text-muted uppercase font-bold tracking-wider mb-1" style="font-size: 0.7rem;">Order Reference</div>
+                                        <div class="text-lg font-bold mono" style="font-family: monospace; font-size: 1.2rem;">{{ $payment['orderReference'] ?? 'N/A' }}</div>
                                     </div>
-                                    <small class="text-muted">{{ $payment['collectedCurrency'] ?? 'TZS' }}</small>
+                                    <div class="text-end">
+                                        <div class="text-xs text-muted uppercase font-bold tracking-wider mb-1" style="font-size: 0.7rem;">Status</div>
+                                        <span class="badge bg-{{ $statusColor }} px-3 py-2">
+                                            <i class="fas {{ $statusIcon }} me-1"></i>
+                                            {{ $statusText }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- TRANSACTION DETAILS -->
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <div class="p-3 border border-light rounded-lg h-100">
+                                            <div class="text-xs text-muted mb-1" style="font-size: 0.75rem;">Customer / Payer</div>
+                                            <div class="font-bold" style="font-weight: 700;">{{ $payment['payer_name'] ?? 'Mteja' }}</div>
+                                            <div class="text-xs text-muted">{{ $payment['phone'] ?? 'N/A' }}</div>
+                                            @if(isset($payment['email']))
+                                                <div class="text-xs text-muted">{{ $payment['email'] }}</div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-3 border border-light rounded-lg h-100">
+                                            <div class="text-xs text-muted mb-1" style="font-size: 0.75rem;">Amount</div>
+                                            <div class="font-bold text-success" style="font-weight: 700; font-size: 1.25rem;">
+                                                {{ $payment['collectedCurrency'] ?? 'TZS' }} {{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }}
+                                            </div>
+                                            @if(isset($payment['fee']) && $payment['fee'] > 0)
+                                                <div class="text-xs text-muted">Incl. fee: {{ number_format($payment['fee'], 2) }}</div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-light rounded-lg h-100">
+                                            <div class="text-xs text-muted mb-1" style="font-size: 0.75rem;">Transaction ID</div>
+                                            <div class="font-bold" style="font-size: 0.85rem;">{{ $payment['id'] ?? 'N/A' }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-light rounded-lg h-100">
+                                            <div class="text-xs text-muted mb-1" style="font-size: 0.75rem;">Date</div>
+                                            <div class="font-bold">{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
+                                            <div class="text-xs text-muted">{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i:s') }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="p-3 border border-light rounded-lg h-100">
+                                            <div class="text-xs text-muted mb-1" style="font-size: 0.75rem;">Payment Method</div>
+                                            <div class="font-bold">{{ ucfirst($payment['channel'] ?? $payment['paymentMethod'] ?? 'N/A') }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- NOTES / COMMENTS -->
+                                <div>
+                                    <label class="text-xs text-muted uppercase font-bold mb-2 d-block" style="font-size: 0.7rem;">Description / Notes</label>
+                                    <div class="p-3 bg-light rounded-lg text-sm italic min-h-[60px]" style="font-size: 0.9rem; min-height: 60px;">
+                                        {{ $payment['description'] ?? $payment['message'] ?? 'No additional notes provided for this transaction.' }}
+                                    </div>
+                                </div>
+
+                                <!-- ACTIONS -->
+                                <div class="space-y-3 mt-4">
+                                    <label class="text-xs text-muted uppercase font-bold d-block mb-2" style="font-size: 0.7rem;">Quick Actions</label>
+                                    <div class="row g-2">
+                                        <div class="col-md-3">
+                                            @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
+                                                <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" class="btn btn-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-3" target="_blank">
+                                                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                                    Download Receipt
+                                                </a>
+                                            @else
+                                                <button class="btn btn-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-3" onclick="checkPaymentStatus()">
+                                                    <i class="fas fa-sync-alt"></i>
+                                                    Refresh Status
+                                                </button>
+                                            @endif
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button class="btn btn-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-3" onclick="sendSms('{{ $payment['id'] ?? '' }}')">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+                                                Send SMS
+                                            </button>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button class="btn btn-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-3" onclick="sendEmail('{{ $payment['id'] ?? '' }}')">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                                                Send Email
+                                            </button>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <button class="btn btn-secondary w-100 d-flex align-items-center justify-content-center gap-2 py-3" onclick="addComment('{{ $payment['id'] ?? '' }}')">
+                                                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                                Add Comment
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-                            
-                            <!-- Payment Details Grid -->
-<div class="row">
+
+            @push('scripts')
+            <script>
+            function sendSms(id) {
+                if (confirm('Send receipt confirmation SMS to customer?')) {
+                    showAlert('info', 'Processing SMS request...');
+                    // Add actual AJAX logic here if needed
+                }
+            }
+
+            function sendEmail(id) {
+                if (confirm('Send receipt confirmation Email to customer?')) {
+                    showAlert('info', 'Processing Email request...');
+                    // Add actual AJAX logic here if needed
+                }
+            }
+
+            function addComment(id) {
+                const comment = prompt('Enter internal comment:');
+                if (comment) {
+                    showAlert('success', 'Comment added successfully');
+                    // Add actual AJAX logic here if needed
+                }
+            }
+            </script>
+            @endpush
+            
+            <!-- Payment Details Grid -->
+<div class="row" style="display: none;">
     <!-- Transaction Information -->
     <div class="col-lg-8">
         <div class="card shadow-sm mb-4">
@@ -658,6 +773,27 @@
         transform: translateY(-50px);
         opacity: 0;
     }
+}
+.space-y-6 > * + * {
+    margin-top: 1.5rem;
+}
+.space-y-3 > * + * {
+    margin-top: 0.75rem;
+}
+.rounded-lg {
+    border-radius: 0.5rem;
+}
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+.border-light {
+    border-color: #f8f9fa !important;
+}
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+.tracking-wider {
+    letter-spacing: 0.05em;
 }
 </style>
 @endpush

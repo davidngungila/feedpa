@@ -190,9 +190,28 @@
                                 <div class="text-[10px] text-primary-500">{{ $payment->created_at->format('H:i:s') }}</div>
                             </td>
                             <td>
-                                <span class="font-mono text-[11px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded border border-primary-100 dark:border-dark-border text-primary-700 dark:text-primary-300">
-                                    {{ $payment->order_reference }}
-                                </span>
+                                <div class="flex items-center gap-1.5 max-w-[200px]">
+                                    <span class="font-mono text-[11px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded border border-primary-100 dark:border-dark-border text-primary-700 dark:text-primary-300 truncate" title="{{ $payment->order_reference }}">
+                                        {{ $payment->order_reference }}
+                                    </span>
+                                    <button type="button"
+                                            @click.stop="copyText(@js($payment->order_reference), 'ref-{{ $payment->id }}')"
+                                            class="shrink-0 w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                            title="Copy reference">
+                                        <i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i>
+                                    </button>
+                                </div>
+                                @if($payment->transaction_id)
+                                    <div class="flex items-center gap-1.5 mt-1 max-w-[200px]">
+                                        <span class="font-mono text-[9px] text-primary-500 truncate" title="{{ $payment->transaction_id }}">TX: {{ $payment->transaction_id }}</span>
+                                        <button type="button"
+                                                @click.stop="copyText(@js($payment->transaction_id), 'tx-{{ $payment->id }}')"
+                                                class="shrink-0 w-6 h-6 rounded-md bg-primary-50 dark:bg-primary-900/20 text-primary-500 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                                title="Copy transaction ID">
+                                            <i class="fas text-[9px]" :class="copiedField === 'tx-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i>
+                                        </button>
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 <div class="font-bold text-primary-900 dark:text-white">{{ $memberName }}</div>
@@ -287,9 +306,17 @@
             <template x-if="selected">
                 <div class="space-y-5">
                     <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-primary-50/50 dark:bg-dark-900/50 border border-primary-100 dark:border-dark-border">
-                        <div>
+                        <div class="min-w-0 flex-1">
                             <p class="text-[10px] font-bold uppercase text-primary-500">Reference</p>
-                            <p class="font-mono font-bold text-primary-900 dark:text-white" x-text="selected.reference"></p>
+                            <div class="flex items-center gap-2 mt-0.5">
+                                <p class="font-mono font-bold text-primary-900 dark:text-white break-all" x-text="selected.reference"></p>
+                                <button type="button"
+                                        @click="copyText(selected.reference, 'reference')"
+                                        class="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-dark-900 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white border border-primary-100 dark:border-dark-border transition-all"
+                                        title="Copy reference">
+                                    <i class="fas text-xs" :class="copiedField === 'reference' ? 'fa-check' : 'fa-copy'"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="text-right">
                             <p class="text-[10px] font-bold uppercase text-primary-500">Amount</p>
@@ -330,9 +357,18 @@
                             <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
                                 <i class="fas fa-receipt"></i> Transaction Details
                             </h4>
-                            <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
-                                <span class="text-xs text-primary-500">Transaction ID</span>
-                                <span class="font-mono text-xs font-bold" x-text="selected.transaction_id"></span>
+                            <div class="flex justify-between items-start gap-2 border-b border-primary-50 dark:border-dark-border pb-2">
+                                <span class="text-xs text-primary-500 shrink-0">Transaction ID</span>
+                                <div class="flex items-center gap-2 min-w-0 justify-end">
+                                    <span class="font-mono text-xs font-bold break-all text-right" x-text="selected.transaction_id"></span>
+                                    <button type="button"
+                                            @click="copyText(selected.transaction_id, 'transaction_id')"
+                                            :disabled="!selected.transaction_id || selected.transaction_id === 'N/A'"
+                                            class="shrink-0 w-7 h-7 rounded-lg bg-primary-50 dark:bg-dark-900 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all disabled:opacity-40 disabled:pointer-events-none"
+                                            title="Copy transaction ID">
+                                        <i class="fas text-[10px]" :class="copiedField === 'transaction_id' ? 'fa-check' : 'fa-copy'"></i>
+                                    </button>
+                                </div>
                             </div>
                             <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
                                 <span class="text-xs text-primary-500">Payment Method</span>
@@ -408,6 +444,8 @@ function paymentHistoryDetails() {
     return {
         open: false,
         selected: null,
+        copiedField: null,
+        copyTimeout: null,
         openDetails(payload) {
             this.selected = payload;
             this.open = true;
@@ -417,6 +455,25 @@ function paymentHistoryDetails() {
             this.open = false;
             this.selected = null;
             document.body.style.overflow = '';
+        },
+        async copyText(text, field) {
+            const value = String(text ?? '').trim();
+            if (!value || value === 'N/A') return;
+            try {
+                await navigator.clipboard.writeText(value);
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = value;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+            this.copiedField = field;
+            clearTimeout(this.copyTimeout);
+            this.copyTimeout = setTimeout(() => { this.copiedField = null; }, 2000);
         },
         formatAmount(value) {
             return new Intl.NumberFormat('en-TZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));

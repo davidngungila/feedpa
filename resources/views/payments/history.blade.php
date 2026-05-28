@@ -3,17 +3,25 @@
 @section('title', 'Payment History')
 
 @section('content')
-<div class="space-y-6">
+<div class="space-y-6" x-data="paymentHistoryDetails()">
     <!-- Status Tabs -->
     <div class="card p-1">
         <div class="flex gap-1">
-            <a href="{{ request()->fullUrlWithQuery(['status' => 'SETTLED']) }}" 
-               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ request('status', 'SETTLED') === 'SETTLED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
-                <i class="fas fa-check-circle"></i> SETTLED
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'SETTLED', 'page' => 1]) }}"
+               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status', 'SETTLED')) !== 'FAILED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
+                <i class="fas fa-check-circle"></i>
+                SETTLED
+                <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status', 'SETTLED')) !== 'FAILED' ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/40' }}">
+                    {{ number_format($settledCount ?? 0) }}
+                </span>
             </a>
-            <a href="{{ request()->fullUrlWithQuery(['status' => 'FAILED']) }}" 
-               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ request('status') === 'FAILED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
-                <i class="fas fa-times-circle"></i> FAILED
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'FAILED', 'page' => 1]) }}"
+               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'FAILED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
+                <i class="fas fa-times-circle"></i>
+                FAILED
+                <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status')) === 'FAILED' ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/40' }}">
+                    {{ number_format($failedCount ?? 0) }}
+                </span>
             </a>
         </div>
     </div>
@@ -30,10 +38,10 @@
         </div>
         
         <form x-show="showFilters" x-transition method="GET" action="{{ route('payments.history') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <input type="hidden" name="status" value="{{ request('status', 'SETTLED') }}">
+            <input type="hidden" name="status" value="{{ $activeStatus ?? request('status', 'SETTLED') }}">
             <div>
-                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Search Reference</label>
-                <input type="text" name="search" value="{{ request('search') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary-500 outline-none" placeholder="REF-XXXX">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Search</label>
+                <input type="text" name="search" value="{{ request('search') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Reference, name, phone...">
             </div>
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Start Date</label>
@@ -47,7 +55,7 @@
                 <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-500 text-white py-2 rounded-lg text-xs font-bold transition-all">
                     Apply Filter
                 </button>
-                <a href="{{ route('payments.history') }}" class="px-3 py-2 bg-gray-100 dark:bg-dark-border rounded-lg text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-200 transition-all">
+                <a href="{{ route('payments.history', ['status' => $activeStatus ?? 'SETTLED']) }}" class="px-3 py-2 bg-gray-100 dark:bg-dark-border rounded-lg text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-200 transition-all">
                     <i class="fas fa-undo"></i>
                 </a>
             </div>
@@ -66,7 +74,7 @@
         </div>
 
         <form x-show="showExport" x-transition method="GET" action="{{ route('payments.export.pdf') }}" class="space-y-4">
-            <input type="hidden" name="status" value="{{ request('status', 'SETTLED') }}">
+            <input type="hidden" name="status" value="{{ $activeStatus ?? request('status', 'SETTLED') }}">
             <input type="hidden" name="search" value="{{ request('search') }}">
             <input type="hidden" name="start_date" value="{{ request('start_date') }}">
             <input type="hidden" name="end_date" value="{{ request('end_date') }}">
@@ -99,6 +107,9 @@
 
     <!-- Transactions Table -->
     <div class="card overflow-hidden">
+        <div class="p-4 border-b border-primary-50 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30">
+            <p class="text-[10px] text-primary-500">Click <i class="fas fa-eye"></i> on any row to preview full payment details</p>
+        </div>
         <div class="overflow-x-auto">
             <table class="data-table">
                 <thead>
@@ -108,7 +119,8 @@
                         <th>Member Name</th>
                         <th>Purpose / Description</th>
                         <th>Amount</th>
-                        <th>Actions</th>
+                        <th>SMS Status</th>
+                        <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
@@ -144,6 +156,33 @@
                             if ($displayDescription === '' || strtoupper($displayDescription) === 'N/A') {
                                 $displayDescription = 'Malipo ya FEEDTAN';
                             }
+
+                            $status = strtoupper($payment->status ?? 'UNKNOWN');
+                            $isSettled = in_array($status, ['SETTLED', 'SUCCESS']);
+
+                            $detailPayload = [
+                                'reference' => $payment->order_reference,
+                                'transaction_id' => $payment->transaction_id ?? 'N/A',
+                                'status' => $status,
+                                'amount' => (float) $payment->amount,
+                                'currency' => $payment->currency ?? 'TZS',
+                                'member_name' => $memberName,
+                                'payer_name' => $actualPayer,
+                                'phone' => $displayPhone,
+                                'email' => $payment->email,
+                                'payment_method' => $payment->payment_method ?? 'N/A',
+                                'description' => $displayDescription,
+                                'date' => $payment->created_at->format('d M, Y'),
+                                'time' => $payment->created_at->format('H:i:s'),
+                                'created_at' => $payment->created_at->toIso8601String(),
+                                'updated_at' => $payment->updated_at?->toIso8601String(),
+                                'sms_sent' => (bool) $payment->sms_sent,
+                                'sms_sent_at' => $payment->sms_sent_at?->format('d M, Y H:i:s'),
+                                'sms_message' => $payment->sms_message,
+                                'sms_error' => $payment->sms_error,
+                                'status_url' => route('payments.status', ['reference' => $payment->order_reference]),
+                                'receipt_url' => route('payments.receipt', $payment->order_reference),
+                            ];
                         @endphp
                         <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
                             <td class="whitespace-nowrap">
@@ -161,7 +200,7 @@
                                 <div class="text-[10px] text-primary-500 font-mono">{{ $displayPhone }}</div>
                             </td>
                             <td>
-                                <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[260px] truncate" title="{{ $displayDescription }}">
+                                <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate" title="{{ $displayDescription }}">
                                     {{ $displayDescription }}
                                 </div>
                             </td>
@@ -171,14 +210,35 @@
                                 </div>
                                 <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payment->currency }}</div>
                             </td>
+                            <td class="whitespace-nowrap">
+                                @if($payment->sms_sent)
+                                    <span class="badge badge-green text-[10px]">
+                                        <i class="fas fa-check me-1"></i> Sent
+                                    </span>
+                                    @if($payment->sms_sent_at)
+                                        <div class="text-[9px] text-primary-500 mt-1">{{ $payment->sms_sent_at->format('d M, H:i') }}</div>
+                                    @endif
+                                @elseif($payment->sms_error)
+                                    <span class="badge badge-red text-[10px]">
+                                        <i class="fas fa-times me-1"></i> Failed
+                                    </span>
+                                @elseif($isSettled)
+                                    <span class="badge badge-yellow text-[10px]">Not Sent</span>
+                                @else
+                                    <span class="text-[10px] text-primary-400">—</span>
+                                @endif
+                            </td>
                             <td>
-                                <div class="flex gap-2">
-                                    <a href="{{ route('payments.status', ['reference' => $payment->order_reference]) }}" 
-                                       class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all">
+                                <div class="flex gap-2 justify-center">
+                                    <button type="button"
+                                            @click="openDetails(@js($detailPayload))"
+                                            class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                            title="Preview details">
                                         <i class="fas fa-eye text-xs"></i>
-                                    </a>
+                                    </button>
                                     <a href="{{ route('payments.receipt', $payment->order_reference) }}" target="_blank"
-                                       class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all">
+                                       class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                       title="Download receipt">
                                         <i class="fas fa-file-invoice text-xs"></i>
                                     </a>
                                 </div>
@@ -186,13 +246,15 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center py-20">
+                            <td colspan="7" class="text-center py-20">
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
                                         <i class="fas fa-folder-open text-2xl text-primary-200"></i>
                                     </div>
                                     <h4 class="font-bold text-primary-900 dark:text-white">No Transactions Found</h4>
-                                    <p class="text-xs text-primary-500">There are no {{ strtolower(request('status', 'SETTLED')) }} payments to display.</p>
+                                    <p class="text-xs text-primary-500">
+                                        No {{ ($activeStatus ?? 'SETTLED') === 'FAILED' ? 'failed' : 'settled' }} payments match your filters.
+                                    </p>
                                 </div>
                             </td>
                         </tr>
@@ -203,9 +265,169 @@
         
         @if($payments->hasPages())
             <div class="p-4 bg-primary-50/30 dark:bg-dark-900/30 border-t border-primary-50 dark:border-dark-border">
-                {{ $payments->links() }}
+                {{ $payments->appends(request()->query())->links() }}
             </div>
         @endif
     </div>
+
+    <!-- Payment detail modal -->
+    <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="closeDetails()">
+        <div class="absolute inset-0 bg-black/50" @click="closeDetails()"></div>
+        <div class="relative w-full max-w-2xl card p-6 max-h-[90vh] overflow-y-auto animate-fade-in" @click.stop>
+            <div class="flex items-start justify-between gap-4 mb-5">
+                <div>
+                    <h3 class="text-lg font-black text-primary-900 dark:text-white">Payment Details</h3>
+                    <p class="text-[10px] text-primary-500 uppercase tracking-widest mt-1">Payment History Preview</p>
+                </div>
+                <button type="button" @click="closeDetails()" class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-dark-900 text-primary-600 hover:bg-primary-100 transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <template x-if="selected">
+                <div class="space-y-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-primary-50/50 dark:bg-dark-900/50 border border-primary-100 dark:border-dark-border">
+                        <div>
+                            <p class="text-[10px] font-bold uppercase text-primary-500">Reference</p>
+                            <p class="font-mono font-bold text-primary-900 dark:text-white" x-text="selected.reference"></p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] font-bold uppercase text-primary-500">Amount</p>
+                            <p class="text-xl font-black text-primary-600 dark:text-primary-400">
+                                <span x-text="selected.currency"></span>
+                                <span x-text="formatAmount(selected.amount)"></span>
+                            </p>
+                            <span class="badge text-[10px] mt-1" :class="statusBadgeClass(selected.status)" x-text="selected.status"></span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-3">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                                <i class="fas fa-user-circle"></i> Member Information
+                            </h4>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">Member Name</p>
+                                <p class="font-bold text-primary-900 dark:text-white" x-text="selected.member_name"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">Actual Payer</p>
+                                <p class="font-semibold text-sm text-primary-800 dark:text-primary-200" x-text="selected.payer_name"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">Phone</p>
+                                <p class="font-mono text-sm" x-text="selected.phone"></p>
+                            </div>
+                            <template x-if="selected.email">
+                                <div>
+                                    <p class="text-[10px] text-primary-500 uppercase font-bold">Email</p>
+                                    <p class="text-sm" x-text="selected.email"></p>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                                <i class="fas fa-receipt"></i> Transaction Details
+                            </h4>
+                            <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
+                                <span class="text-xs text-primary-500">Transaction ID</span>
+                                <span class="font-mono text-xs font-bold" x-text="selected.transaction_id"></span>
+                            </div>
+                            <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
+                                <span class="text-xs text-primary-500">Payment Method</span>
+                                <span class="text-xs font-bold" x-text="selected.payment_method"></span>
+                            </div>
+                            <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
+                                <span class="text-xs text-primary-500">Date & Time</span>
+                                <span class="text-xs font-bold"><span x-text="selected.date"></span> <span x-text="selected.time"></span></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-[10px] text-primary-500 uppercase font-bold mb-1">Purpose / Description</p>
+                        <p class="text-sm text-primary-800 dark:text-primary-200 bg-primary-50/50 dark:bg-dark-900/50 rounded-xl p-3 border border-primary-100 dark:border-dark-border" x-text="selected.description"></p>
+                    </div>
+
+                    <div class="p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 space-y-3">
+                        <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                            <i class="fas fa-sms"></i> SMS Notification
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <template x-if="selected.sms_sent">
+                                <span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> SMS Sent</span>
+                            </template>
+                            <template x-if="!selected.sms_sent && selected.sms_error">
+                                <span class="badge badge-red text-[10px]"><i class="fas fa-times me-1"></i> SMS Failed</span>
+                            </template>
+                            <template x-if="!selected.sms_sent && !selected.sms_error">
+                                <span class="badge badge-yellow text-[10px]">Not Sent</span>
+                            </template>
+                            <template x-if="selected.sms_sent_at">
+                                <span class="text-[10px] text-primary-500" x-text="'at ' + selected.sms_sent_at"></span>
+                            </template>
+                        </div>
+                        <template x-if="selected.sms_error">
+                            <p class="text-xs text-red-600 dark:text-red-400 font-bold" x-text="'Error: ' + selected.sms_error"></p>
+                        </template>
+                        <template x-if="selected.sms_message">
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold mb-1">Message Sent</p>
+                                <p class="text-xs text-primary-800 dark:text-primary-200 bg-white dark:bg-dark-900 rounded-lg p-3 border border-primary-100 dark:border-dark-border whitespace-pre-wrap max-h-40 overflow-y-auto" x-text="selected.sms_message"></p>
+                            </div>
+                        </template>
+                        <template x-if="!selected.sms_message && !selected.sms_error && !selected.sms_sent">
+                            <p class="text-xs text-primary-500 italic">No SMS has been sent for this payment yet.</p>
+                        </template>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 pt-2">
+                        <a :href="selected.status_url" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
+                            <i class="fas fa-external-link-alt me-1"></i> Full Payment Page
+                        </a>
+                        <a :href="selected.receipt_url" target="_blank" class="px-4 py-2 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs font-bold border border-primary-100 dark:border-dark-border hover:bg-primary-100 transition-all">
+                            <i class="fas fa-file-pdf me-1"></i> Receipt PDF
+                        </a>
+                        <button type="button" @click="closeDetails()" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-dark-border text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-200 transition-all">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
 </div>
+
+<style>[x-cloak] { display: none !important; }</style>
 @endsection
+
+@push('scripts')
+<script>
+function paymentHistoryDetails() {
+    return {
+        open: false,
+        selected: null,
+        openDetails(payload) {
+            this.selected = payload;
+            this.open = true;
+            document.body.style.overflow = 'hidden';
+        },
+        closeDetails() {
+            this.open = false;
+            this.selected = null;
+            document.body.style.overflow = '';
+        },
+        formatAmount(value) {
+            return new Intl.NumberFormat('en-TZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));
+        },
+        statusBadgeClass(status) {
+            const s = String(status || '').toUpperCase();
+            if (['SETTLED', 'SUCCESS'].includes(s)) return 'badge-green';
+            if (['FAILED', 'ERROR', 'CANCELLED'].includes(s)) return 'badge-red';
+            return 'badge-yellow';
+        }
+    };
+}
+</script>
+@endpush

@@ -379,7 +379,7 @@ class PaymentController extends Controller
      */
     public function history(Request $request)
     {
-        $status = $request->get('status', 'SETTLED');
+        $activeStatus = $request->get('status', 'SETTLED');
         $selectedColumns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']);
         $availableColumns = [
             'order_reference' => 'Reference',
@@ -393,16 +393,15 @@ class PaymentController extends Controller
             'email' => 'Email',
             'description' => 'Description',
             'payment_method' => 'Payment Method',
+            'sms_sent' => 'SMS Sent',
+            'sms_sent_at' => 'SMS Sent At',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
         ];
 
         $query = Transaction::query()->where('type', 'payment');
 
-        // Apply filters
-        if ($status) {
-            $query->where('status', $status);
-        }
+        $this->applyHistoryTabFilter($query, $activeStatus);
         if ($request->filled('currency')) {
             $query->where('currency', $request->currency);
         }
@@ -434,17 +433,24 @@ class PaymentController extends Controller
         $totalCount = $query->count();
         $payments = $query->orderBy('created_at', 'desc')->paginate($request->get('limit', 20));
 
-        // Calculate statistics
-        $successCount = Transaction::where('type', 'payment')->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
-        $pendingCount = Transaction::where('type', 'payment')->whereIn('status', ['PENDING', 'PROCESSING'])->count();
-        $failedCount = Transaction::where('type', 'payment')->where('status', 'FAILED')->count();
+        $settledCount = Transaction::where('type', 'payment')->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
+        $failedCount = Transaction::where('type', 'payment')->whereIn('status', ['FAILED', 'ERROR'])->count();
         
         Log::info('Payment history loaded from database', [
             'count' => $payments->count(),
-            'total' => $totalCount
+            'total' => $totalCount,
+            'tab' => $activeStatus,
         ]);
 
-        return view('payments.history', compact('payments', 'totalCount', 'successCount', 'pendingCount', 'failedCount', 'selectedColumns', 'availableColumns'));
+        return view('payments.history', compact(
+            'payments',
+            'totalCount',
+            'settledCount',
+            'failedCount',
+            'activeStatus',
+            'selectedColumns',
+            'availableColumns'
+        ));
     }
 
     /**
@@ -461,9 +467,7 @@ class PaymentController extends Controller
             // Get filtered payments from database
             $query = Transaction::query()->where('type', 'payment');
 
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
+            $this->applyHistoryTabFilter($query, $request->get('status', 'SETTLED'));
             if ($request->filled('currency')) {
                 $query->where('currency', $request->currency);
             }
@@ -487,7 +491,7 @@ class PaymentController extends Controller
             $payments = $query->orderBy('created_at', 'desc')->get()->toArray();
             
             // Selected columns
-            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at'];
+            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'sms_sent', 'sms_sent_at', 'created_at', 'updated_at'];
             $columns = array_values(array_intersect($request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']), $allowedColumns));
             if (empty($columns)) {
                 $columns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at'];
@@ -516,9 +520,7 @@ class PaymentController extends Controller
             // Get filtered payments from database
             $query = Transaction::query()->where('type', 'payment');
 
-            if ($request->filled('status')) {
-                $query->where('status', $request->status);
-            }
+            $this->applyHistoryTabFilter($query, $request->get('status', 'SETTLED'));
             if ($request->filled('currency')) {
                 $query->where('currency', $request->currency);
             }
@@ -545,7 +547,7 @@ class PaymentController extends Controller
             $payments = $query->orderBy('created_at', 'desc')->get()->toArray();
             
             // Selected columns
-            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at'];
+            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'sms_sent', 'sms_sent_at', 'created_at', 'updated_at'];
             $columns = array_values(array_intersect($request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at']), $allowedColumns));
             if (empty($columns)) {
                 $columns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at'];
@@ -945,6 +947,15 @@ class PaymentController extends Controller
                 'success' => false,
                 'message' => 'An error occurred while resending USSD. Please try again.'
             ], 500);
+        }
+    }
+
+    private function applyHistoryTabFilter($query, string $activeStatus = 'SETTLED'): void
+    {
+        if ($activeStatus === 'FAILED') {
+            $query->whereIn('status', ['FAILED', 'ERROR']);
+        } else {
+            $query->whereIn('status', ['SETTLED', 'SUCCESS']);
         }
     }
 }

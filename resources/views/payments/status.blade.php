@@ -67,9 +67,15 @@
                             <div class="space-y-6 p-4">
                                 <!-- HEADER INFO -->
                                 <div class="d-flex align-items-center justify-content-between p-4 bg-light rounded-lg">
-                                    <div>
-                                        <div class="text-xs text-muted uppercase font-bold tracking-wider mb-1" style="font-size: 0.7rem;">Order Reference</div>
-                                        <div class="text-lg font-bold mono" style="font-family: monospace; font-size: 1.2rem;">{{ $payment['orderReference'] ?? 'N/A' }}</div>
+                                    <div class="d-flex align-items-center">
+                                        <!-- QR Code Section -->
+                                        <div class="me-4 p-2 bg-white rounded border shadow-sm">
+                                            {!! QrCode::size(80)->generate(request()->fullUrl()) !!}
+                                        </div>
+                                        <div>
+                                            <div class="text-xs text-muted uppercase font-bold tracking-wider mb-1" style="font-size: 0.7rem;">Order Reference</div>
+                                            <div class="text-lg font-bold mono" style="font-family: monospace; font-size: 1.2rem;">{{ $payment['orderReference'] ?? 'N/A' }}</div>
+                                        </div>
                                     </div>
                                     <div class="text-end">
                                         <div class="text-xs text-muted uppercase font-bold tracking-wider mb-1" style="font-size: 0.7rem;">Status</div>

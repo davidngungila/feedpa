@@ -173,16 +173,23 @@ class AccountController extends Controller
         $dbTransactions = $query->orderBy('created_at', 'desc')->get()->map(function($t) {
             return [
                 'date' => $t->created_at->toIso8601String(),
+                'created_at' => $t->created_at->toIso8601String(),
+                'updated_at' => $t->updated_at?->toIso8601String(),
                 'description' => $t->description ?? 'Payment Transaction',
-                'amount' => (float)$t->amount,
+                'amount' => (float) $t->amount,
+                'currency' => $t->currency ?? 'TZS',
                 'entry' => 'CREDIT',
                 'status' => strtoupper($t->status),
                 'reference' => $t->order_reference,
+                'order_reference' => $t->order_reference,
                 'transaction_id' => $t->transaction_id,
                 'source' => 'DATABASE',
+                'customer_name' => $t->customer_name,
                 'payer_name' => $t->payer_name,
                 'phone' => $t->phone,
-                'payment_method' => $t->payment_method
+                'email' => $t->email,
+                'payment_method' => $t->payment_method,
+                'type' => $t->type,
             ];
         });
 

@@ -6,52 +6,54 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            font-size: 12px;
-            margin: 20px;
+            font-size: 10px;
+            margin: 10px;
         }
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             border-bottom: 2px solid #333;
-            padding-bottom: 20px;
+            padding-bottom: 10px;
         }
         .header h1 {
             margin: 0;
             color: #333;
-            font-size: 24px;
+            font-size: 18px;
         }
         .header h2 {
-            margin: 5px 0 15px 0;
+            margin: 5px 0 10px 0;
             color: #555;
-            font-size: 20px;
+            font-size: 14px;
         }
         .header p {
-            margin: 3px 0;
+            margin: 2px 0;
             color: #666;
-            font-size: 12px;
+            font-size: 10px;
         }
         .report-info {
-            margin: 15px 0;
+            margin: 10px 0;
             text-align: left;
             display: inline-block;
         }
         .summary-stats {
-            margin: 15px 0;
-            padding: 10px;
+            margin: 10px 0;
+            padding: 8px;
             background: #f5f5f5;
             border-radius: 5px;
             text-align: left;
             display: inline-block;
+            float: right;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
         }
         th, td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 6px;
             text-align: left;
+            word-wrap: break-word;
         }
         th {
             background-color: #f2f2f2;
@@ -73,10 +75,11 @@
             text-align: right;
         }
         .footer {
-            margin-top: 30px;
+            margin-top: 20px;
             text-align: center;
             color: #666;
-            font-size: 10px;
+            font-size: 8px;
+            clear: both;
         }
     </style>
 </head>
@@ -96,18 +99,6 @@
                     @if(request()->filled('end_date')) {{ request('end_date') }} @endif
                 </p>
             @endif
-            
-            @if(request()->filled('status'))
-                <p><strong>Status Filter:</strong> {{ request('status') }}</p>
-            @endif
-            
-            @if(request()->filled('currency'))
-                <p><strong>Currency Filter:</strong> {{ request('currency') }}</p>
-            @endif
-            
-            @if(request()->filled('order_reference'))
-                <p><strong>Order Reference:</strong> {{ request('order_reference') }}</p>
-            @endif
         </div>
         
         <div class="summary-stats">
@@ -117,51 +108,56 @@
                Failed: {{ collect($payments)->filter(fn($p) => in_array($p['status'] ?? '', ['FAILED', 'ERROR']))->count() }}</p>
             <p>Total Amount: {{ number_format(collect($payments)->sum(fn($p) => $p['amount'] ?? 0), 2) }} TZS</p>
         </div>
+        <div style="clear: both;"></div>
     </div>
+
+    @php
+        $columns = request()->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']);
+        $headers = [];
+        foreach($columns as $col) {
+            $headers[] = ucwords(str_replace('_', ' ', $col));
+        }
+    @endphp
 
     <table>
         <thead>
             <tr>
-                <th>Order Reference</th>
-                <th>Transaction ID</th>
-                <th>Status</th>
-                <th class="text-right">Amount</th>
-                <th>Currency</th>
-                <th>Phone/Email</th>
-                <th>Description</th>
-                <th>Payment Method</th>
-                <th>Created At</th>
+                @foreach($headers as $header)
+                    <th>{{ $header }}</th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
             @foreach($payments as $payment)
                 <tr>
-                    <td>{{ $payment['orderReference'] ?? 'N/A' }}</td>
-                    <td>{{ $payment['transactionId'] ?? 'N/A' }}</td>
-                    <td>
-                        @switch($payment['status'] ?? '')
-                            @case('SUCCESS')
-                            @case('SETTLED')
-                                <span class="status-success">{{ $payment['status'] }}</span>
-                                @break
-                            @case('PROCESSING')
-                            @case('PENDING')
-                                <span class="status-pending">{{ $payment['status'] }}</span>
-                                @break
-                            @case('FAILED')
-                            @case('ERROR')
-                                <span class="status-failed">{{ $payment['status'] }}</span>
-                                @break
-                            @default
-                                {{ $payment['status'] ?? 'N/A' }}
-                        @endswitch
-                    </td>
-                    <td class="text-right">{{ number_format($payment['amount'] ?? 0, 2) }}</td>
-                    <td>{{ $payment['currency'] ?? 'TZS' }}</td>
-                    <td>{{ $payment['phone'] ?? $payment['email'] ?? 'N/A' }}</td>
-                    <td>{{ $payment['description'] ?? 'N/A' }}</td>
-                    <td>{{ $payment['paymentMethod'] ?? 'N/A' }}</td>
-                    <td>{{ isset($payment['createdAt']) ? \Carbon\Carbon::parse($payment['createdAt'])->format('Y-m-d H:i') : 'N/A' }}</td>
+                    @foreach($columns as $col)
+                        <td class="{{ $col === 'amount' ? 'text-right' : '' }}">
+                            @if($col === 'status')
+                                @switch($payment[$col] ?? '')
+                                    @case('SUCCESS')
+                                    @case('SETTLED')
+                                        <span class="status-success">{{ $payment[$col] }}</span>
+                                        @break
+                                    @case('PROCESSING')
+                                    @case('PENDING')
+                                        <span class="status-pending">{{ $payment[$col] }}</span>
+                                        @break
+                                    @case('FAILED')
+                                    @case('ERROR')
+                                        <span class="status-failed">{{ $payment[$col] }}</span>
+                                        @break
+                                    @default
+                                        {{ $payment[$col] ?? 'N/A' }}
+                                @endswitch
+                            @elseif($col === 'amount')
+                                {{ number_format($payment[$col] ?? 0, 2) }}
+                            @elseif($col === 'created_at' || $col === 'updated_at')
+                                {{ isset($payment[$col]) ? \Carbon\Carbon::parse($payment[$col])->format('Y-m-d H:i') : 'N/A' }}
+                            @else
+                                {{ $payment[$col] ?? 'N/A' }}
+                            @endif
+                        </td>
+                    @endforeach
                 </tr>
             @endforeach
         </tbody>
@@ -170,7 +166,6 @@
     @if(!empty($payments))
         <div class="footer">
             <p>Report generated by ClickPesa Payment Management System</p>
-            <p>Page {{ Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage() }} of {{ ceil(count($payments) / 50) }}</p>
         </div>
     @endif
 </body>

@@ -93,121 +93,67 @@
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-light">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
                             <i class="fas fa-filter me-2"></i>
-                            Advanced Filters
+                            Advanced Filters & Search
                         </h5>
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleFilters()">
-                                <i class="fas fa-chevron-down"></i>
-                            </button>
-                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleFilters()">
+                            <i class="fas fa-chevron-down" id="filterIcon"></i>
+                        </button>
                     </div>
-                    <div class="card-body" id="filtersSection" style="display: none;">
-                        <form method="GET" action="{{ route('payments.history') }}" class="row g-3">
-                            <div class="col-md-3">
-                                <label class="form-label">
-                                    <i class="fas fa-search me-1"></i>
-                                    Order Reference
-                                </label>
-                                <input type="text" class="form-control" name="order_reference" 
-                                       placeholder="Enter order reference..." 
-                                       value="{{ request('order_reference') }}">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">
-                                    <i class="fas fa-chart-line me-1"></i>
-                                    Status
-                                </label>
-                                <select class="form-control" name="status">
-                                    <option value="">All Status</option>
-                                    <option value="PENDING" {{ request('status') == 'PENDING' ? 'selected' : '' }}>
-                                        <i class="fas fa-clock me-1"></i> Pending
-                                    </option>
-                                    <option value="PROCESSING" {{ request('status') == 'PROCESSING' ? 'selected' : '' }}>
-                                        <i class="fas fa-spinner me-1"></i> Processing
-                                    </option>
-                                    <option value="SUCCESS" {{ request('status') == 'SUCCESS' ? 'selected' : '' }}>
-                                        <i class="fas fa-check-circle me-1"></i> Success
-                                    </option>
-                                    <option value="SETTLED" {{ request('status') == 'SETTLED' ? 'selected' : '' }}>
-                                        <i class="fas fa-check-double me-1"></i> Settled
-                                    </option>
-                                    <option value="FAILED" {{ request('status') == 'FAILED' ? 'selected' : '' }}>
-                                        <i class="fas fa-exclamation-triangle me-1"></i> Failed
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">
-                                    <i class="fas fa-money-bill-wave me-1"></i>
-                                    Currency
-                                </label>
-                                <select class="form-control" name="currency">
-                                    <option value="">All Currencies</option>
-                                    <option value="TZS" {{ request('currency') == 'TZS' ? 'selected' : '' }}>
-                                        <i class="fas fa-shilling-sign me-1"></i> TZS
-                                    </option>
-                                    <option value="USD" {{ request('currency') == 'USD' ? 'selected' : '' }}>
-                                        <i class="fas fa-dollar-sign me-1"></i> USD
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">
-                                    <i class="fas fa-calendar me-1"></i>
-                                    Payment Method
-                                </label>
-                                <select class="form-control" name="payment_method">
-                                    <option value="">All Methods</option>
-                                    <option value="halopesa" {{ request('payment_method') == 'halopesa' ? 'selected' : '' }}>
-                                        <i class="fas fa-mobile-alt me-1"></i> Halopesa
-                                    </option>
-                                    <option value="tigopesa" {{ request('payment_method') == 'tigopesa' ? 'selected' : '' }}>
-                                        <i class="fas fa-mobile-alt me-1"></i> Tigo Pesa
-                                    </option>
-                                    <option value="airtelmoney" {{ request('payment_method') == 'airtelmoney' ? 'selected' : '' }}>
-                                        <i class="fas fa-mobile-alt me-1"></i> Airtel Money
-                                    </option>
-                                    <option value="mpesa" {{ request('payment_method') == 'mpesa' ? 'selected' : '' }}>
-                                        <i class="fas fa-mobile-alt me-1"></i> M-Pesa
-                                    </option>
-                                    <option value="ezypesa" {{ request('payment_method') == 'ezypesa' ? 'selected' : '' }}>
-                                        <i class="fas fa-mobile-alt me-1"></i> Ezy Pesa
-                                    </option>
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">
-                                    <i class="fas fa-calendar-alt me-1"></i>
-                                    Start Date
-                                </label>
-                                <input type="date" class="form-control" name="start_date" 
-                                       value="{{ request('start_date') }}">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">
-                                    <i class="fas fa-calendar-check me-1"></i>
-                                    End Date
-                                </label>
-                                <input type="date" class="form-control" name="end_date" 
-                                       value="{{ request('end_date') }}">
-                            </div>
-                            <div class="col-md-12">
-                                <div class="btn-group">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-search me-1"></i>
-                                        Apply Filters
-                                    </button>
-                                    <a href="{{ route('payments.history') }}" class="btn btn-outline-secondary">
-                                        <i class="fas fa-times me-1"></i>
-                                        Clear All
-                                    </a>
-                                    <button type="button" class="btn btn-outline-info" onclick="exportData()">
-                                        <i class="fas fa-download me-1"></i>
-                                        Export
-                                    </button>
+                    <div class="card-body" id="filtersSection" style="{{ request()->hasAny(['order_reference', 'status', 'currency', 'phone', 'payer_name', 'start_date', 'end_date']) ? '' : 'display: none;' }}">
+                        <form method="GET" action="{{ route('payments.history') }}" id="filterForm">
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Order Reference</label>
+                                    <input type="text" class="form-control" name="order_reference" value="{{ request('order_reference') }}" placeholder="Search reference...">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Payer Name</label>
+                                    <input type="text" class="form-control" name="payer_name" value="{{ request('payer_name') }}" placeholder="Search name...">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="text" class="form-control" name="phone" value="{{ request('phone') }}" placeholder="Search phone...">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Status</label>
+                                    <select class="form-select" name="status">
+                                        <option value="">All Status</option>
+                                        <option value="SUCCESS" {{ request('status') == 'SUCCESS' ? 'selected' : '' }}>SUCCESS</option>
+                                        <option value="SETTLED" {{ request('status') == 'SETTLED' ? 'selected' : '' }}>SETTLED</option>
+                                        <option value="PENDING" {{ request('status') == 'PENDING' ? 'selected' : '' }}>PENDING</option>
+                                        <option value="PROCESSING" {{ request('status') == 'PROCESSING' ? 'selected' : '' }}>PROCESSING</option>
+                                        <option value="FAILED" {{ request('status') == 'FAILED' ? 'selected' : '' }}>FAILED</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Currency</label>
+                                    <select class="form-select" name="currency">
+                                        <option value="">All Currencies</option>
+                                        <option value="TZS" {{ request('currency') == 'TZS' ? 'selected' : '' }}>TZS</option>
+                                        <option value="USD" {{ request('currency') == 'USD' ? 'selected' : '' }}>USD</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Start Date</label>
+                                    <input type="date" class="form-control" name="start_date" value="{{ request('start_date') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">End Date</label>
+                                    <input type="date" class="form-control" name="end_date" value="{{ request('end_date') }}">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-search me-1"></i> Apply
+                                        </button>
+                                        <a href="{{ route('payments.history') }}" class="btn btn-outline-secondary w-100">
+                                            Clear
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </form>
@@ -216,581 +162,273 @@
             </div>
         </div>
 
-        <!-- Quick Actions -->
+        <!-- Status Tabs -->
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-white p-0">
+                <ul class="nav nav-tabs nav-fill" id="statusTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link py-3 {{ !request('status') ? 'active fw-bold border-bottom border-primary border-3' : 'text-muted' }}" 
+                           href="{{ request()->fullUrlWithQuery(['status' => null]) }}">
+                            <i class="fas fa-list me-2"></i> ALL TRANSACTIONS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-3 {{ request('status') === 'SETTLED' ? 'active fw-bold border-bottom border-primary border-3' : 'text-muted' }}" 
+                           href="{{ request()->fullUrlWithQuery(['status' => 'SETTLED']) }}">
+                            <i class="fas fa-check-circle me-2"></i> SETTLED
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link py-3 {{ request('status') === 'FAILED' ? 'active fw-bold border-bottom border-primary border-3' : 'text-muted' }}" 
+                           href="{{ request()->fullUrlWithQuery(['status' => 'FAILED']) }}">
+                            <i class="fas fa-times-circle me-2"></i> FAILED
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Transactions Table -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-light">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-bolt me-2"></i>
-                            Quick Actions
+                            <i class="fas fa-list me-2 text-primary"></i>
+                            Recent Transactions
                         </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-2">
-                            <div class="col-md-2 col-sm-4 col-6">
-                                <a href="{{ route('payments.create') }}" class="btn btn-primary w-100">
-                                    <i class="fas fa-plus me-2"></i>
-                                    New Payment
-                                </a>
-                            </div>
-                            <div class="col-md-2 col-sm-4 col-6">
-                                <a href="{{ route('payments.export.pdf') }}" class="btn btn-danger w-100">
-                                    <i class="fas fa-file-pdf me-2"></i>
-                                    Export PDF
-                                </a>
-                            </div>
-                            <div class="col-md-2 col-sm-4 col-6">
-                                <a href="{{ route('payments.export.excel') }}" class="btn btn-success w-100">
-                                    <i class="fas fa-file-excel me-2"></i>
-                                    Export Excel
-                                </a>
-                            </div>
-                            <div class="col-md-2 col-sm-4 col-6">
-                                <button type="button" class="btn btn-outline-info w-100" onclick="refreshData()">
-                                    <i class="fas fa-sync-alt me-2"></i>
-                                    Refresh
-                                </button>
-                            </div>
-                            <div class="col-md-2 col-sm-4 col-6">
-                                <button type="button" class="btn btn-outline-warning w-100" onclick="printData()">
-                                    <i class="fas fa-print me-2"></i>
-                                    Print
-                                </button>
-                            </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#exportModal" onclick="setExportType('pdf')">
+                                <i class="fas fa-file-pdf me-1"></i> PDF
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#exportModal" onclick="setExportType('excel')">
+                                <i class="fas fa-file-excel me-1"></i> Excel
+                            </button>
+                            <a href="{{ route('payments.create') }}" class="btn btn-sm btn-primary">
+                                <i class="fas fa-plus me-1"></i> New Payment
+                            </a>
                         </div>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Active Filters Display -->
-        @if(request()->hasAny(['status', 'currency', 'order_reference', 'start_date', 'end_date', 'payment_method']))
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="alert alert-info alert-dismissible">
-                        <i class="fas fa-filter me-2"></i>
-                        <strong>Active Filters:</strong>
-                        @if(request()->filled('status')) Status: {{ request('status') }} @endif
-                        @if(request()->filled('currency')) Currency: {{ request('currency') }} @endif
-                        @if(request()->filled('order_reference')) Reference: {{ request('order_reference') }} @endif
-                        @if(request()->filled('payment_method')) Method: {{ request('payment_method') }} @endif
-                        @if(request()->filled('start_date')) From: {{ request('start_date') }} @endif
-                        @if(request()->filled('end_date')) To: {{ request('end_date') }} @endif
-                        <a href="{{ route('payments.history') }}" class="btn btn-sm btn-outline-secondary float-end">
-                            <i class="fas fa-times me-1"></i>
-                            Clear Filters
-                        </a>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <!-- Successful Payments Table -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-check-circle me-2"></i>
-                            Successful Payments
-                            <span class="badge bg-light text-success float-end">{{ count(array_filter($payments ?? [], fn($p) => in_array($p['status'] ?? '', ['SUCCESS', 'SETTLED']))) }} Records</span>
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        @php
-                            $successfulPayments = array_filter($payments ?? [], fn($p) => in_array($p['status'] ?? '', ['SUCCESS', 'SETTLED']));
-                        @endphp
-                        
-                        @if(empty($successfulPayments))
-                            <div class="text-center py-4">
-                                <i class="fas fa-check-circle fs-1 text-muted mb-3"></i>
-                                <h5 class="text-muted">No Successful Payments</h5>
-                            </div>
-                        @else
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped">
-                                    <thead class="table-success">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">Reference</th>
+                                        <th>Customer</th>
+                                        <th>Purpose / Description</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>Method</th>
+                                        <th>Date</th>
+                                        <th class="pe-4 text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($payments as $payment)
                                         <tr>
-                                            <th>Order Reference</th>
-                                            <th>Customer</th>
-                                            <th>Amount</th>
-                                            <th>Status</th>
-                                            <th>Payment Method</th>
-                                            <th>Date</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($successfulPayments as $payment)
-                                            <tr>
-                                                <td>
-                                                    <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" class="text-decoration-none fw-bold">
-                                                        {{ $payment['orderReference'] ?? 'N/A' }}
+                                            <td class="ps-4">
+                                                <div class="fw-bold">{{ $payment->order_reference }}</div>
+                                                <small class="text-muted">{{ $payment->transaction_id ?? 'No ID' }}</small>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold">{{ $payment->payer_name ?? 'N/A' }}</div>
+                                                <small class="text-muted">{{ $payment->phone ?? 'N/A' }}</small>
+                                            </td>
+                                            <td>
+                                                <div class="text-wrap" style="max-width: 200px;">
+                                                    {{ $payment->description ?? 'N/A' }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold">{{ number_format($payment->amount, 2) }}</div>
+                                                <small class="text-muted">{{ $payment->currency }}</small>
+                                            </td>
+                                            <td>
+                                                @php
+                                                    $statusClass = match($payment->status) {
+                                                        'SUCCESS', 'SETTLED' => 'bg-success',
+                                                        'PENDING', 'PROCESSING' => 'bg-warning text-dark',
+                                                        'FAILED' => 'bg-danger',
+                                                        default => 'bg-secondary'
+                                                    };
+                                                @endphp
+                                                <span class="badge {{ $statusClass }}">{{ $payment->status }}</span>
+                                            </td>
+                                            <td>{{ $payment->payment_method ?? 'N/A' }}</td>
+                                            <td>
+                                                <div>{{ $payment->created_at->format('M d, Y') }}</div>
+                                                <small class="text-muted">{{ $payment->created_at->format('H:i A') }}</small>
+                                            </td>
+                                            <td class="pe-4 text-end">
+                                                <div class="d-flex justify-content-end gap-2">
+                                                    <a href="{{ route('payments.status', ['reference' => $payment->order_reference]) }}" class="btn btn-sm btn-info text-white" title="View Status">
+                                                        View
                                                     </a>
-                                                </td>
-                                                <td>
-                                                    <div class="fw-bold">{{ $payment['customerName'] ?? $payment['payer_name'] ?? 'N/A' }}</div>
-                                                    <small class="text-muted">{{ $payment['paymentPhoneNumber'] ?? $payment['customer']['customerPhoneNumber'] ?? 'N/A' }}</small>
-                                                </td>
-                                                <td>
-                                                    <span class="fw-bold text-success">{{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }}</span>
-                                                    <small class="text-muted">{{ $payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS' }}</small>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-success">{{ $payment['status'] ?? 'UNKNOWN' }}</span>
-                                                </td>
-                                                <td>
-                                                    <span>{{ $payment['paymentMethod'] ?? $payment['channel'] ?? $payment['source'] ?? $payment['provider'] ?? 'N/A' }}</span>
-                                                </td>
-                                                <td>
-                                                    <div class="text-muted">
-                                                        <div>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
-                                                        <small>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i A') }}</small>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group">
-                                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" class="btn btn-sm btn-info">View</a>
-                                                        <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" class="btn btn-sm btn-success" target="_blank">Receipt</a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @endif
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Failed Payments Table -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-danger text-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            Failed Payments
-                            <span class="badge bg-light text-danger float-end">{{ count(array_filter($payments ?? [], fn($p) => $p['status'] === 'FAILED')) }} Records</span>
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        @php
-                            $failedPayments = array_filter($payments ?? [], fn($p) => $p['status'] === 'FAILED');
-                        @endphp
-                        
-                        @if(empty($failedPayments))
-                            <div class="text-center py-4">
-                                <i class="fas fa-check-circle fs-1 text-muted mb-3"></i>
-                                <h5 class="text-muted">No Failed Payments</h5>
-                            </div>
-                        @else
-                            <div class="table-responsive">
-                                <table class="table table-hover table-striped">
-                                    <thead class="table-danger">
+                                                    @if(in_array($payment->status, ['SUCCESS', 'SETTLED']))
+                                                        <a href="{{ route('payments.receipt', $payment->order_reference) }}" class="btn btn-sm btn-success text-white" title="Download Receipt" target="_blank">
+                                                            Receipt
+                                                        </a>
+                                                    @endif
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
                                         <tr>
-                                            <th>Order Reference</th>
-                                            <th>Customer</th>
-                                            <th>Amount</th>
-                                            <th>Status</th>
-                                            <th>Payment Method</th>
-                                            <th>Date</th>
-                                            <th>Actions</th>
+                                            <td colspan="7" class="text-center py-5">
+                                                <div class="text-muted mb-3">
+                                                    <i class="fas fa-search fs-1"></i>
+                                                </div>
+                                                <h5>No transactions found</h5>
+                                                <p>Try adjusting your filters or search terms.</p>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($failedPayments as $payment)
-                                            <tr>
-                                                <td>
-                                                    <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" class="text-decoration-none fw-bold">
-                                                        {{ $payment['orderReference'] ?? 'N/A' }}
-                                                    </a>
-                                                </td>
-                                                <td>
-                                                    <div class="fw-bold">{{ $payment['customerName'] ?? $payment['payer_name'] ?? 'N/A' }}</div>
-                                                    <small class="text-muted">{{ $payment['paymentPhoneNumber'] ?? $payment['customer']['customerPhoneNumber'] ?? 'N/A' }}</small>
-                                                </td>
-                                                <td>
-                                                    <span class="fw-bold text-danger">{{ number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) }}</span>
-                                                    <small class="text-muted">{{ $payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS' }}</small>
-                                                </td>
-                                                <td>
-                                                    <span class="badge bg-danger">{{ $payment['status'] ?? 'UNKNOWN' }}</span>
-                                                </td>
-                                                <td>
-                                                    <span>{{ $payment['paymentMethod'] ?? $payment['channel'] ?? $payment['source'] ?? $payment['provider'] ?? 'N/A' }}</span>
-                                                </td>
-                                                <td>
-                                                    <div class="text-muted">
-                                                        <div>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('M d, Y') }}</div>
-                                                        <small>{{ \Carbon\Carbon::parse($payment['createdAt'] ?? 'now')->format('H:i A') }}</small>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group">
-                                                        <a href="{{ route('payments.status', ['reference' => $payment['orderReference'] ?? '']) }}" class="btn btn-sm btn-info">View</a>
-                                                        <a href="{{ route('payments.create') }}" class="btn btn-sm btn-warning">Retry</a>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        @endif
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
+                    @if($payments->hasPages())
+                        <div class="card-footer bg-white py-3">
+                            {{ $payments->appends(request()->query())->links() }}
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
-
-        @if(empty($payments))
-            <div class="row">
-                <div class="col-12">
-                    <div class="text-center py-5">
-                        <div class="avatar avatar-xl bg-light rounded-circle mx-auto mb-3">
-                            <i class="fas fa-search fs-1 text-muted"></i>
-                        </div>
-                        <h3 class="text-muted">No Payment Transactions Found</h3>
-                        <p class="text-muted mb-4">No payment transactions match your current filters.</p>
-                        <a href="{{ route('payments.create') }}" class="btn btn-primary">
-                            <i class="fas fa-plus me-2"></i>
-                            Create First Payment
-                        </a>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        <!-- Enhanced Pagination -->
-        @if(!empty($payments) && $totalCount > 20)
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow-sm">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <div class="dataTables_info">
-                                    <strong>Showing {{ min(20, $totalCount + ((request()->get('page', 1) - 1) * 20)) }} to {{ min(20, $totalCount + ((request()->get('page', 1) - 1) * 20)) }} of {{ $totalCount }} entries</strong>
-                                </div>
-                                <div class="d-flex align-items-center">
-                                    <span class="me-2">Page {{ request()->get('page', 1) }} of {{ $totalPages = ceil($totalCount / 20) }}</span>
-                                    <div class="btn-group btn-group-sm">
-                                        <button type="button" class="btn btn-outline-secondary" onclick="goToPage(1)" {{ request()->get('page', 1) == 1 ? 'disabled' : '' }}>
-                                            <i class="fas fa-angle-double-left"></i> First
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary" onclick="goToPage({{ max(1, request()->get('page', 1) - 1) }})" {{ request()->get('page', 1) <= 1 ? 'disabled' : '' }}>
-                                            <i class="fas fa-chevron-left"></i> Previous
-                                        </button>
-                                        <button type="button" class="btn btn-outline-primary" onclick="goToPage({{ min($totalPages, request()->get('page', 1) + 1) }})" {{ request()->get('page', 1) >= $totalPages ? 'disabled' : '' }}>
-                                            Next <i class="fas fa-chevron-right"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary" onclick="goToPage({{ $totalPages }})" {{ request()->get('page', 1) == $totalPages ? 'disabled' : '' }}>
-                                            Last <i class="fas fa-angle-double-right"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Page Number Navigation -->
-                            <div class="d-flex justify-content-center">
-                                <ul class="pagination">
-                                    @php
-                                        $currentPage = request()->get('page', 1);
-                                        $totalPages = ceil($totalCount / 20);
-                                        $startPage = max(1, $currentPage - 3);
-                                        $endPage = min($totalPages, $currentPage + 3);
-                                    @endphp
-                                    
-                                    <!-- First page if not visible -->
-                                    @if($startPage > 1)
-                                        <li class="paginate_button page-item">
-                                            <a href="{{ request()->fullUrlWithQuery(['page' => 1]) }}" class="page-link">1</a>
-                                        </li>
-                                        @if($startPage > 2)
-                                            <li class="paginate_button page-item disabled">
-                                                <a href="#" class="page-link">...</a>
-                                            </li>
-                                        @endif
-                                    @endif
-                                    
-                                    <!-- Visible page range -->
-                                    @for($i = $startPage; $i <= $endPage; $i++)
-                                        <li class="paginate_button page-item {{ $i == $currentPage ? 'active' : '' }}">
-                                            <a href="{{ request()->fullUrlWithQuery(['page' => $i]) }}" class="page-link">{{ $i }}</a>
-                                        </li>
-                                    @endfor
-                                    
-                                    <!-- Last page if not visible -->
-                                    @if($endPage < $totalPages)
-                                        @if($endPage < $totalPages - 1)
-                                            <li class="paginate_button page-item disabled">
-                                                <a href="#" class="page-link">...</a>
-                                            </li>
-                                        @endif
-                                        <li class="paginate_button page-item">
-                                            <a href="{{ request()->fullUrlWithQuery(['page' => $totalPages]) }}" class="page-link">{{ $totalPages }}</a>
-                                        </li>
-                                    @endif
-                                </ul>
-                            </div>
-                            
-                            <!-- Quick Jump to Page -->
-                            <div class="d-flex justify-content-center align-items-center mt-3">
-                                <span class="me-2">Go to page:</span>
-                                <div class="input-group" style="max-width: 200px;">
-                                    <input type="number" class="form-control" id="pageJumpInput" min="1" max="{{ $totalPages }}" value="{{ request()->get('page', 1) }}">
-                                    <button type="button" class="btn btn-primary" onclick="jumpToPage()">
-                                        Go
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        @endif
     </div>
 </section>
 
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="exportForm" method="GET" action="">
+                <div class="modal-header">
+                    <h5 class="modal-title">Export Options</h5>
+                    <button type="button" class="btn-close" data-bs-toggle="modal" data-bs-target="#exportModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Select columns to include in the export:</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="order_reference" id="col_ref" checked>
+                                <label class="form-check-label" for="col_ref">Order Reference</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="transaction_id" id="col_tid" checked>
+                                <label class="form-check-label" for="col_tid">Transaction ID</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="status" id="col_status" checked>
+                                <label class="form-check-label" for="col_status">Status</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="amount" id="col_amount" checked>
+                                <label class="form-check-label" for="col_amount">Amount</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="currency" id="col_curr" checked>
+                                <label class="form-check-label" for="col_curr">Currency</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="description" id="col_desc" checked>
+                                <label class="form-check-label" for="col_desc">Purpose / Description</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="payer_name" id="col_name" checked>
+                                <label class="form-check-label" for="col_name">Payer Name</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="phone" id="col_phone" checked>
+                                <label class="form-check-label" for="col_phone">Phone</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="email" id="col_email" checked>
+                                <label class="form-check-label" for="col_email">Email</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="payment_method" id="col_method" checked>
+                                <label class="form-check-label" for="col_method">Payment Method</label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" name="columns[]" value="created_at" id="col_date" checked>
+                                <label class="form-check-label" for="col_date">Created At</label>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="text-muted small">The export will respect your current filters.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="confirmExportBtn">Export Now</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @push('styles')
 <style>
-.bg-gradient-primary {
-    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%) !important;
-}
-
-.bg-gradient-success {
-    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%) !important;
-}
-
-.bg-gradient-warning {
-    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%) !important;
-}
-
-.bg-gradient-danger {
-    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
-}
-
-.payment-card {
-    transition: transform 0.2s ease-in-out;
-}
-
-.payment-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-}
-
-.payment-row {
-    transition: background-color 0.3s ease;
-}
-
-.payment-row:hover {
-    background-color: rgba(0, 123, 255, 0.05);
-}
-
-.table th {
-    border-top: none;
-    background-color: #343a40;
-    color: white;
-    font-weight: 600;
-}
-
-.table td {
-    vertical-align: middle;
-}
-
-.pagination .page-link {
-    color: #007bff;
-    border: 1px solid #dee2e6;
-}
-
-.pagination .page-link:hover {
-    background-color: #e9ecef;
-    border-color: #dee2e6;
-}
-
-.pagination .page-item.active .page-link {
-    background-color: #007bff;
-    border-color: #007bff;
-    color: white;
-}
-
-.payment-method-icon {
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: #f8f9fa;
-    border-radius: 50%;
-    font-size: 0.875rem;
-}
-
-@media (max-width: 768px) {
-    .card-body {
-        padding: 1rem;
-    }
-    
-    .table-responsive {
-        font-size: 0.875rem;
-    }
-    
-    .btn-group .btn {
-        font-size: 0.75rem;
-        padding: 0.375rem 0.75rem;
-    }
-}
+.bg-gradient-primary { background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%); }
+.bg-gradient-success { background: linear-gradient(135deg, #198754 0%, #0c5231 100%); }
+.bg-gradient-warning { background: linear-gradient(135deg, #ffc107 0%, #ba8b00 100%); }
+.bg-gradient-danger { background: linear-gradient(135deg, #dc3545 0%, #a11b27 100%); }
+.card { border: none; }
+.table > :not(caption) > * > * { padding: 1rem 0.5rem; }
+.avatar { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; }
 </style>
 @endpush
 
 @push('scripts')
 <script>
 function toggleFilters() {
-    const filtersSection = document.getElementById('filtersSection');
-    if (filtersSection.style.display === 'none') {
-        filtersSection.style.display = 'block';
+    const section = document.getElementById('filtersSection');
+    const icon = document.getElementById('filterIcon');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
     } else {
-        filtersSection.style.display = 'none';
+        section.style.display = 'none';
+        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
     }
 }
 
-function toggleTableView() {
-    document.getElementById('tableView').style.display = 'block';
-    document.getElementById('cardView').style.display = 'none';
-}
-
-function toggleCardView() {
-    document.getElementById('tableView').style.display = 'none';
-    document.getElementById('cardView').style.display = 'block';
-}
-
-function toggleSelectAll() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.row-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-}
-
-function refreshData() {
-    window.location.reload();
-}
-
-function exportData() {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ route('payments.export.excel') }}';
-    form.target = '_blank';
-    
-    const filters = new URLSearchParams(window.location.search);
-    filters.forEach((value, key) => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = key;
-        input.value = value;
-        form.appendChild(input);
-    });
-    
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
-}
-
-function printData() {
-    window.print();
-}
-
-// Initialize table sorting
-document.addEventListener('DOMContentLoaded', function() {
-    const table = document.getElementById('paymentsTable');
-    if (table) {
-        // Add sorting functionality to table headers
-        const headers = table.querySelectorAll('th');
-        headers.forEach((header, index) => {
-            if (index > 0 && index < headers.length - 1) {
-                header.style.cursor = 'pointer';
-                header.addEventListener('click', function() {
-                    sortTable(index);
-                });
-            }
-        });
+function setExportType(type) {
+    const form = document.getElementById('exportForm');
+    if (type === 'pdf') {
+        form.action = '{{ route('payments.export.pdf') }}';
+        document.getElementById('confirmExportBtn').className = 'btn btn-danger';
+        document.getElementById('confirmExportBtn').innerText = 'Export PDF';
+    } else {
+        form.action = '{{ route('payments.export.excel') }}';
+        document.getElementById('confirmExportBtn').className = 'btn btn-success';
+        document.getElementById('confirmExportBtn').innerText = 'Export Excel';
     }
-});
 
-function sortTable(columnIndex) {
-    const table = document.getElementById('paymentsTable');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+    // Add current filters to export form
+    const filterForm = document.getElementById('filterForm');
+    const formData = new FormData(filterForm);
     
-    const isAscending = table.getAttribute('data-sort-order') !== 'asc';
+    // Remove old hidden filter inputs
+    form.querySelectorAll('.filter-input').forEach(el => el.remove());
     
-    rows.sort((a, b) => {
-        const aValue = a.cells[columnIndex].textContent.trim();
-        const bValue = b.cells[columnIndex].textContent.trim();
-        
-        if (columnIndex === 2) { // Amount column
-            return parseFloat(aValue.replace(/[^0-9.-]+/g, '')) - parseFloat(bValue.replace(/[^0-9.-]+/g, ''));
+    // Add current filters
+    for (let [key, value] of formData.entries()) {
+        if (value) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = value;
+            input.className = 'filter-input';
+            form.appendChild(input);
         }
-        
-        return aValue.localeCompare(bValue);
-    });
-    
-    // Clear existing rows
-    while (tbody.firstChild) {
-        tbody.removeChild(tbody.firstChild);
     }
-    
-    // Add sorted rows
-    rows.forEach(row => tbody.appendChild(row));
-    
-    // Toggle sort order
-    table.setAttribute('data-sort-order', isAscending ? 'asc' : 'desc');
 }
-
-// Enhanced pagination functions
-function goToPage(page) {
-    if (page < 1) return;
-    
-    const totalPages = {{ $totalPages ?? 1 }};
-    if (page > totalPages) return;
-    
-    const url = new URL(window.location);
-    url.searchParams.set('page', page);
-    window.location.href = url.toString();
-}
-
-function jumpToPage() {
-    const input = document.getElementById('pageJumpInput');
-    const page = parseInt(input.value);
-    
-    if (isNaN(page) || page < 1) {
-        alert('Please enter a valid page number');
-        input.value = '{{ request()->get('page', 1) }}';
-        return;
-    }
-    
-    const totalPages = {{ $totalPages ?? 1 }};
-    if (page > totalPages) {
-        alert(`Page ${page} does not exist. Maximum page is ${totalPages}`);
-        input.value = '{{ request()->get('page', 1) }}';
-        return;
-    }
-    
-    goToPage(page);
-}
-
-// Handle Enter key in page jump input
-document.addEventListener('DOMContentLoaded', function() {
-    const pageJumpInput = document.getElementById('pageJumpInput');
-    if (pageJumpInput) {
-        pageJumpInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                jumpToPage();
-            }
-        });
-    }
-});
 </script>
 @endpush
 

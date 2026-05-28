@@ -201,13 +201,45 @@ class PaymentController extends Controller
                                 'status' => $apiData['status'],
                                 'transaction_id' => $apiData['id'] ?? $apiData['transaction_id'] ?? $transaction->transaction_id,
                                 'payment_method' => $apiData['channel'] ?? $apiData['paymentMethod'] ?? $transaction->payment_method,
+                                'amount' => $apiData['collectedAmount'] ?? $apiData['amount'] ?? $transaction->amount,
+                                'currency' => $apiData['collectedCurrency'] ?? $apiData['currency'] ?? $transaction->currency,
+                                'phone' => $apiData['customer']['customerPhoneNumber'] ?? $apiData['paymentPhoneNumber'] ?? $transaction->phone,
+                                'payer_name' => $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? $transaction->payer_name,
+                                'email' => $apiData['customer']['customerEmail'] ?? $apiData['email'] ?? $transaction->email,
+                                'description' => $apiData['description'] ?? $apiData['narrative'] ?? $transaction->description,
                                 'updated_at' => now()
                             ]);
                             
                             // Update payment data with API response
-                            $paymentData['status'] = $apiData['status'];
-                            $paymentData['transaction_id'] = $apiData['id'] ?? $apiData['transaction_id'] ?? $transaction->transaction_id;
-                            $paymentData['payment_method'] = $apiData['channel'] ?? $apiData['paymentMethod'] ?? $transaction->payment_method;
+                            $paymentData = [
+                                'id' => $transaction->id,
+                                'orderReference' => $transaction->order_reference,
+                                'transaction_id' => $transaction->transaction_id,
+                                'status' => $transaction->status,
+                                'amount' => $transaction->amount,
+                                'currency' => $transaction->currency,
+                                'phone' => $transaction->phone,
+                                'payer_name' => $transaction->payer_name,
+                                'email' => $transaction->email,
+                                'description' => $transaction->description,
+                                'type' => $transaction->type,
+                                'payment_method' => $transaction->payment_method,
+                                'sms_sent' => $transaction->sms_sent,
+                                'sms_message' => $transaction->sms_message,
+                                'sms_sent_at' => $transaction->sms_sent_at,
+                                'sms_error' => $transaction->sms_error,
+                                'created_at' => $transaction->created_at,
+                                'updated_at' => $transaction->updated_at,
+                                'customer' => [
+                                    'customerName' => $transaction->payer_name,
+                                    'customerPhoneNumber' => $transaction->phone,
+                                    'customerEmail' => $transaction->email
+                                ],
+                                'paymentPhoneNumber' => $transaction->phone,
+                                'collectedAmount' => $transaction->amount,
+                                'collectedCurrency' => $transaction->currency,
+                                'channel' => $transaction->payment_method
+                            ];
                             
                             // SMS notifications now handled by webhooks for better reliability
                         }
@@ -319,81 +351,45 @@ class PaymentController extends Controller
      */
     public function history(Request $request)
     {
-        $params = [
-            'limit' => $request->get('limit', 20),
-            'skip' => ($request->get('page', 1) - 1) * 20,
-            'orderBy' => 'DESC',
-            'sortBy' => 'createdAt'
-        ];
+        $query = Transaction::query()->where('type', 'payment');
 
         // Apply filters
         if ($request->filled('status')) {
-            $params['status'] = $request->status;
+            $query->where('status', $request->status);
         }
         if ($request->filled('currency')) {
-            $params['collectedCurrency'] = $request->currency;
+            $query->where('currency', $request->currency);
         }
         if ($request->filled('order_reference')) {
-            $params['orderReference'] = $request->order_reference;
+            $query->where('order_reference', 'like', '%' . $request->order_reference . '%');
+        }
+        if ($request->filled('phone')) {
+            $query->where('phone', 'like', '%' . $request->phone . '%');
+        }
+        if ($request->filled('payer_name')) {
+            $query->where('payer_name', 'like', '%' . $request->payer_name . '%');
         }
         if ($request->filled('start_date')) {
-            $params['startDate'] = $request->start_date;
+            $query->whereDate('created_at', '>=', $request->start_date);
         }
         if ($request->filled('end_date')) {
-            $params['endDate'] = $request->end_date;
+            $query->whereDate('created_at', '<=', $request->end_date);
         }
 
-        $payments = [];
-        $totalCount = 0;
-        $error = null;
-
-        try {
-            Log::info('Payment history API call', ['params' => $params]);
-            $response = $this->api->queryAllPayments($params);
-            Log::info('Payment history API response', ['response' => $response]);
-            
-            if (isset($response['data'])) {
-                $payments = $response['data'];
-                $totalCount = $response['totalCount'] ?? 0;
-                Log::info('Payment history loaded', ['count' => count($payments), 'total' => $totalCount]);
-            } else {
-                Log::warning('No data in payment history response', ['response' => $response]);
-            }
-        } catch (Exception $e) {
-            $error = $e->getMessage();
-            Log::error('Payment history fetch failed: ' . $error);
-        }
+        $totalCount = $query->count();
+        $payments = $query->orderBy('created_at', 'desc')->paginate($request->get('limit', 20));
 
         // Calculate statistics
-        $successCount = 0;
-        $pendingCount = 0;
-        $failedCount = 0;
+        $successCount = Transaction::where('type', 'payment')->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
+        $pendingCount = Transaction::where('type', 'payment')->whereIn('status', ['PENDING', 'PROCESSING'])->count();
+        $failedCount = Transaction::where('type', 'payment')->where('status', 'FAILED')->count();
         
-        foreach ($payments as $payment) {
-            $status = $payment['status'] ?? '';
-            switch ($status) {
-                case 'SUCCESS':
-                case 'SETTLED':
-                    $successCount++;
-                    break;
-                case 'PENDING':
-                case 'PROCESSING':
-                    $pendingCount++;
-                    break;
-                case 'FAILED':
-                    $failedCount++;
-                    break;
-            }
-        }
-        
-        Log::info('Payment statistics calculated', [
-            'total' => $totalCount,
-            'success' => $successCount,
-            'pending' => $pendingCount,
-            'failed' => $failedCount
+        Log::info('Payment history loaded from database', [
+            'count' => $payments->count(),
+            'total' => $totalCount
         ]);
 
-        return view('payments.history', compact('payments', 'totalCount', 'successCount', 'pendingCount', 'failedCount', 'error'));
+        return view('payments.history', compact('payments', 'totalCount', 'successCount', 'pendingCount', 'failedCount'));
     }
 
     /**
@@ -403,124 +399,35 @@ class PaymentController extends Controller
     {
         try {
             // Check if this is a single payment receipt request
-            if ($request->filled('order_reference')) {
-                $orderReference = $request->order_reference;
-                
-                // Try to get single payment data for receipt using multiple methods
-                $paymentData = null;
-                
-                try {
-                    // First try queryPaymentStatus
-                    $paymentData = $this->api->queryPaymentStatus($orderReference);
-                    Log::info('Payment data from queryPaymentStatus', ['orderReference' => $orderReference, 'data' => $paymentData]);
-                } catch (Exception $e) {
-                    Log::warning('queryPaymentStatus failed, trying queryAllPayments', ['orderReference' => $orderReference, 'error' => $e->getMessage()]);
-                }
-                
-                // If queryPaymentStatus failed or returned empty, try queryAllPayments
-                if (!$paymentData || empty($paymentData)) {
-                    try {
-                        $params = [
-                            'limit' => 1,
-                            'orderReference' => $orderReference
-                        ];
-                        $response = $this->api->queryAllPayments($params);
-                        Log::info('Payment data from queryAllPayments', ['orderReference' => $orderReference, 'response' => $response]);
-                        
-                        if (isset($response['data']) && !empty($response['data'])) {
-                            $paymentData = $response['data'][0]; // Get the first (and only) payment
-                        }
-                    } catch (Exception $e) {
-                        Log::error('queryAllPayments also failed', ['orderReference' => $orderReference, 'error' => $e->getMessage()]);
-                    }
-                }
-                
-                if (!$paymentData) {
-                    return back()->with('error', 'Payment not found');
-                }
-
-                // Extract payment data from array wrapper if needed
-                if (is_array($paymentData) && isset($paymentData[0])) {
-                    $paymentData = $paymentData[0];
-                }
-
-                // Debug: Log the actual payment data structure
-                Log::info('Receipt generation - Raw payment data', [
-                    'orderReference' => $orderReference,
-                    'paymentData' => $paymentData,
-                    'paymentDataKeys' => array_keys($paymentData ?? []),
-                    'hasCustomer' => isset($paymentData['customer']),
-                    'customerData' => $paymentData['customer'] ?? null
-                ]);
-
-                // Pass raw payment data to match status page structure exactly
-                $paymentData['orderReference'] = $paymentData['orderReference'] ?? $orderReference;
-                
-                // Generate QR code with full payment details
-                $qrContent = "ClickPesa Payment Receipt\n" .
-                           "Order Reference: " . ($paymentData['orderReference'] ?? 'N/A') . "\n" .
-                           "Transaction ID: " . ($paymentData['id'] ?? 'N/A') . "\n" .
-                           "Amount: " . number_format($paymentData['collectedAmount'] ?? 0, 2) . " " . ($paymentData['collectedCurrency'] ?? 'TZS') . "\n" .
-                           "Status: " . ($paymentData['status'] ?? 'UNKNOWN') . "\n" .
-                           "Phone: " . ($paymentData['paymentPhoneNumber'] ?? 'N/A') . "\n" .
-                           "Channel: " . ($paymentData['channel'] ?? 'N/A') . "\n" .
-                           "Customer: " . ($paymentData['customer']['customerName'] ?? 'N/A') . "\n" .
-                           "Email: " . ($paymentData['customer']['customerEmail'] ?? 'N/A') . "\n" .
-                           "Date: " . (isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('Y-m-d H:i:s') : 'N/A') . "\n" .
-                           "Verify: " . route('payments.status', ['reference' => $paymentData['orderReference']]);
-                
-                $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
-                $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
-
-                $pdf = Pdf::loadView('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage])
-                    ->setPaper('a4', 'portrait')
-                    ->setOption('margin-bottom', 20);
-
-                return $pdf->download('payment-receipt-' . $orderReference . '.pdf');
+            if ($request->filled('order_reference') && !$request->filled('bulk')) {
+                return $this->receipt($request->order_reference);
             }
 
-            // Get all payments without limit for export
-            $params = [
-                'limit' => 1000, // Maximum limit for export
-                'orderBy' => 'DESC',
-                'sortBy' => 'createdAt'
-            ];
+            // Get filtered payments from database
+            $query = Transaction::query()->where('type', 'payment');
 
-            // Apply filters
             if ($request->filled('status')) {
-                $params['status'] = $request->status;
+                $query->where('status', $request->status);
             }
             if ($request->filled('currency')) {
-                $params['collectedCurrency'] = $request->currency;
+                $query->where('currency', $request->currency);
             }
             if ($request->filled('start_date')) {
-                $params['startDate'] = $request->start_date;
+                $query->whereDate('created_at', '>=', $request->start_date);
             }
             if ($request->filled('end_date')) {
-                $params['endDate'] = $request->end_date;
+                $query->whereDate('created_at', '<=', $request->end_date);
             }
 
-            $response = $this->api->queryAllPayments($params);
-            $payments = $response['data'] ?? [];
+            $payments = $query->orderBy('created_at', 'desc')->get()->toArray();
+            
+            // Selected columns
+            $columns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']);
 
-            // Map payment data to expected format for export
-            $mappedPayments = collect($payments)->map(function($payment) {
-                return [
-                    'orderReference' => $payment['orderReference'] ?? $payment['id'] ?? 'N/A',
-                    'transactionId' => $payment['transactionId'] ?? $payment['id'] ?? 'N/A',
-                    'status' => $payment['status'] ?? 'UNKNOWN',
-                    'amount' => $payment['amount'] ?? $payment['collectedAmount'] ?? 0,
-                    'currency' => $payment['currency'] ?? $payment['collectedCurrency'] ?? 'TZS',
-                    'phone' => $payment['phone'] ?? $payment['paymentPhoneNumber'] ?? 'N/A',
-                    'email' => $payment['email'] ?? 'N/A',
-                    'description' => $payment['description'] ?? $payment['narrative'] ?? 'Payment Transaction',
-                    'paymentMethod' => $payment['paymentMethod'] ?? $payment['channel'] ?? 'N/A',
-                    'createdAt' => $payment['createdAt'] ?? 'now',
-                    'updatedAt' => $payment['updatedAt'] ?? 'now'
-                ];
-            })->toArray();
-
-            $pdf = Pdf::loadView('payments.exports.pdf', ['payments' => $mappedPayments])
+            $pdf = Pdf::loadView('payments.exports.pdf', [
+                'payments' => $payments,
+                'columns' => $columns
+            ])
                 ->setPaper('a4', 'landscape')
                 ->setOption('margin-bottom', 10);
 
@@ -537,51 +444,31 @@ class PaymentController extends Controller
     public function exportExcel(Request $request)
     {
         try {
-            // Get all payments without limit for export
-            $params = [
-                'limit' => 1000, // Maximum limit for export
-                'orderBy' => 'DESC',
-                'sortBy' => 'createdAt'
-            ];
+            // Get filtered payments from database
+            $query = Transaction::query()->where('type', 'payment');
 
-            // Apply filters
             if ($request->filled('status')) {
-                $params['status'] = $request->status;
+                $query->where('status', $request->status);
             }
             if ($request->filled('currency')) {
-                $params['collectedCurrency'] = $request->currency;
+                $query->where('currency', $request->currency);
             }
             if ($request->filled('order_reference')) {
-                $params['orderReference'] = $request->order_reference;
+                $query->where('order_reference', 'like', '%' . $request->order_reference . '%');
             }
             if ($request->filled('start_date')) {
-                $params['startDate'] = $request->start_date;
+                $query->whereDate('created_at', '>=', $request->start_date);
             }
             if ($request->filled('end_date')) {
-                $params['endDate'] = $request->end_date;
+                $query->whereDate('created_at', '<=', $request->end_date);
             }
 
-            $response = $this->api->queryAllPayments($params);
-            $payments = $response['data'] ?? [];
+            $payments = $query->orderBy('created_at', 'desc')->get()->toArray();
+            
+            // Selected columns
+            $columns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at']);
 
-            // Map payment data to expected format for export
-            $mappedPayments = collect($payments)->map(function($payment) {
-                return [
-                    'orderReference' => $payment['orderReference'] ?? $payment['id'] ?? 'N/A',
-                    'transactionId' => $payment['transactionId'] ?? $payment['id'] ?? 'N/A',
-                    'status' => $payment['status'] ?? 'UNKNOWN',
-                    'amount' => $payment['amount'] ?? $payment['collectedAmount'] ?? 0,
-                    'currency' => $payment['currency'] ?? $payment['collectedCurrency'] ?? 'TZS',
-                    'phone' => $payment['phone'] ?? $payment['paymentPhoneNumber'] ?? 'N/A',
-                    'email' => $payment['email'] ?? 'N/A',
-                    'description' => $payment['description'] ?? $payment['narrative'] ?? 'Payment Transaction',
-                    'paymentMethod' => $payment['paymentMethod'] ?? $payment['channel'] ?? 'N/A',
-                    'createdAt' => $payment['createdAt'] ?? 'now',
-                    'updatedAt' => $payment['updatedAt'] ?? 'now'
-                ];
-            })->toArray();
-
-            return Excel::download(new \App\Exports\PaymentHistoryExport($mappedPayments), 'payment-history-' . date('Y-m-d') . '.xlsx');
+            return Excel::download(new \App\Exports\PaymentHistoryExport($payments, $columns), 'payment-history-' . date('Y-m-d') . '.xlsx');
         } catch (Exception $e) {
             Log::error('Excel export failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
@@ -594,28 +481,56 @@ class PaymentController extends Controller
     public function receipt($orderReference)
     {
         try {
-            $paymentData = $this->api->queryPaymentStatus($orderReference);
+            // Try to get from database first
+            $transaction = Transaction::where('order_reference', $orderReference)->first();
+            
+            $paymentData = null;
+            if ($transaction) {
+                $paymentData = [
+                    'orderReference' => $transaction->order_reference,
+                    'transaction_id' => $transaction->transaction_id,
+                    'status' => $transaction->status,
+                    'collectedAmount' => $transaction->amount,
+                    'collectedCurrency' => $transaction->currency,
+                    'paymentPhoneNumber' => $transaction->phone,
+                    'channel' => $transaction->payment_method,
+                    'customer' => [
+                        'customerName' => $transaction->payer_name,
+                        'customerEmail' => $transaction->email,
+                        'customerPhoneNumber' => $transaction->phone
+                    ],
+                    'description' => $transaction->description,
+                    'createdAt' => $transaction->created_at,
+                    'id' => $transaction->transaction_id
+                ];
+            } else {
+                // Fallback to API
+                $apiResponse = $this->api->queryPaymentStatus($orderReference);
+                if ($apiResponse && is_array($apiResponse)) {
+                    $paymentData = isset($apiResponse[0]) ? $apiResponse[0] : $apiResponse;
+                    $paymentData['orderReference'] = $paymentData['orderReference'] ?? $orderReference;
+                }
+            }
             
             if (!$paymentData) {
                 return back()->with('error', 'Payment not found');
             }
 
-            // Map payment data to expected format for receipt
-            $mappedPaymentData = [
-                'orderReference' => $paymentData['orderReference'] ?? $paymentData['id'] ?? $orderReference,
-                'transactionId' => $paymentData['transactionId'] ?? $paymentData['id'] ?? 'N/A',
-                'status' => $paymentData['status'] ?? 'UNKNOWN',
-                'amount' => $paymentData['amount'] ?? $paymentData['collectedAmount'] ?? 0,
-                'currency' => $paymentData['currency'] ?? $paymentData['collectedCurrency'] ?? 'TZS',
-                'phone' => $paymentData['phone'] ?? $paymentData['paymentPhoneNumber'] ?? 'N/A',
-                'email' => $paymentData['email'] ?? 'N/A',
-                'description' => $paymentData['description'] ?? $paymentData['narrative'] ?? 'Payment Transaction',
-                'paymentMethod' => $paymentData['paymentMethod'] ?? $paymentData['channel'] ?? 'N/A',
-                'createdAt' => $paymentData['createdAt'] ?? 'now',
-                'updatedAt' => $paymentData['updatedAt'] ?? 'now'
-            ];
+            // Generate QR code with full payment details
+            $qrContent = "ClickPesa Payment Receipt\n" .
+                       "Order Reference: " . ($paymentData['orderReference'] ?? 'N/A') . "\n" .
+                       "Transaction ID: " . ($paymentData['id'] ?? $paymentData['transaction_id'] ?? 'N/A') . "\n" .
+                       "Amount: " . number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 2) . " " . ($paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS') . "\n" .
+                       "Status: " . ($paymentData['status'] ?? 'UNKNOWN') . "\n" .
+                       "Phone: " . ($paymentData['paymentPhoneNumber'] ?? $paymentData['phone'] ?? 'N/A') . "\n" .
+                       "Channel: " . ($paymentData['channel'] ?? $paymentData['payment_method'] ?? 'N/A') . "\n" .
+                       "Customer: " . ($paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? 'N/A') . "\n" .
+                       "Date: " . (isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('Y-m-d H:i:s') : 'N/A');
+            
+            $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
+            $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
 
-            $pdf = Pdf::loadView('payments.receipt', compact('mappedPaymentData'))
+            $pdf = Pdf::loadView('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage])
                 ->setPaper('a4', 'portrait')
                 ->setOption('margin-bottom', 20);
 

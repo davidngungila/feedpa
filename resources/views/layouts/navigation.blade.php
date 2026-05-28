@@ -27,51 +27,28 @@
       </a>
     </li>
 
-    <!-- Payments -->
-    <li class="menu-item {{ request()->routeIs('payments.*') ? 'active' : '' }}">
-      <a href="javascript:void(0);" class="menu-link menu-toggle">
-        <i class="menu-icon tf-icons bx bx-credit-card"></i>
-        <div data-i18n="Payments">Payments</div>
+    <!-- Create Payment -->
+    <li class="menu-item {{ request()->routeIs('payments.create') ? 'active' : '' }}">
+      <a href="{{ route('payments.create') }}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-plus-circle"></i>
+        <div data-i18n="Create Payment">Create Payment</div>
       </a>
-      <ul class="menu-sub">
-        <li class="menu-item">
-          <a href="{{ route('payments.create') }}" class="menu-link">
-            <div data-i18n="Create Payment">Create Payment</div>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="{{ route('payments.history') }}" class="menu-link">
-            <div data-i18n="Payment History">Payment History</div>
-          </a>
-        </li>
-      </ul>
     </li>
 
-    
-    
-    <!-- Account -->
-    <li class="menu-item {{ request()->routeIs('account.*') ? 'active' : '' }}">
-      <a href="javascript:void(0);" class="menu-link menu-toggle">
-        <i class="menu-icon tf-icons bx bx-user"></i>
-        <div data-i18n="Account">Account</div>
+    <!-- Payment History -->
+    <li class="menu-item {{ request()->routeIs('payments.history') ? 'active' : '' }}">
+      <a href="{{ route('payments.history') }}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-history"></i>
+        <div data-i18n="Payment History">Payment History</div>
       </a>
-      <ul class="menu-sub">
-        <li class="menu-item">
-          <a href="{{ route('account.index') }}" class="menu-link">
-            <div data-i18n="Overview">Overview</div>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="{{ route('account.balance') }}" class="menu-link">
-            <div data-i18n="Balance">Balance</div>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="{{ route('account.statement') }}" class="menu-link">
-            <div data-i18n="Statement">Statement</div>
-          </a>
-        </li>
-      </ul>
+    </li>
+
+    <!-- Generate statement -->
+    <li class="menu-item {{ request()->routeIs('account.statement') ? 'active' : '' }}">
+      <a href="{{ route('account.statement') }}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-file"></i>
+        <div data-i18n="Generate statement">Generate statement</div>
+      </a>
     </li>
   </ul>
 </aside>

@@ -237,10 +237,11 @@ class AccountController extends Controller
         }
 
         return view('account.statement', [
-            'transactions' => $displayTransactions->sortByDesc('date'),
+            'displayTransactions' => $displayTransactions->sortByDesc('date'),
             'stats' => $stats,
             'error' => $error,
             'currency' => $currency,
+            'currencyFilter' => $currency,
             'startDate' => $startDate,
             'endDate' => $endDate,
             'activeTab' => $activeTab,

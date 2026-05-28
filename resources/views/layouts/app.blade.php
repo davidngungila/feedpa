@@ -37,6 +37,22 @@
     html { scroll-behavior: smooth; }
     body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
 
+    /* Fix Pagination Styling */
+    .pagination { display: flex; list-style: none; padding: 0; gap: 0.5rem; align-items: center; }
+    .page-item .page-link { 
+        display: flex; align-items: center; justify-content: center;
+        min-width: 2.5rem; height: 2.5rem; padding: 0.5rem;
+        border-radius: 0.75rem; border: 1px solid #d1fae5;
+        background: white; color: #065f46; font-weight: 600; font-size: 0.875rem;
+        transition: all 0.2s;
+    }
+    .dark .page-item .page-link { background: #0d1f16; border-color: #1a3328; color: #6ee7b7; }
+    .page-item.active .page-link { background: #10b981; color: white; border-color: #10b981; shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+    .page-item.disabled .page-link { opacity: 0.5; cursor: not-allowed; }
+    .page-item:hover:not(.active):not(.disabled) .page-link { background: #f0fdf4; border-color: #10b981; }
+    .dark .page-item:hover:not(.active):not(.disabled) .page-link { background: #052e16; }
+    .pagination svg { width: 1.25rem; height: 1.25rem; }
+
     ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #10b981; border-radius: 10px; }

@@ -232,7 +232,10 @@
                                                 <small class="text-muted">{{ $payment->transaction_id ?? 'No ID' }}</small>
                                             </td>
                                             <td>
-                                                <div class="fw-bold">{{ $payment->payer_name ?? 'N/A' }}</div>
+                                                <div class="fw-bold">{{ $payment->customer_name ?? $payment->payer_name ?? 'N/A' }}</div>
+                                                @if($payment->customer_name && $payment->payer_name && strtolower($payment->customer_name) !== strtolower($payment->payer_name))
+                                                    <div class="text-xs text-muted" style="font-size: 0.75rem;">Payer: {{ $payment->payer_name }}</div>
+                                                @endif
                                                 <small class="text-muted">{{ $payment->phone ?? 'N/A' }}</small>
                                             </td>
                                             <td>

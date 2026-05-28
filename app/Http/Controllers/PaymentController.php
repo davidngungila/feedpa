@@ -48,6 +48,7 @@ class PaymentController extends Controller
             $amount = $this->api->formatAmount($validated['amount']);
             $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);
             $payerName = $validated['payer_name'];
+            $description = $validated['description'] ?? '';
             $orderReference = $this->api->generateOrderReference();
 
             if (!$phoneNumber) {
@@ -70,7 +71,7 @@ class PaymentController extends Controller
                 'phone' => $phoneNumber,
                 'customer_name' => $payerName, // Store "Jina La Mwanachama" in customer_name
                 'payer_name' => $payerName,    // Also set initial payer_name
-                'description' => $validated['description'] ?? null,
+                'description' => $description,
                 'type' => 'payment',
                 'callback_data' => null,
             ]);
@@ -78,7 +79,7 @@ class PaymentController extends Controller
             // Initiate the payment with customer details
             $customerDetails = [
                 'customerName' => $payerName,
-                'description' => $validated['description'] ?? ''
+                'description' => $description
             ];
             $payment = $this->api->initiateUSSDPush($amount, $orderReference, $phoneNumber, null, $customerDetails);
             

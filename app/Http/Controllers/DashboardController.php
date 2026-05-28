@@ -514,13 +514,14 @@ class DashboardController extends Controller
                     'customerName' => $customerName,
                     'customerPhoneNumber' => $phoneNumber
                 ],
+                'customer_name' => $transaction->customer_name ?? $customerName,
+                'payer_name' => $transaction->payer_name ?? $customerName,
                 'createdAt' => $transaction->created_at,
                 'updatedAt' => $transaction->updated_at
             ];
-            
-            // Generate SMS message
-            $smsMessage = "FeedTan: Malipo yako ya TZS " . number_format($amount, 0) . " kwa reference {$reference} imethibitishwa. Ahsante kwa kutumia!";
-            
+
+            $smsMessage = $messaging->buildPaymentConfirmationMessage($paymentData);
+
             // Send SMS
             $result = $messaging->sendPaymentConfirmation($phoneNumber, $paymentData);
             

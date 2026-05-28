@@ -87,9 +87,17 @@ class MessagingServiceAPI
      */
     public function sendPaymentConfirmation(string $phoneNumber, array $paymentData): array
     {
-        $message = $this->formatPaymentMessage($paymentData);
-        
+        $message = $this->buildPaymentConfirmationMessage($paymentData);
+
         return $this->sendSMS($phoneNumber, $message);
+    }
+
+    /**
+     * Build payment confirmation SMS text (shared by webhooks, sync, and dashboard).
+     */
+    public function buildPaymentConfirmationMessage(array $paymentData): string
+    {
+        return $this->formatPaymentMessage($paymentData);
     }
 
     /**
@@ -169,16 +177,17 @@ class MessagingServiceAPI
      */
     private function formatPaymentMessage(array $paymentData): string
     {
-        $amount = number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 2);
-        $customerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? '[Jina la Mteja]';
-        $paymentMethod = $paymentData['channel'] ?? 'Mobile Money';
-        $date = \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i');
-        $transactionId = $paymentData['id'] ?? $paymentData['transaction_id'] ?? 'FTN-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -6));
+        $amount = number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 0);
+        $customerName = trim((string) (
+            $paymentData['customer']['customerName']
+            ?? $paymentData['customer_name']
+            ?? $paymentData['payer_name']
+            ?? 'Mteja'
+        ));
+        $date = \Carbon\Carbon::parse($paymentData['createdAt'] ?? $paymentData['updatedAt'] ?? now())->format('d M Y, H:i');
         $reference = $paymentData['orderReference'] ?? $paymentData['reference'] ?? 'N/A';
 
-        $phoneNumber = $paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? '255622239304';
-        
-        return "Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$phoneNumber}  tarehe " . \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i') . ".  Rejea: {$reference}. Asante kwa kutumia huduma zetu.";
+        return "Malipo yamefanikiwa. TZS {$amount} zimepokelewa kutoka {$customerName} tarehe {$date}. Rejea: {$reference}.";
     }
 
     /**

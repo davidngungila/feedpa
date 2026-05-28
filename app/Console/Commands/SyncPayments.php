@@ -218,9 +218,11 @@ class SyncPayments extends Command
                 'paymentPhoneNumber' => $phoneNumber,
                 'channel' => $transaction->payment_method ?? 'Mobile Money',
                 'customer' => [
-                    'customerName' => $transaction->payer_name,
+                    'customerName' => $transaction->customer_name ?? $transaction->payer_name,
                     'customerPhoneNumber' => $phoneNumber
                 ],
+                'customer_name' => $transaction->customer_name ?? $transaction->payer_name,
+                'payer_name' => $transaction->payer_name,
                 'createdAt' => $transaction->created_at
             ];
 

@@ -165,10 +165,12 @@ class CallbackController extends Controller
                 'paymentPhoneNumber' => $phoneNumber,
                 'channel' => $webhookData['channel'] ?? 'Mobile Money',
                 'customer' => [
-                    'customerName' => $webhookData['customer']['customerName'] ?? $transaction->payer_name,
+                    'customerName' => $webhookData['customer']['customerName'] ?? $transaction->customer_name ?? $transaction->payer_name,
                     'customerEmail' => $webhookData['customer']['customerEmail'] ?? null,
                     'customerPhoneNumber' => $phoneNumber
                 ],
+                'customer_name' => $transaction->customer_name ?? $transaction->payer_name,
+                'payer_name' => $transaction->payer_name,
                 'createdAt' => $webhookData['createdAt'] ?? $transaction->created_at,
                 'updatedAt' => $webhookData['updatedAt'] ?? now()
             ];
@@ -248,12 +250,7 @@ class CallbackController extends Controller
      */
     private function generateSMSMessage(array $paymentData): string
     {
-        $amount = number_format($paymentData['collectedAmount'] ?? 0, 0);
-        $reference = $paymentData['orderReference'] ?? 'N/A';
-        $customerName = $paymentData['customer']['customerName'] ?? 'Mteja';
-        $phoneNumber = $paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? '255622239304';
-        
-        return "Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$phoneNumber}  tarehe " . \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i') . ".  Rejea: {$reference}. Asante kwa kutumia huduma zetu.";
+        return $this->messaging->buildPaymentConfirmationMessage($paymentData);
     }
 
     /**

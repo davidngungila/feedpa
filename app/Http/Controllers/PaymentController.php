@@ -68,7 +68,8 @@ class PaymentController extends Controller
                 'amount' => $validated['amount'],
                 'currency' => 'TZS',
                 'phone' => $phoneNumber,
-                'payer_name' => $payerName,
+                'customer_name' => $payerName, // Store "Jina La Mwanachama" in customer_name
+                'payer_name' => $payerName,    // Also set initial payer_name
                 'description' => $validated['description'] ?? null,
                 'type' => 'payment',
                 'callback_data' => null,
@@ -220,6 +221,7 @@ class PaymentController extends Controller
                                 'currency' => $transaction->currency,
                                 'phone' => $transaction->phone,
                                 'payer_name' => $transaction->payer_name,
+                                'customer_name' => $transaction->customer_name,
                                 'email' => $transaction->email,
                                 'description' => $transaction->description,
                                 'type' => $transaction->type,
@@ -231,7 +233,7 @@ class PaymentController extends Controller
                                 'created_at' => $transaction->created_at,
                                 'updated_at' => $transaction->updated_at,
                                 'customer' => [
-                                    'customerName' => $transaction->payer_name,
+                                    'customerName' => $transaction->customer_name ?? $transaction->payer_name,
                                     'customerPhoneNumber' => $transaction->phone,
                                     'customerEmail' => $transaction->email
                                 ],
@@ -495,10 +497,12 @@ class PaymentController extends Controller
                     'paymentPhoneNumber' => $transaction->phone,
                     'channel' => $transaction->payment_method,
                     'customer' => [
-                        'customerName' => $transaction->payer_name,
+                        'customerName' => $transaction->customer_name ?? $transaction->payer_name,
                         'customerEmail' => $transaction->email,
                         'customerPhoneNumber' => $transaction->phone
                     ],
+                    'payer_name' => $transaction->payer_name,
+                    'customer_name' => $transaction->customer_name,
                     'description' => $transaction->description,
                     'createdAt' => $transaction->created_at,
                     'id' => $transaction->transaction_id
@@ -524,7 +528,8 @@ class PaymentController extends Controller
                        "Status: " . ($paymentData['status'] ?? 'UNKNOWN') . "\n" .
                        "Phone: " . ($paymentData['paymentPhoneNumber'] ?? $paymentData['phone'] ?? 'N/A') . "\n" .
                        "Channel: " . ($paymentData['channel'] ?? $paymentData['payment_method'] ?? 'N/A') . "\n" .
-                       "Customer: " . ($paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? 'N/A') . "\n" .
+                       "Member: " . ($paymentData['customer_name'] ?? $paymentData['customer']['customerName'] ?? 'N/A') . "\n" .
+                       "Payer: " . ($paymentData['payer_name'] ?? 'N/A') . "\n" .
                        "Date: " . (isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('Y-m-d H:i:s') : 'N/A');
             
             $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);

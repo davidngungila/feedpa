@@ -154,8 +154,8 @@
  <body> 
      @php
         $isSuccessful = in_array($paymentData['status'] ?? '', ['SUCCESS', 'SETTLED']);
-        $customerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? 'Anonymous';
-        $payerName = $paymentData['payer_name'] ?? $paymentData['customer']['customerName'] ?? 'Anonymous';
+        $customerName = $paymentData['customer_name'] ?? $paymentData['customer']['customerName'] ?? 'Anonymous';
+        $payerName = $paymentData['payer_name'] ?? $customerName;
         $isPayerDifferent = strtolower($customerName) !== strtolower($payerName);
      @endphp
      <div class="watermark">{{ $isSuccessful ? 'OFFICIAL' : 'PROVISIONAL' }}</div> 

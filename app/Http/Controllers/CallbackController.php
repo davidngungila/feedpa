@@ -53,18 +53,32 @@ class CallbackController extends Controller
         $orderReference = $data['orderReference'] ?? null;
         $amount = $data['amount'] ?? $data['collectedAmount'] ?? null;
         $phone = $data['phone'] ?? $data['paymentPhoneNumber'] ?? $data['customer']['customerPhoneNumber'] ?? null;
+        $payerName = $data['payer_name'] ?? $data['customer']['customerName'] ?? null;
 
         try {
             // Find transaction by order reference
             $transaction = Transaction::where('order_reference', $orderReference)->first();
 
             if ($transaction) {
+                // Avoid overwriting existing names with phone numbers from callback
+                $finalPayerName = $payerName ?? $transaction->payer_name;
+                if ($payerName && is_numeric($payerName) && strlen($payerName) > 5 && $transaction->payer_name && !is_numeric($transaction->payer_name)) {
+                    $finalPayerName = $transaction->payer_name;
+                }
+
+                $finalCustomerName = $transaction->customer_name ?? $payerName;
+                if ($payerName && is_numeric($payerName) && strlen($payerName) > 5 && $transaction->customer_name && !is_numeric($transaction->customer_name)) {
+                    $finalCustomerName = $transaction->customer_name;
+                }
+
                 // Update transaction status
                 $transaction->update([
                     'status' => $status,
                     'transaction_id' => $transactionId,
                     'amount' => $amount,
                     'phone' => $phone,
+                    'payer_name' => $finalPayerName,
+                    'customer_name' => $finalCustomerName,
                     'callback_data' => $data,
                     'callback_received_at' => now()
                 ]);

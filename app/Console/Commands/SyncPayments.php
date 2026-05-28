@@ -103,14 +103,27 @@ class SyncPayments extends Command
 
                 $transaction = Transaction::where('order_reference', $orderReference)->first();
 
-                $data = [
+                $apiPayerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? null;
+                 $apiCustomerName = $paymentData['customer']['customerName'] ?? null;
+                 
+                 // Avoid overwriting names with phone numbers if possible
+                 if ($apiPayerName && is_numeric($apiPayerName) && strlen($apiPayerName) > 5 && $transaction && $transaction->payer_name && !is_numeric($transaction->payer_name)) {
+                     $apiPayerName = $transaction->payer_name;
+                 }
+                 
+                 if ($apiCustomerName && is_numeric($apiCustomerName) && strlen($apiCustomerName) > 5 && $transaction && $transaction->customer_name && !is_numeric($transaction->customer_name)) {
+                     $apiCustomerName = $transaction->customer_name;
+                 }
+
+                 $data = [
                     'order_reference' => $orderReference,
                     'transaction_id' => $paymentData['id'] ?? $paymentData['transaction_id'] ?? null,
                     'status' => $paymentData['status'] ?? 'UNKNOWN',
                     'amount' => $paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0,
                     'currency' => $paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS',
                     'phone' => $paymentData['customer']['customerPhoneNumber'] ?? $paymentData['paymentPhoneNumber'] ?? null,
-                    'payer_name' => $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? null,
+                    'payer_name' => $apiPayerName,
+                    'customer_name' => $transaction ? ($transaction->customer_name ?? $apiCustomerName) : $apiCustomerName,
                     'email' => $paymentData['customer']['customerEmail'] ?? $paymentData['email'] ?? null,
                     'description' => $paymentData['description'] ?? $paymentData['narrative'] ?? null,
                     'payment_method' => $paymentData['channel'] ?? $paymentData['paymentMethod'] ?? null,

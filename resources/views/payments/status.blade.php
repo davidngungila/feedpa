@@ -90,9 +90,15 @@
                                 <div class="row g-4">
                                     <div class="col-md-6">
                                         <div class="p-3 border border-light rounded-lg h-100">
-                                            <div class="text-xs text-muted mb-1" style="font-size: 0.75rem;">Customer / Payer</div>
-                                            <div class="font-bold" style="font-weight: 700;">{{ $payment['payer_name'] ?? 'Mteja' }}</div>
-                                            <div class="text-xs text-muted">{{ $payment['phone'] ?? 'N/A' }}</div>
+                                            <div class="text-xs text-muted mb-1" style="font-size: 0.75rem;">Member Name</div>
+                                            <div class="font-bold" style="font-weight: 700;">{{ $payment['customer_name'] ?? $payment['payer_name'] ?? 'Mteja' }}</div>
+                                            
+                                            @if(isset($payment['payer_name']) && strtolower($payment['payer_name']) !== strtolower($payment['customer_name'] ?? ''))
+                                                <div class="text-xs text-muted mt-2 mb-1" style="font-size: 0.75rem;">Actual Payer</div>
+                                                <div class="font-bold" style="font-size: 0.85rem;">{{ $payment['payer_name'] }}</div>
+                                            @endif
+
+                                            <div class="text-xs text-muted mt-2">{{ $payment['phone'] ?? 'N/A' }}</div>
                                             @if(isset($payment['email']))
                                                 <div class="text-xs text-muted">{{ $payment['email'] }}</div>
                                             @endif

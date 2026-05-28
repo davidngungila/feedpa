@@ -11,7 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Skipped because table already has a primary key
+        Schema::table('transactions', function (Blueprint $table) {
+            if (!Schema::hasColumn('transactions', 'customer_name')) {
+                $table->string('customer_name')->nullable()->after('payer_name');
+            }
+        });
     }
 
     /**
@@ -20,9 +24,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('transactions', function (Blueprint $table) {
-            $table->dropColumn('id');
-            // Add back a regular string id for rollback
-            $table->string('id')->primary()->first();
+            $table->dropColumn('customer_name');
         });
     }
 };

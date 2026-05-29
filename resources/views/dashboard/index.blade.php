@@ -81,17 +81,26 @@
             </div>
         </div>
 
-        <!-- Total account balance (all-time settled) -->
-        <div class="card p-5 flex items-center gap-4">
+        <!-- Live ClickPesa account balance -->
+        <div class="card p-5 flex items-center gap-4" id="accountBalanceCard">
             <div class="w-12 h-12 rounded-2xl bg-primary-600 flex items-center justify-center text-white shadow-lg shadow-primary-900/20">
                 <i class="fas fa-wallet text-xl"></i>
             </div>
-            <div>
+            <div class="min-w-0">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500">Total Revenue</p>
-                <p class="text-[9px] text-primary-400 normal-case">Full account balance</p>
-                <h3 class="text-xl font-black text-primary-900 dark:text-white mt-1">
-                    <span class="text-xs font-bold text-primary-500">TZS</span> {{ number_format($stats['total_revenue'] ?? 0, 0) }}
+                <p class="text-[9px] text-primary-400 normal-case">Live ClickPesa balance (TZS)</p>
+                <h3 class="text-xl font-black text-primary-900 dark:text-white mt-1" id="accountBalanceAmount">
+                    <span class="text-xs font-bold text-primary-500">TZS</span>
+                    <span id="accountBalanceValue">{{ number_format($accountBalance['balance'] ?? 0, 0) }}</span>
                 </h3>
+                <p class="text-[9px] text-primary-400 mt-1" id="accountBalanceSynced">
+                    @if(!empty($accountBalance['synced_at']))
+                        <i class="fas fa-circle text-[6px] {{ ($accountBalance['live'] ?? false) ? 'text-green-500' : 'text-amber-500' }} me-1"></i>
+                        Updated {{ $accountBalance['synced_at']->diffForHumans() }}
+                    @else
+                        Balance not synced yet
+                    @endif
+                </p>
             </div>
         </div>
 
@@ -274,6 +283,30 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 <script>
+    // Auto-refresh live account balance from ClickPesa API
+    function refreshAccountBalance() {
+        fetch('{{ route('dashboard.account-balance') }}', {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(res => res.json())
+            .then(payload => {
+                if (!payload.success || !payload.data) return;
+                const balance = payload.data.balance ?? 0;
+                const valueEl = document.getElementById('accountBalanceValue');
+                const syncedEl = document.getElementById('accountBalanceSynced');
+                if (valueEl) {
+                    valueEl.textContent = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(balance);
+                }
+                if (syncedEl) {
+                    const live = payload.data.live ? 'text-green-500' : 'text-amber-500';
+                    syncedEl.innerHTML = '<i class="fas fa-circle text-[6px] ' + live + ' me-1"></i>Updated just now';
+                }
+            })
+            .catch(() => {});
+    }
+    refreshAccountBalance();
+    setInterval(refreshAccountBalance, 60000);
+
     // Daily Transactions Chart
     const dailyLabels = @json(array_column($stats['daily_stats'] ?? [], 'date'));
     const dailyData = @json(array_column($stats['daily_stats'] ?? [], 'amount'));

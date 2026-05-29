@@ -150,6 +150,10 @@
                             $status = strtoupper($payment->status ?? 'UNKNOWN');
                             $isSettled = in_array($status, ['SETTLED', 'SUCCESS']);
 
+                            $createdAt = $payment->created_at ? \Illuminate\Support\Carbon::parse($payment->created_at) : null;
+                            $updatedAt = $payment->updated_at ? \Illuminate\Support\Carbon::parse($payment->updated_at) : null;
+                            $smsSentAt = $payment->sms_sent_at ? \Illuminate\Support\Carbon::parse($payment->sms_sent_at) : null;
+
                             $detailPayload = [
                                 'reference' => $payment->order_reference,
                                 'transaction_id' => $payment->transaction_id ?? 'N/A',
@@ -162,12 +166,12 @@
                                 'email' => $payment->email,
                                 'payment_method' => $payment->payment_method ?? 'N/A',
                                 'description' => $displayDescription,
-                                'date' => $payment->created_at->format('d M, Y'),
-                                'time' => $payment->created_at->format('H:i:s'),
-                                'created_at' => $payment->created_at->toIso8601String(),
-                                'updated_at' => $payment->updated_at?->toIso8601String(),
+                                'date' => $createdAt?->format('d M, Y'),
+                                'time' => $createdAt?->format('H:i:s'),
+                                'created_at' => $createdAt?->toIso8601String(),
+                                'updated_at' => $updatedAt?->toIso8601String(),
                                 'sms_sent' => (bool) $payment->sms_sent,
-                                'sms_sent_at' => $payment->sms_sent_at?->format('d M, Y H:i:s'),
+                                'sms_sent_at' => $smsSentAt?->format('d M, Y H:i:s'),
                                 'sms_message' => $payment->sms_message,
                                 'sms_error' => $payment->sms_error,
                                 'status_url' => route('payments.status', ['reference' => $payment->order_reference]),
@@ -176,8 +180,8 @@
                         @endphp
                         <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
                             <td class="whitespace-nowrap">
-                                <div class="font-bold text-primary-900 dark:text-white">{{ $payment->created_at->format('M d, Y') }}</div>
-                                <div class="text-[10px] text-primary-500">{{ $payment->created_at->format('H:i:s') }}</div>
+                                <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
+                                <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
                             </td>
                             <td>
                                 <div class="flex items-center gap-1.5 max-w-[200px]">
@@ -224,8 +228,8 @@
                                     <span class="badge badge-green text-[10px]">
                                         <i class="fas fa-check me-1"></i> Sent
                                     </span>
-                                    @if($payment->sms_sent_at)
-                                        <div class="text-[9px] text-primary-500 mt-1">{{ $payment->sms_sent_at->format('d M, H:i') }}</div>
+                                    @if($smsSentAt)
+                                        <div class="text-[9px] text-primary-500 mt-1">{{ $smsSentAt->format('d M, H:i') }}</div>
                                     @endif
                                 @elseif($payment->sms_error)
                                     <span class="badge badge-red text-[10px]">

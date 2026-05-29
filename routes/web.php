@@ -22,10 +22,7 @@ use App\Http\Controllers\UserController;
 */
 
 Route::get('/', function () {
-    if (Auth::check()) {
-        return redirect()->route('dashboard.index');
-    }
-    return redirect()->route('login');
+    return view('public.swahili-payment');
 });
 
 // Protected Routes (Require Authentication)
@@ -37,6 +34,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/advanced', [DashboardController::class, 'advanced'])->name('advanced');
         Route::get('/live-status', [DashboardController::class, 'liveStatus'])->name('live-status');
         Route::post('/send-manual-sms', [DashboardController::class, 'sendManualSMS'])->name('send.manual.sms');
+        Route::post('/sync-transactions', [DashboardController::class, 'syncTransactions'])->name('sync-transactions');
+        Route::post('/sync-bills', [DashboardController::class, 'syncBills'])->name('sync-bills');
     });
 
     // Payment Routes

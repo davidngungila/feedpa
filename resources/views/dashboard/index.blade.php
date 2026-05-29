@@ -307,6 +307,40 @@
     refreshAccountBalance();
     setInterval(refreshAccountBalance, 60000);
 
+    // Auto-sync transactions every second
+    function syncTransactions() {
+        fetch('{{ route('dashboard.sync-transactions') }}', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .catch(() => {});
+    }
+
+    // Auto-sync bills every second
+    function syncBills() {
+        fetch('{{ route('dashboard.sync-bills') }}', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        })
+        .catch(() => {});
+    }
+
+    // Initial sync
+    syncTransactions();
+    syncBills();
+
+    // Auto-sync every second
+    setInterval(syncTransactions, 1000);
+    setInterval(syncBills, 1000);
+
     // Daily Transactions Chart
     const dailyLabels = @json(array_column($stats['daily_stats'] ?? [], 'date'));
     const dailyData = @json(array_column($stats['daily_stats'] ?? [], 'amount'));

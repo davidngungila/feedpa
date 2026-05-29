@@ -157,4 +157,24 @@ class DashboardController extends Controller
             'data' => $balance,
         ]);
     }
+
+    public function syncTransactions()
+    {
+        \Artisan::call('payments:sync', ['--days' => 1]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Transactions synced',
+        ]);
+    }
+
+    public function syncBills()
+    {
+        \Artisan::call('app:sync-bills-from-api');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Bills synced',
+        ]);
+    }
 }

@@ -47,7 +47,7 @@
         transition: all 0.2s;
     }
     .dark .page-item .page-link { background: #0d1f16; border-color: #1a3328; color: #6ee7b7; }
-    .page-item.active .page-link { background: #10b981; color: white; border-color: #10b981; shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+    .page-item.active .page-link { background: #10b981; color: white; border-color: #10b981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
     .page-item.disabled .page-link { opacity: 0.5; cursor: not-allowed; }
     .page-item:hover:not(.active):not(.disabled) .page-link { background: #f0fdf4; border-color: #10b981; }
     .dark .page-item:hover:not(.active):not(.disabled) .page-link { background: #052e16; }
@@ -88,11 +88,15 @@
       .sidebar { transform: translateX(-100%); }
       .sidebar.mobile-open { transform: translateX(0); }
     }
+    
+    /* Dropdown menus in sidebar */
+    .sidebar-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+    .sidebar-dropdown.open { max-height: 500px; }
     </style>
     
     @stack('styles')
 </head>
-<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true' }" :class="{'dark': darkMode}">
+<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false }" :class="{'dark': darkMode}">
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" 
@@ -106,28 +110,115 @@
                     </div>
                     <div>
                         <p class="text-white font-bold text-sm leading-tight">FEEDTAN</p>
-                        <p class="text-primary-300 text-[10px]">DIGITAL</p>
+                        <p class="text-primary-300 text-[10px]">DIGITAL PAYMENT SYSTEM</p>
                     </div>
                 </div>
             </div>
 
             <!-- Navigation -->
             <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
-                <a href="{{ route('payments.history') }}" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('payments.history') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
-                    <i class="fa-solid fa-history w-4 text-center"></i>
-                    <span>Payment History</span>
+                <!-- Dashboard -->
+                <a href="{{ route('dashboard.index') }}" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('dashboard.*') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                    <i class="fa-solid fa-gauge-high w-4 text-center"></i>
+                    <span>Dashboard</span>
                 </a>
-                <a href="{{ route('account.statement') }}" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('account.statement') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
-                    <i class="fa-solid fa-file-invoice w-4 text-center"></i>
-                    <span>Account Statement</span>
-                </a>
-                <a href="{{ route('payments.create') }}" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('payments.create') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
-                    <i class="fa-solid fa-plus-circle w-4 text-center"></i>
-                    <span>New Payment</span>
-                </a>
+
+                <!-- Payments Dropdown -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('payments') ? openDropdowns = openDropdowns.filter(d => d !== 'payments') : openDropdowns.push('payments')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('payments.*') ? 'bg-primary-800/60 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-credit-card w-4 text-center"></i>
+                            <span>Payments</span>
+                        </div>
+                        <i :class="openDropdowns.includes('payments') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('payments') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('payments.create') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('payments.create') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>New Payment</span>
+                        </a>
+                        <a href="{{ route('payments.history') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('payments.history') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Payment History</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Bill Management Dropdown -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('bills') ? openDropdowns = openDropdowns.filter(d => d !== 'bills') : openDropdowns.push('bills')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('bills.*') ? 'bg-primary-800/60 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-file-invoice-dollar w-4 text-center"></i>
+                            <span>Bill Management</span>
+                        </div>
+                        <i :class="openDropdowns.includes('bills') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('bills') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('bills.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('bills.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>All Bills</span>
+                        </a>
+                        <a href="{{ route('bills.create-order') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('bills.create-order') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Create Order Control No</span>
+                        </a>
+                        <a href="{{ route('bills.create-customer') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('bills.create-customer') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Create Customer Control No</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Account Dropdown -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('account') ? openDropdowns = openDropdowns.filter(d => d !== 'account') : openDropdowns.push('account')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('account.*') ? 'bg-primary-800/60 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-file-invoice w-4 text-center"></i>
+                            <span>Account</span>
+                        </div>
+                        <i :class="openDropdowns.includes('account') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('account') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('account.statement') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('account.statement') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Account Statement</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Users Management -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('users') ? openDropdowns = openDropdowns.filter(d => d !== 'users') : openDropdowns.push('users')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('users.*') ? 'bg-primary-800/60 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-users w-4 text-center"></i>
+                            <span>Users</span>
+                        </div>
+                        <i :class="openDropdowns.includes('users') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('users') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('users.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('users.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>All Users</span>
+                        </a>
+                        <a href="{{ route('users.create') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('users.create') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Add User</span>
+                        </a>
+                    </div>
+                </div>
             </nav>
 
             <!-- Sidebar Footer -->
@@ -152,14 +243,92 @@
                         @yield('title', 'Dashboard')
                     </h2>
                 </div>
-
+                
+                <!-- Connection Status -->
                 <div class="flex items-center gap-4">
-                    <div class="hidden sm:flex flex-col text-right">
-                        <p class="text-xs font-bold text-primary-900 dark:text-white">{{ auth()->user()->name ?? 'Administrator' }}</p>
-                        <p class="text-[10px] text-primary-500">{{ auth()->user()->email ?? 'admin@feedtan.co.tz' }}</p>
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-50 dark:bg-primary-900/30">
+                        <div class="relative">
+                            @if(cache()->get('api_status', 'connected') === 'connected')
+                                <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+                                <div class="w-3 h-3 rounded-full bg-green-400 absolute top-0 left-0 animate-ping"></div>
+                            @else
+                                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            @endif
+                        </div>
+                        <span class="text-xs font-bold text-primary-600 dark:text-primary-400">
+                            {{ cache()->get('api_status', 'connected') === 'connected' ? 'API Connected' : 'API Disconnected' }}
+                        </span>
                     </div>
-                    <div class="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center text-white font-bold">
-                        {{ substr(auth()->user()->name ?? 'A', 0, 1) }}
+
+                <div class="relative">
+                    <button @click="profileDropdownOpen = !profileDropdownOpen" class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                        <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900 flex items-center justify-center overflow-hidden border-2 border-green-500">
+                            @if(auth()->user()->avatar)
+                                <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                            @else
+                                <span class="text-primary-600 dark:text-primary-400 font-bold">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
+                            @endif
+                        </div>
+                        <div class="hidden sm:flex flex-col text-left">
+                            <p class="text-xs font-bold text-primary-900 dark:text-white">{{ auth()->user()->name ?? 'Administrator' }}</p>
+                            <p class="text-[10px] text-primary-500">{{ auth()->user()->position ?? 'Member' }}</p>
+                        </div>
+                        <i class="fas fa-chevron-down text-xs text-primary-400"></i>
+                    </button>
+
+                    <!-- Profile Dropdown -->
+                    <div x-show="profileDropdownOpen"
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="opacity-0 transform scale-95"
+                         x-transition:enter-end="opacity-100 transform scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="opacity-100 transform scale-100"
+                         x-transition:leave-end="opacity-0 transform scale-95"
+                         @click.outside="profileDropdownOpen = false"
+                         class="absolute right-0 mt-2 w-64 z-50 rounded-xl shadow-xl bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border overflow-hidden">
+                        
+                        <div class="p-4 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-dark-border">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900 flex items-center justify-center overflow-hidden border-2 border-green-500">
+                                    @if(auth()->user()->avatar)
+                                        <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
+                                    @else
+                                        <span class="text-primary-600 dark:text-primary-400 font-bold text-lg">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
+                                    @endif
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-bold text-primary-900 dark:text-white truncate">{{ auth()->user()->name ?? 'Administrator' }}</p>
+                                    <p class="text-xs text-primary-500 truncate">{{ auth()->user()->email ?? 'admin@feedtan.co.tz' }}</p>
+                                    <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
+                                        {{ auth()->user()->position ?? 'Member' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="py-2">
+                            <a href="{{ route('profile.index') }}" 
+                               class="flex items-center gap-3 px-4 py-2.5 text-xs text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                                <i class="fas fa-id-card w-4"></i>
+                                <span>My Profile</span>
+                            </a>
+                            <a href="{{ route('profile.edit') }}" 
+                               class="flex items-center gap-3 px-4 py-2.5 text-xs text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                                <i class="fas fa-cog w-4"></i>
+                                <span>Settings</span>
+                            </a>
+                        </div>
+
+                        <div class="border-t border-primary-100 dark:border-dark-border">
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" 
+                                        class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
+                                    <i class="fas fa-sign-out-alt w-4"></i>
+                                    <span>Logout</span>
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </header>

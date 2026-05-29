@@ -162,8 +162,8 @@
      
      <div class="container"> 
          <div class="header"> 
-             <div class="logo">FEEDTAN CMG</div> 
-             <div class="sub-header">CLICKPESA PAYMENT MANAGEMENT SYSTEM</div> 
+             <div class="logo">FEEDTAN</div> 
+             <div class="sub-header">DIGITAL PAYMENT SYSTEM</div> 
              <div class="receipt-title">OFFICIAL PAYMENT RECEIPT</div> 
          </div> 
  
@@ -251,14 +251,14 @@
              </tr> 
          </table> 
  
-         <div class="footer"> 
-             <strong>FEEDTAN CMG - PAYMENT SYSTEM</strong><br> 
-             Powered by ClickPesa<br> 
-             <span style="color: #16a34a;">www.feedtan.co.tz • info@feedtan.co.tz</span><br> 
-             <div style="margin-top: 10px; font-size: 8px; color: #9ca3af;"> 
-                 This document is electronically generated and verified by FEEDTAN CMG Payment System. 
-             </div> 
-         </div> 
+         <div class="footer">
+            <strong>FEEDTAN DIGITAL PAYMENT SYSTEM</strong><br>
+            Powered by FeedTan Team<br>
+            <span style="color: #16a34a;">www.feedtan.co.tz • info@feedtan.co.tz</span><br>
+            <div style="margin-top: 10px; font-size: 8px; color: #9ca3af;">
+                This document is electronically generated and verified by FEEDTAN DIGITAL PAYMENT SYSTEM.
+            </div>
+        </div> 
      </div> 
  </body> 
  </html>

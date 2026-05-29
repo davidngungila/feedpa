@@ -2,82 +2,50 @@
 
 namespace App\Models;
 
-use App\Support\TransactionFieldResolver;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Transaction extends Model
 {
-    use HasFactory, HasUuids;
-
+    protected $keyType = 'string'; // since id is uuid
+    public $incrementing = false;
+    
     protected $fillable = [
+        'id',
         'order_reference',
         'transaction_id',
         'status',
         'amount',
+        'collected_amount',
         'currency',
         'phone',
         'email',
-        'payer_name',
-        'customer_name',
         'description',
         'type',
         'payment_method',
-        'callback_data',
-        'callback_received_at',
+        'payer_name',
+        'customer_name',
         'sms_sent',
         'sms_message',
         'sms_sent_at',
         'sms_error',
-        'created_at',
-        'updated_at'
+        'callback_data',
+        'callback_received_at'
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'callback_data' => 'array',
-        'callback_received_at' => 'datetime',
-        'sms_sent' => 'boolean',
-        'sms_sent_at' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime'
+        'callback_received_at' => 'datetime'
     ];
 
-    public function getStatusDescriptionAttribute(): string
+    public function resolvedDescription($fallbackDescription = null)
     {
-        return match($this->status) {
-            'SUCCESS' => 'Payment completed successfully',
-            'SETTLED' => 'Payment has been settled',
-            'PROCESSING' => 'Payment is being processed',
-            'PENDING' => 'Payment is pending',
-            'FAILED' => 'Payment failed',
-            default => 'Unknown status'
-        };
+        return \App\Support\TransactionFieldResolver::resolveForTransaction($this, $fallbackDescription);
     }
 
-    public function scopeSuccessful($query)
+    public function getResolvedDescriptionAttribute()
     {
-        return $query->whereIn('status', ['SUCCESS', 'SETTLED']);
-    }
-
-    public function scopePending($query)
-    {
-        return $query->whereIn('status', ['PROCESSING', 'PENDING']);
-    }
-
-    public function scopeFailed($query)
-    {
-        return $query->where('status', 'FAILED');
-    }
-
-    public function scopePayments($query)
-    {
-        return $query->where('type', 'payment');
-    }
-
-    public function resolvedDescription(?string $remote = null, string $default = 'Malipo ya FEEDTAN'): string
-    {
-        return TransactionFieldResolver::resolveForTransaction($this, $remote, $default);
+        return $this->resolvedDescription();
     }
 }

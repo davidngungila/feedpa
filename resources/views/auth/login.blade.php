@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en" x-data="loginApp()" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login | FEEDTAN DIGITAL PAYMENT SYSTEM</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: { 50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857',800:'#065f46',900:'#064e3b',950:'#022c22' },
+            dark: { 800:'#0f1a14',850:'#111f17',900:'#0a140e',card:'#0d1f16',border:'#1a3328' }
+          },
+          fontFamily: { sans:['Plus Jakarta Sans','sans-serif'] },
+          animation: { 'fade-in':'fadeIn 0.4s ease','slide-in':'slideIn 0.3s ease','count-up':'countUp 1.5s ease','pulse-slow':'pulse 3s infinite' },
+          keyframes: { fadeIn:{from:{opacity:0,transform:'translateY(10px)'},to:{opacity:1,transform:'translateY(0)'}}, slideIn:{from:{opacity:0,transform:'translateX(-20px)'},to:{opacity:1,transform:'translateX(0)'}} }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
+
+    /* Light/Dark styles */
+    .card { border-radius: 16px; }
+    .light-mode .card { background: white; border: 1px solid #d1fae5; box-shadow: 0 2px 24px rgba(6,78,59,0.15); }
+    .dark .card { background: #0d1f16; border: 1px solid #1a3328; box-shadow: 0 2px 24px rgba(0,0,0,0.4); }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .light-mode .form-input { background: #f9fafb; border: 1px solid #d1fae5; color: #064e3b; }
+    .dark .form-input { background: #0a140e; border: 1px solid #1a3328; color: white; }
+    .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Splash counter animation */
+    @keyframes countUp {
+      from { opacity:0; transform: translateY(10px); }
+      to { opacity:1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body class="h-full" :class="darkMode ? 'dark bg-[#0a140e]' : 'bg-white'">
+
+  <!-- ============================================================
+       LOGIN SCREEN
+       ============================================================ -->
+  <div x-show="!showSplash" x-transition class="fixed inset-0 z-50 flex items-center justify-center">
+    <!-- Background decorations -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10" :class="darkMode ? 'bg-primary-400' : 'bg-white'"></div>
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full opacity-10" :class="darkMode ? 'bg-primary-500' : 'bg-white'"></div>
+      <div class="absolute top-1/3 right-1/4 w-64 h-64 rounded-full opacity-5" :class="darkMode ? 'bg-primary-300' : 'bg-white'"></div>
+    </div>
+
+    <div class="relative w-full max-w-md mx-4">
+      <div class="card p-8 shadow-2xl">
+        <!-- Logo -->
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 mb-4 shadow-lg">
+            <i class="fa-solid fa-leaf text-white text-2xl"></i>
+          </div>
+          <h1 class="text-2xl font-bold" :class="darkMode?'text-white':'text-primary-900'">FEEDTAN DIGITAL</h1>
+          <p class="text-sm mt-1" :class="darkMode?'text-primary-300':'text-primary-600'">Payment System</p>
+        </div>
+
+        <form id="loginForm" method="POST" action="{{ route('login') }}">
+          @csrf
+
+          <!-- Email -->
+          <div class="mb-4">
+            <label class="block text-sm font-semibold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Email Address</label>
+            <div class="relative">
+              <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
+              <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="you@example.com"
+                     class="form-input pl-9"/>
+            </div>
+            @error('email')
+              <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
+            @enderror
+          </div>
+
+          <!-- Password -->
+          <div class="mb-6">
+            <label class="block text-sm font-semibold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Password</label>
+            <div class="relative">
+              <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
+              <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="••••••••"
+                     class="form-input pl-9"/>
+            </div>
+            @error('password')
+              <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
+            @enderror
+          </div>
+
+          <!-- Remember Me -->
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+              <input id="remember" type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }} class="w-4 h-4 rounded border-primary-200 bg-primary-50 text-primary-600 focus:ring-primary-500">
+              <label for="remember" class="text-xs text-primary-500 font-medium cursor-pointer" :class="darkMode?'text-primary-300':'text-primary-600'">Remember Me</label>
+            </div>
+          </div>
+
+          <!-- Login Button -->
+          <button type="button" @click="submitLogin()" class="w-full py-3 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
+            <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
+          </button>
+        </form>
+
+
+
+        <!-- Dark mode toggle -->
+        <div class="mt-4 flex justify-center">
+          <button @click="darkMode=!darkMode; localStorage.setItem('darkMode', darkMode);" class="text-xs flex items-center gap-2 transition-colors" :class="darkMode?'text-primary-300':'text-primary-600'">
+            <i :class="darkMode?'fa-solid fa-sun':'fa-solid fa-moon'"></i>
+            <span x-text="darkMode?'Switch to Light Mode':'Switch to Dark Mode'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       SPLASH SCREEN
+       ============================================================ -->
+  <div x-show="showSplash" x-transition class="fixed inset-0 z-[60] flex items-center justify-center"
+       :class="darkMode ? 'bg-[#0a140e]' : 'bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700'">
+    <div class="text-center">
+      <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center mb-4 shadow-xl mx-auto">
+        <i class="fa-solid fa-leaf text-white text-3xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold mb-1" :class="darkMode?'text-white':'text-white'">FEEDTAN DIGITAL</h2>
+      <p class="text-sm mb-6" :class="darkMode?'text-primary-300':'text-primary-100'">Payment System</p>
+      <div class="text-5xl font-black text-primary-300 mb-2" x-text="counter"></div>
+      <p class="text-xs font-bold uppercase tracking-widest" :class="darkMode?'text-primary-400':'text-primary-200'">Authenticating...</p>
+    </div>
+  </div>
+
+  <script>
+    function loginApp() {
+      return {
+        darkMode: localStorage.getItem('darkMode') === 'true',
+        showSplash: false,
+        counter: 0,
+        submitLogin() {
+          const form = document.getElementById('loginForm');
+          this.showSplash = true;
+
+          // Animate counter
+          this.counter = 0;
+          const interval = setInterval(() => {
+            if (this.counter < 100) {
+              this.counter += 2;
+            } else {
+              clearInterval(interval);
+              form.submit();
+            }
+          }, 30);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

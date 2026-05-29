@@ -429,6 +429,20 @@ class ClickPesaAPIService
         return $this->makeRequest('PATCH', $url, $data);
     }
 
+    /**
+     * Query All BillPay Numbers
+     */
+    public function queryAllBillPayNumbers(array $params = []): array
+    {
+        $url = $this->config['api_base_url'] . '/billpay/all';
+        
+        if (!empty($params)) {
+            $url .= '?' . http_build_query($params);
+        }
+
+        return $this->makeRequest('GET', $url);
+    }
+
     // ==================== UTILITY METHODS ====================
 
     /**
@@ -502,8 +516,13 @@ class ClickPesaAPIService
     /**
      * Convert API error messages to user-friendly messages
      */
-    private function getUserFriendlyErrorMessage(string $errorMessage, int $statusCode): string
+    private function getUserFriendlyErrorMessage($errorMessage, int $statusCode): string
     {
+        // Handle array error messages
+        if (is_array($errorMessage)) {
+            $errorMessage = implode(', ', $errorMessage);
+        }
+        
         // Insufficient funds errors
         if (stripos($errorMessage, 'insufficient funds') !== false || 
             stripos($errorMessage, 'balance') !== false ||

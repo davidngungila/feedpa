@@ -20,7 +20,15 @@
             </div>
         </div>
         
-        <form method="GET" action="{{ route('account.statement') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form method="GET" action="{{ route('account.statement') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Statement Type</label>
+                <select name="type" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                    <option value="payments" {{ $statementType === 'payments' ? 'selected' : '' }}>Payments Statement</option>
+                    <option value="billing" {{ $statementType === 'billing' ? 'selected' : '' }}>Billing Statement</option>
+                </select>
+            </div>
+            @if($statementType === 'payments')
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Source</label>
                 <select name="tab" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
@@ -28,6 +36,7 @@
                     <option value="api" {{ $activeTab === 'api' ? 'selected' : '' }}>ClickPesa API</option>
                 </select>
             </div>
+            @endif
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Status</label>
                 <select name="status" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
@@ -61,14 +70,15 @@
     <div class="card overflow-hidden">
         <div class="p-4 border-b border-primary-50 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 flex flex-wrap items-center justify-between gap-2">
             <h3 class="font-bold text-xs text-primary-700 dark:text-primary-300 uppercase tracking-widest">
-                Showing Records from: {{ $activeTab === 'api' ? 'ClickPesa API' : 'Internal Database' }}
+                Showing {{ $statementType === 'payments' ? ($activeTab === 'api' ? 'ClickPesa API' : 'Internal Database') : 'Billing' }} Records
             </h3>
-            <p class="text-[10px] text-primary-500">Click <i class="fas fa-eye"></i> on any row for full transaction details</p>
+            <p class="text-[10px] text-primary-500">Click <i class="fas fa-eye"></i> on any row for full details</p>
         </div>
         
         <div class="overflow-x-auto">
             <table class="data-table">
                 <thead>
+                    @if($statementType === 'payments')
                     <tr>
                         <th>Date</th>
                         <th>Reference</th>
@@ -80,8 +90,23 @@
                         @endif
                         <th class="text-center">Actions</th>
                     </tr>
+                    @else
+                    <tr>
+                        <th>Date</th>
+                        <th>Control Number</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th class="text-right">Amount</th>
+                        @if($totalPaidFilter)
+                            <th class="text-right">Paid</th>
+                        @endif
+                        <th class="text-center">Actions</th>
+                    </tr>
+                    @endif
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
+                    @if($statementType === 'payments')
                     @forelse($displayTransactions as $transaction)
                         @php
                             $t = (array) $transaction;
@@ -194,13 +219,78 @@
                             </td>
                         </tr>
                     @endforelse
+                    @else
+                    @forelse($displayBills as $bill)
+                        @php
+                            $status = strtoupper($bill->bill_status ?? 'UNKNOWN');
+                            $isActive = $status === 'ACTIVE';
+                            $formattedDate = $bill->created_at ? $bill->created_at->format('d M, Y') : 'N/A';
+                            $formattedTime = $bill->created_at ? $bill->created_at->format('H:i:s') : 'N/A';
+                        @endphp
+                        <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
+                            <td class="whitespace-nowrap">
+                                <div class="font-bold text-primary-900 dark:text-white">{{ $formattedDate }}</div>
+                                <div class="text-[10px] text-primary-500">{{ $formattedTime }}</div>
+                            </td>
+                            <td>
+                                <span class="font-mono text-[11px] text-primary-600 dark:text-primary-400">{{ $bill->bill_pay_number }}</span>
+                            </td>
+                            <td>
+                                <div class="text-xs font-bold text-primary-900 dark:text-white">{{ $bill->bill_description ?? 'No description' }}</div>
+                                @if($bill->customer_name)
+                                    <div class="text-[10px] text-primary-500">Customer: {{ $bill->customer_name }}</div>
+                                @endif
+                            </td>
+                            <td>
+                                <span class="badge {{ $bill->bill_type === 'order' ? 'badge-blue' : 'badge-purple' }}">
+                                    {{ ucfirst($bill->bill_type) }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge {{ $isActive ? 'badge-green' : 'badge-gray' }}">
+                                    {{ $status }}
+                                </span>
+                            </td>
+                            <td class="text-right font-mono font-bold text-primary-900 dark:text-white whitespace-nowrap">
+                                {{ number_format($bill->bill_amount, 2) }}
+                                <div class="text-[10px] text-primary-500 font-bold">{{ $bill->bill_currency }}</div>
+                            </td>
+                            @if($totalPaidFilter)
+                            <td class="text-right font-mono font-bold text-green-600 dark:text-green-400 whitespace-nowrap">
+                                {{ number_format($bill->total_paid, 2) }}
+                            </td>
+                            @endif
+                            <td class="text-center">
+                                <a href="{{ route('bills.show', $bill->id) }}" class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 inline-flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all" title="View bill details">
+                                    <i class="fas fa-eye text-xs"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="7" class="text-center py-20">
+                                <div class="flex flex-col items-center">
+                                    <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
+                                        <i class="fas fa-search text-2xl text-primary-200"></i>
+                                    </div>
+                                    <h4 class="font-bold text-primary-900 dark:text-white">No bills found</h4>
+                                    <p class="text-xs text-primary-500">Adjust your filters or dates to find bills.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    @endforelse
+                    @endif
                 </tbody>
             </table>
         </div>
         
-        @if(method_exists($displayTransactions, 'links'))
+        @if($statementType === 'payments' && method_exists($displayTransactions, 'links'))
             <div class="p-4 bg-primary-50/30 dark:bg-dark-900/30 border-t border-primary-50 dark:border-dark-border">
                 {{ $displayTransactions->links() }}
+            </div>
+        @elseif($statementType === 'billing' && method_exists($displayBills, 'links'))
+            <div class="p-4 bg-primary-50/30 dark:bg-dark-900/30 border-t border-primary-50 dark:border-dark-border">
+                {{ $displayBills->appends(request()->query())->links() }}
             </div>
         @endif
     </div>

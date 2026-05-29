@@ -1,0 +1,205 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\BillPayNumber;
+use App\Services\ClickPesaAPIService;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
+
+class BillController extends Controller
+{
+    protected ClickPesaAPIService $clickPesaService;
+
+    public function __construct(ClickPesaAPIService $clickPesaService)
+    {
+        $this->clickPesaService = $clickPesaService;
+    }
+
+    public function index()
+    {
+        $bills = BillPayNumber::latest()->paginate(20);
+        return view('bills.index', compact('bills'));
+    }
+
+    public function createOrder()
+    {
+        return view('bills.create-order');
+    }
+
+    public function storeOrder(Request $request)
+    {
+        $request->validate([
+            'bill_description' => 'required|string',
+            'bill_amount' => 'nullable|numeric',
+            'bill_reference' => 'nullable|string',
+            'bill_payment_mode' => 'required|in:ALLOW_PARTIAL_AND_OVER_PAYMENT,EXACT',
+        ]);
+
+        try {
+            $response = $this->clickPesaService->createOrderControlNumber(
+                $request->bill_description,
+                $request->bill_amount,
+                $request->bill_reference,
+                $request->bill_payment_mode
+            );
+
+            if (isset($response['billPayNumber'])) {
+                $bill = BillPayNumber::create([
+                    'bill_pay_number' => $response['billPayNumber'],
+                    'bill_description' => $request->bill_description,
+                    'bill_amount' => $request->bill_amount,
+                    'bill_currency' => 'TZS',
+                    'bill_payment_mode' => $request->bill_payment_mode,
+                    'bill_status' => 'ACTIVE',
+                    'bill_type' => 'order',
+                    'bill_reference' => $request->bill_reference,
+                    'created_by' => Auth::check() ? Auth::id() : null,
+                ]);
+
+                return redirect()->route('bills.show', $bill->id)->with('success', 'Order Control Number created successfully! Control number: ' . $response['billPayNumber']);
+            }
+
+            return back()->with('error', 'Failed to create control number.');
+        } catch (\Exception $e) {
+            Log::error('Error creating order control number', ['error' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function createCustomer()
+    {
+        return view('bills.create-customer');
+    }
+
+    public function storeCustomer(Request $request)
+    {
+        $request->validate([
+            'customer_name' => 'required|string',
+            'customer_email' => 'nullable|email',
+            'customer_phone' => 'nullable|string',
+            'bill_description' => 'nullable|string',
+            'bill_amount' => 'nullable|numeric',
+            'bill_reference' => 'nullable|string',
+            'bill_payment_mode' => 'required|in:ALLOW_PARTIAL_AND_OVER_PAYMENT,EXACT',
+        ]);
+
+        try {
+            $response = $this->clickPesaService->createCustomerControlNumber(
+                $request->customer_name,
+                $request->customer_email,
+                $request->customer_phone,
+                $request->bill_description,
+                $request->bill_amount,
+                $request->bill_reference,
+                $request->bill_payment_mode
+            );
+
+            if (isset($response['billPayNumber'])) {
+                $bill = BillPayNumber::create([
+                    'bill_pay_number' => $response['billPayNumber'],
+                    'bill_description' => $request->bill_description,
+                    'bill_amount' => $request->bill_amount,
+                    'bill_currency' => 'TZS',
+                    'bill_payment_mode' => $request->bill_payment_mode,
+                    'bill_status' => 'ACTIVE',
+                    'bill_type' => 'customer',
+                    'customer_name' => $request->customer_name,
+                    'customer_email' => $request->customer_email,
+                    'customer_phone' => $request->customer_phone,
+                    'bill_reference' => $request->bill_reference,
+                    'created_by' => Auth::check() ? Auth::id() : null,
+                ]);
+
+                return redirect()->route('bills.show', $bill->id)->with('success', 'Customer Control Number created successfully! Control number: ' . $response['billPayNumber']);
+            }
+
+            return back()->with('error', 'Failed to create control number.');
+        } catch (\Exception $e) {
+            Log::error('Error creating customer control number', ['error' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function show($id)
+    {
+        $bill = BillPayNumber::findOrFail($id);
+        
+        // Try to fetch latest bill details from API
+        try {
+            $apiBill = $this->clickPesaService->queryBillPayNumber($bill->bill_pay_number);
+            
+            if (isset($apiBill['billPayNumber'])) {
+                // Update local bill with latest data from API
+                $billType = 'order';
+                if (isset($apiBill['customerName'])) {
+                    $billType = 'customer';
+                }
+                
+                $bill->update([
+                    'bill_description' => $apiBill['billDescription'] ?? $bill->bill_description,
+                    'bill_amount' => $apiBill['billAmount'] ?? $bill->bill_amount,
+                    'bill_currency' => $apiBill['currency'] ?? $bill->bill_currency,
+                    'bill_payment_mode' => $apiBill['billPaymentMode'] ?? $bill->bill_payment_mode,
+                    'bill_status' => $apiBill['billStatus'] ?? $bill->bill_status,
+                    'bill_type' => $billType,
+                    'customer_name' => $apiBill['customerName'] ?? $bill->customer_name,
+                    'customer_email' => $apiBill['customerEmail'] ?? $bill->customer_email,
+                    'customer_phone' => $apiBill['customerPhone'] ?? $bill->customer_phone,
+                    'bill_reference' => $apiBill['billReference'] ?? $bill->bill_reference,
+                    'total_paid' => $apiBill['totalPaid'] ?? $apiBill['collectedAmount'] ?? $bill->total_paid,
+                    'last_payment_at' => isset($apiBill['lastPaymentAt']) ? \Illuminate\Support\Carbon::parse($apiBill['lastPaymentAt']) : $bill->last_payment_at,
+                ]);
+                
+                // Refresh the bill instance from DB
+                $bill = $bill->fresh();
+            }
+        } catch (\Exception $e) {
+            Log::error('Error fetching bill details from API', [
+                'bill_id' => $id,
+                'bill_pay_number' => $bill->bill_pay_number,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        // Generate QR code with bill details
+        $qrContent = "FEEDTAN BillPay\n" .
+                   "Control Number: " . $bill->bill_pay_number . "\n" .
+                   "Type: " . ucfirst($bill->bill_type) . "\n" .
+                   "Description: " . $bill->bill_description . "\n" .
+                   "Amount: " . number_format($bill->bill_amount, 2) . " " . $bill->bill_currency . "\n" .
+                   "Status: " . $bill->bill_status . "\n" .
+                   "Created: " . $bill->created_at->format('Y-m-d H:i:s');
+        
+        $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
+        $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
+        
+        return view('bills.show', compact('bill', 'qrCodeImage'));
+    }
+
+    public function pdf($id)
+    {
+        $bill = BillPayNumber::findOrFail($id);
+        
+        // Generate QR code with bill details
+        $qrContent = "FEEDTAN BillPay\n" .
+                   "Control Number: " . $bill->bill_pay_number . "\n" .
+                   "Type: " . ucfirst($bill->bill_type) . "\n" .
+                   "Description: " . $bill->bill_description . "\n" .
+                   "Amount: " . number_format($bill->bill_amount, 2) . " " . $bill->bill_currency . "\n" .
+                   "Status: " . $bill->bill_status . "\n" .
+                   "Created: " . $bill->created_at->format('Y-m-d H:i:s');
+        
+        $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
+        $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
+        
+        $pdf = Pdf::loadView('bills.pdf', ['bill' => $bill, 'qrCodeImage' => $qrCodeImage])
+            ->setPaper('a4', 'portrait')
+            ->setOption('margin-bottom', 20);
+        
+        return $pdf->download('bill-' . $bill->bill_pay_number . '.pdf');
+    }
+}

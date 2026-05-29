@@ -158,95 +158,136 @@ class AccountController extends Controller
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         $activeTab = $request->get('tab', 'database'); 
-        $statusFilter = $request->get('status', 'all'); // Sub-tab status filter
+        $statusFilter = $request->get('status', 'all');
+        $statementType = $request->get('type', 'payments');
         
         $error = null;
+        $displayTransactions = collect();
+        $displayBills = collect();
         $dbTransactions = collect();
         $apiTransactions = collect();
+        $totalPaidFilter = false;
 
-        // 1. Get from Database
-        $query = \App\Models\Transaction::query()->where('type', 'payment');
-        if ($startDate) $query->whereDate('created_at', '>=', $startDate);
-        if ($endDate) $query->whereDate('created_at', '<=', $endDate);
-        if ($currency) $query->where('currency', $currency);
-        
-        $dbTransactions = $query->orderBy('created_at', 'desc')->get()->map(function($t) {
-            return [
-                'date' => $t->created_at->toIso8601String(),
-                'created_at' => $t->created_at->toIso8601String(),
-                'updated_at' => $t->updated_at?->toIso8601String(),
-                'description' => $t->resolvedDescription(),
-                'amount' => (float) $t->amount,
-                'currency' => $t->currency ?? 'TZS',
-                'entry' => 'CREDIT',
-                'status' => strtoupper($t->status),
-                'reference' => $t->order_reference,
-                'order_reference' => $t->order_reference,
-                'transaction_id' => $t->transaction_id,
-                'source' => 'DATABASE',
-                'customer_name' => $t->customer_name,
-                'payer_name' => $t->payer_name,
-                'phone' => $t->phone,
-                'email' => $t->email,
-                'payment_method' => $t->payment_method,
-                'type' => $t->type,
-            ];
-        });
+        if ($statementType === 'payments') {
+            // 1. Get from Database
+            $query = \App\Models\Transaction::query()->where('type', 'payment');
+            if ($startDate) $query->whereDate('created_at', '>=', $startDate);
+            if ($endDate) $query->whereDate('created_at', '<=', $endDate);
+            if ($currency) $query->where('currency', $currency);
+            
+            $dbTransactions = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
+                return [
+                    'date' => $t->created_at->toIso8601String(),
+                    'created_at' => $t->created_at->toIso8601String(),
+                    'updated_at' => $t->updated_at?->toIso8601String(),
+                    'description' => $t->resolvedDescription(),
+                    'amount' => (float)$t->amount,
+                    'currency' => $t->currency ?? 'TZS',
+                    'entry' => 'CREDIT',
+                    'status' => strtoupper($t->status),
+                    'reference' => $t->order_reference,
+                    'order_reference' => $t->order_reference,
+                    'transaction_id' => $t->transaction_id,
+                    'source' => 'DATABASE',
+                    'customer_name' => $t->customer_name,
+                    'payer_name' => $t->payer_name,
+                    'phone' => $t->phone,
+                    'email' => $t->email,
+                    'payment_method' => $t->payment_method,
+                    'type' => $t->type,
+                ];
+            });
 
-        // 2. Fetch API data
-        try {
-            $apiResponse = $this->api->getAccountStatement($currency, $startDate, $endDate);
-            if (isset($apiResponse['transactions'])) {
-                $apiTransactions = collect($apiResponse['transactions'])->map(function($t) {
-                    $t['source'] = 'API';
-                    $t['amount'] = (float)($t['amount'] ?? 0);
-                    $t['status'] = strtoupper($t['status'] ?? 'UNKNOWN');
-                    $t['reference'] = $t['orderReference'] ?? $t['reference'] ?? null;
-                    $t['transaction_id'] = $t['id'] ?? $t['transaction_id'] ?? null;
+            // 2. Fetch API data
+            try {
+                $apiResponse = $this->api->getAccountStatement($currency, $startDate, $endDate);
+                if (isset($apiResponse['transactions'])) {
+                    $apiTransactions = collect($apiResponse['transactions'])->map(function ($t) {
+                        $t['source'] = 'API';
+                        $t['amount'] = (float)($t['amount'] ?? 0);
+                        $t['status'] = strtoupper($t['status'] ?? 'UNKNOWN');
+                        $t['reference'] = $t['orderReference'] ?? $t['reference'] ?? null;
+                        $t['transaction_id'] = $t['id'] ?? $t['transaction_id'] ?? null;
+                        return $t;
+                    });
+                }
+            } catch (Exception $e) {
+                $error = 'API Fetch Error: ' . $e->getMessage();
+            }
+
+            // 3. Identification and Cross-Referencing
+            $dbRefs = $dbTransactions->pluck('reference')->filter()->unique()->toArray();
+            $dbTids = $dbTransactions->pluck('transaction_id')->filter()->unique()->toArray();
+
+            // 4. Apply Status Sub-Tab Filtering
+            $filterByStatus = function ($collection) use ($statusFilter) {
+                if ($statusFilter === 'settled') {
+                    return $collection->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED']));
+                } elseif ($statusFilter === 'failed') {
+                    return $collection->filter(fn($t) => $t['status'] === 'FAILED');
+                }
+                return $collection;
+            };
+
+            if ($activeTab === 'database') {
+                $displayTransactions = $filterByStatus($dbTransactions);
+            } else {
+                $displayTransactions = $apiTransactions->map(function ($t) use ($dbRefs, $dbTids) {
+                    $t['is_synced'] = in_array($t['reference'], $dbRefs) || in_array($t['transaction_id'], $dbTids);
                     return $t;
                 });
             }
-        } catch (Exception $e) {
-            $error = 'API Fetch Error: ' . $e->getMessage();
-        }
-
-        // 3. Identification and Cross-Referencing
-        $dbRefs = $dbTransactions->pluck('reference')->filter()->unique()->toArray();
-        $dbTids = $dbTransactions->pluck('transaction_id')->filter()->unique()->toArray();
-
-        // 4. Apply Status Sub-Tab Filtering
-        $filterByStatus = function($collection) use ($statusFilter) {
-            if ($statusFilter === 'settled') {
-                return $collection->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED']));
-            } elseif ($statusFilter === 'failed') {
-                return $collection->filter(fn($t) => $t['status'] === 'FAILED');
-            }
-            return $collection;
-        };
-
-        if ($activeTab === 'database') {
-            $displayTransactions = $filterByStatus($dbTransactions);
         } else {
-            // API tab shows all transactions regardless of status filter
-            $displayTransactions = $apiTransactions->map(function($t) use ($dbRefs, $dbTids) {
-                $t['is_synced'] = in_array($t['reference'], $dbRefs) || in_array($t['transaction_id'], $dbTids);
-                return $t;
-            });
+            // Handle Billing Statement
+            $query = \App\Models\BillPayNumber::query();
+            if ($startDate) $query->whereDate('created_at', '>=', $startDate);
+            if ($endDate) $query->whereDate('created_at', '<=', $endDate);
+            if ($currency) $query->where('bill_currency', $currency);
+            
+            if ($statusFilter === 'settled') {
+                $query->where('total_paid', '>', 0);
+                $totalPaidFilter = true;
+            } elseif ($statusFilter === 'failed') {
+                $query->where('bill_status', '!=', 'ACTIVE');
+            }
+            
+            if ($request->has('export')) {
+                $displayBills = $query->orderBy('created_at', 'desc')->get();
+            } else {
+                $displayBills = $query->orderBy('created_at', 'desc')->paginate(20);
+            }
         }
 
         // Statistics
-        $mergedTransactions = $this->mergeAndDeduplicate($dbTransactions, $apiTransactions);
-        $stats = $this->calculateTransactionStats($mergedTransactions->toArray());
+        $stats = [];
+        $billingStats = [];
+        if ($statementType === 'payments') {
+            $mergedTransactions = $this->mergeAndDeduplicate($dbTransactions, $apiTransactions);
+            $stats = $this->calculateTransactionStats($mergedTransactions->toArray());
+        } else {
+            $billsForStats = $request->has('export') ? $displayBills : $displayBills->items();
+            $billingStats = [
+                'totalBills' => $request->has('export') ? $displayBills->count() : $displayBills->total(),
+                'totalAmount' => collect($billsForStats)->sum('bill_amount'),
+                'totalPaid' => collect($billsForStats)->sum('total_paid'),
+                'showPaid' => $totalPaidFilter || collect($billsForStats)->sum('total_paid') > 0
+            ];
+        }
 
         // Handle Export
         if ($request->has('export')) {
-            return $this->exportStatement($displayTransactions, $stats, $request->get('export'), $activeTab, $currency);
+            if ($statementType === 'payments') {
+                return $this->exportStatement($displayTransactions, $stats, $request->get('export'), $activeTab, $currency);
+            } else {
+                return $this->exportBillingStatement($displayBills, $billingStats, $request->get('export'), $currency);
+            }
         }
 
         return view('account.statement', [
-            'displayTransactions' => $displayTransactions->sortByDesc(function ($transaction) {
+            'displayTransactions' => $statementType === 'payments' ? $displayTransactions->sortByDesc(function ($transaction) {
                 return $transaction['date'] ?? $transaction['created_at'] ?? $transaction['createdAt'] ?? null;
-            }),
+            }) : collect(),
+            'displayBills' => $displayBills,
             'stats' => $stats,
             'error' => $error,
             'currency' => $currency,
@@ -255,11 +296,12 @@ class AccountController extends Controller
             'endDate' => $endDate,
             'activeTab' => $activeTab,
             'statusFilter' => $statusFilter,
+            'statementType' => $statementType,
+            'totalPaidFilter' => $totalPaidFilter,
             'dbCount' => $dbTransactions->count(),
             'apiCount' => $apiTransactions->count(),
-            // Counts for sub-tabs
-            'settledCount' => ($activeTab === 'database' ? $dbTransactions : $apiTransactions)->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED']))->count(),
-            'failedCount' => ($activeTab === 'database' ? $dbTransactions : $apiTransactions)->filter(fn($t) => $t['status'] === 'FAILED')->count()
+            'settledCount' => $statementType === 'payments' ? ($activeTab === 'database' ? $dbTransactions : $apiTransactions)->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED']))->count() : 0,
+            'failedCount' => $statementType === 'payments' ? ($activeTab === 'database' ? $dbTransactions : $apiTransactions)->filter(fn($t) => $t['status'] === 'FAILED')->count() : 0
         ]);
     }
 
@@ -306,6 +348,47 @@ class AccountController extends Controller
             return \Maatwebsite\Excel\Facades\Excel::download(
                 new \App\Exports\PaymentHistoryExport($transactions->toArray()), 
                 'account-statement-' . $tab . '-' . date('Y-m-d') . '.xlsx'
+            );
+        }
+    }
+
+    /**
+     * Export Billing Statement to PDF or Excel
+     */
+    private function exportBillingStatement($bills, $stats, $format, $currency)
+    {
+        $data = [
+            'bills' => $bills,
+            'totalBills' => $stats['totalBills'],
+            'totalAmount' => $stats['totalAmount'],
+            'totalPaid' => $stats['totalPaid'],
+            'showPaid' => $stats['showPaid'],
+            'currency' => $currency,
+            'date' => date('Y-m-d H:i:s')
+        ];
+
+        if ($format === 'pdf') {
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('account.exports.billing_statement_pdf', $data)
+                ->setPaper('a4', 'landscape');
+            return $pdf->download('billing-statement-' . date('Y-m-d') . '.pdf');
+        } else {
+            // For Excel, we can create a simple export array
+            $exportData = $bills->map(function ($bill) {
+                return [
+                    'Date' => $bill->created_at->format('Y-m-d H:i'),
+                    'Control Number' => $bill->bill_pay_number,
+                    'Description' => $bill->bill_description,
+                    'Type' => strtoupper($bill->bill_type),
+                    'Status' => strtoupper($bill->bill_status),
+                    'Amount' => $bill->bill_currency . ' ' . number_format($bill->bill_amount, 2),
+                    'Paid' => $bill->bill_currency . ' ' . number_format($bill->total_paid, 2),
+                ];
+            })->toArray();
+            
+            // Create a simple Excel export (or use a dedicated Export class if needed)
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\PaymentHistoryExport($exportData), 
+                'billing-statement-' . date('Y-m-d') . '.xlsx'
             );
         }
     }

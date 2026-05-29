@@ -50,5 +50,13 @@
         <div data-i18n="Generate statement">Generate statement</div>
       </a>
     </li>
+
+    <!-- Bill Management -->
+    <li class="menu-item {{ request()->routeIs('bills.*') ? 'active' : '' }}">
+      <a href="{{ route('bills.index') }}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-file-invoice"></i>
+        <div data-i18n="Bill Management">Bill Management</div>
+      </a>
+    </li>
   </ul>
 </aside>

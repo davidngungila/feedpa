@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Account Statement - {{ strtoupper($tab) }}</title>
+    <title>Billing Statement</title>
     <style>
         body { font-family: Arial, sans-serif; font-size: 10px; margin: 10px; }
         .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #16a34a; padding-bottom: 10px; }
@@ -17,39 +17,35 @@
         table.main-table th { background-color: #f3f4f6; font-weight: bold; }
         .text-right { text-align: right; }
         .text-success { color: #16a34a; }
-        .text-danger { color: #dc2626; }
         .badge { padding: 2px 5px; border-radius: 4px; font-size: 8px; font-weight: bold; }
         .bg-success { background: #dcfce7; color: #166534; }
-        .bg-warning { background: #fef3c7; color: #92400e; }
-        .bg-danger { background: #fee2e2; color: #991b1b; }
+        .bg-gray { background: #e5e7eb; color: #4b5563; }
         .footer { margin-top: 30px; text-align: center; font-size: 8px; color: #9ca3af; border-top: 1px dashed #ddd; padding-top: 10px; }
     </style>
 </head>
 <body>
     <div class="header">
         <h1>FEEDTAN DIGITAL PAYMENT SYSTEM</h1>
-        <h2>Account Statement ({{ strtoupper($tab) }} SOURCE)</h2>
+        <h2>Billing Statement</h2>
         <p>Generated on: {{ $date }} | Currency: {{ $currency }}</p>
     </div>
 
     <table class="stats-table">
         <tr>
             <td>
-                <div class="stats-label">Total Transactions</div>
-                <div class="stats-value">{{ number_format($stats['total']) }}</div>
+                <div class="stats-label">Total Bills</div>
+                <div class="stats-value">{{ number_format($totalBills) }}</div>
             </td>
             <td>
-                <div class="stats-label">Total Credits</div>
-                <div class="stats-value text-success">{{ number_format($stats['total_credits'], 2) }}</div>
+                <div class="stats-label">Total Amount</div>
+                <div class="stats-value text-success">{{ $currency }} {{ number_format($totalAmount, 2) }}</div>
             </td>
+            @if($totalPaid > 0)
             <td>
-                <div class="stats-label">Total Debits</div>
-                <div class="stats-value text-danger">{{ number_format($stats['total_debits'], 2) }}</div>
+                <div class="stats-label">Total Paid</div>
+                <div class="stats-value text-success">{{ $currency }} {{ number_format($totalPaid, 2) }}</div>
             </td>
-            <td>
-                <div class="stats-label">Successful</div>
-                <div class="stats-value">{{ number_format($stats['successful']) }}</div>
-            </td>
+            @endif
         </tr>
     </table>
 
@@ -57,32 +53,38 @@
         <thead>
             <tr>
                 <th width="12%">Date & Time</th>
-                <th width="15%">Reference</th>
-                <th width="33%">Description / Purpose</th>
-                <th width="15%">Payer Info</th>
-                <th width="10%">Status</th>
-                <th width="15%" class="text-right">Amount ({{ $currency }})</th>
+                <th width="15%">Control Number</th>
+                <th width="25%">Description</th>
+                <th width="12%">Type</th>
+                <th width="12%">Status</th>
+                <th width="12%" class="text-right">Amount</th>
+                @if($showPaid)
+                <th width="12%" class="text-right">Paid</th>
+                @endif
             </tr>
         </thead>
         <tbody>
-            @foreach($transactions as $t)
+            @foreach($bills as $bill)
                 <tr>
-                    <td>{{ \Carbon\Carbon::parse($t['date'])->format('Y-m-d H:i') }}</td>
-                    <td><code>{{ $t['reference'] ?? 'N/A' }}</code></td>
-                    <td>{{ $t['description'] ?? 'N/A' }}</td>
+                    <td>{{ $bill->created_at->format('Y-m-d H:i') }}</td>
+                    <td><code>{{ $bill->bill_pay_number }}</code></td>
                     <td>
-                        {{ $t['payer_name'] ?? 'N/A' }}<br>
-                        <small>{{ $t['phone'] ?? '' }}</small>
+                        {{ $bill->bill_description ?? 'No Description' }}
+                        @if($bill->customer_name)
+                            <br><small>Customer: {{ $bill->customer_name }}</small>
+                        @endif
                     </td>
+                    <td>{{ strtoupper($bill->bill_type) }}</td>
                     <td>
-                        @php $status = strtoupper($t['status'] ?? 'UNKNOWN'); @endphp
-                        <span class="badge {{ in_array($status, ['SUCCESS', 'SETTLED']) ? 'bg-success' : (in_array($status, ['PENDING', 'PROCESSING']) ? 'bg-warning' : 'bg-danger') }}">
+                        @php $status = strtoupper($bill->bill_status ?? 'UNKNOWN'); @endphp
+                        <span class="badge {{ $status == 'ACTIVE' ? 'bg-success' : 'bg-gray' }}">
                             {{ $status }}
                         </span>
                     </td>
-                    <td class="text-right {{ ($t['entry'] ?? 'CREDIT') == 'DEBIT' ? 'text-danger' : 'text-success' }}">
-                        {{ ($t['entry'] ?? 'CREDIT') == 'DEBIT' ? '-' : '+' }} {{ number_format($t['amount'], 2) }}
-                    </td>
+                    <td class="text-right">{{ $bill->bill_currency }} {{ number_format($bill->bill_amount, 2) }}</td>
+                    @if($showPaid)
+                    <td class="text-right text-success">{{ $bill->bill_currency }} {{ number_format($bill->total_paid, 2) }}</td>
+                    @endif
                 </tr>
             @endforeach
         </tbody>

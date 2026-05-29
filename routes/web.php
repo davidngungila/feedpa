@@ -1,10 +1,14 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CallbackController;
+use App\Http\Controllers\BillController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,49 +22,87 @@ use App\Http\Controllers\CallbackController;
 */
 
 Route::get('/', function () {
-    return redirect()->route('public.payment');
+    if (Auth::check()) {
+        return redirect()->route('dashboard.index');
+    }
+    return redirect()->route('login');
 });
 
-// Dashboard Routes
-Route::prefix('dashboard')->name('dashboard.')->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('index');
-    Route::get('/advanced', [DashboardController::class, 'advanced'])->name('advanced');
-    Route::get('/live-status', [DashboardController::class, 'liveStatus'])->name('live-status');
-    Route::post('/send-manual-sms', [DashboardController::class, 'sendManualSMS'])->name('send.manual.sms');
-});
+// Protected Routes (Require Authentication)
+Route::middleware(['auth'])->group(function () {
+    // Dashboard Routes
+    Route::prefix('dashboard')->name('dashboard.')->group(function () {
+        Route::get('/', [DashboardController::class, 'index'])->name('index');
+        Route::get('/advanced', [DashboardController::class, 'advanced'])->name('advanced');
+        Route::get('/live-status', [DashboardController::class, 'liveStatus'])->name('live-status');
+        Route::post('/send-manual-sms', [DashboardController::class, 'sendManualSMS'])->name('send.manual.sms');
+    });
 
-// Payment Routes
-Route::prefix('payments')->name('payments.')->group(function () {
-    Route::get('/create', [PaymentController::class, 'create'])->name('create');
-    Route::post('/', [PaymentController::class, 'store'])->name('store');
-    Route::post('/store', [PaymentController::class, 'store'])->name('store.alt'); // Add explicit /store route
-    Route::get('/store', function() {
-        return redirect('/payment')->with('info', 'Please use the payment form to submit payments.');
-    }); // Handle direct access to /store
-    Route::get('/status', [PaymentController::class, 'status'])->name('status');
-    Route::get('/history', [PaymentController::class, 'history'])->name('history');
-    Route::get('/export/pdf', [PaymentController::class, 'exportPdf'])->name('export.pdf');
-    Route::get('/export/excel', [PaymentController::class, 'exportExcel'])->name('export.excel');
-    Route::get('/receipt/{orderReference}', [PaymentController::class, 'receipt'])->name('receipt');
-    Route::post('/api/status', [PaymentController::class, 'apiStatus'])->name('api.status');
-    Route::post('/resend-ussd', [PaymentController::class, 'resendUssd'])->name('resend-ussd');
+    // Payment Routes
+    Route::prefix('payments')->name('payments.')->group(function () {
+        Route::get('/create', [PaymentController::class, 'create'])->name('create');
+        Route::post('/', [PaymentController::class, 'store'])->name('store');
+        Route::post('/store', [PaymentController::class, 'store'])->name('store.alt'); // Add explicit /store route
+        Route::get('/store', function() {
+            return redirect('/payment')->with('info', 'Please use the payment form to submit payments.');
+        }); // Handle direct access to /store
+        Route::get('/status', [PaymentController::class, 'status'])->name('status');
+        Route::get('/history', [PaymentController::class, 'history'])->name('history');
+        Route::get('/export/pdf', [PaymentController::class, 'exportPdf'])->name('export.pdf');
+        Route::get('/export/excel', [PaymentController::class, 'exportExcel'])->name('export.excel');
+        Route::get('/receipt/{orderReference}', [PaymentController::class, 'receipt'])->name('receipt');
+        Route::post('/api/status', [PaymentController::class, 'apiStatus'])->name('api.status');
+        Route::post('/resend-ussd', [PaymentController::class, 'resendUssd'])->name('resend-ussd');
+    });
+
+    // Account Routes
+    Route::prefix('account')->name('account.')->group(function () {
+        Route::get('/', [AccountController::class, 'index'])->name('index');
+        Route::get('/balance', [AccountController::class, 'balance'])->name('balance');
+        Route::get('/statement', [AccountController::class, 'statement'])->name('statement');
+        
+        // API Endpoints
+        Route::get('/balance/api', [AccountController::class, 'balanceApi'])->name('balance.api');
+    });
+
+    // Bill Management Routes
+    Route::prefix('bills')->name('bills.')->group(function () {
+        Route::get('/', [BillController::class, 'index'])->name('index');
+        Route::get('/create-order', [BillController::class, 'createOrder'])->name('create-order');
+        Route::post('/store-order', [BillController::class, 'storeOrder'])->name('store-order');
+        Route::get('/create-customer', [BillController::class, 'createCustomer'])->name('create-customer');
+        Route::post('/store-customer', [BillController::class, 'storeCustomer'])->name('store-customer');
+        Route::get('/{id}', [BillController::class, 'show'])->name('show');
+        Route::get('/{id}/pdf', [BillController::class, 'pdf'])->name('pdf');
+    });
+
+    // User Management Routes
+    Route::resource('users', UserController::class);
+
+    // Profile Routes
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [UserController::class, 'profile'])->name('index');
+        Route::get('/edit', [UserController::class, 'editProfile'])->name('edit');
+        Route::put('/update', [UserController::class, 'updateProfile'])->name('update');
+        Route::put('/change-password', [UserController::class, 'updatePassword'])->name('password');
+    });
+    
+    // Sync Trigger Routes
+    Route::post('/api-sync', function () {
+        Artisan::call('app:sync-transactions-from-api');
+        return back()->with('success', 'Transactions synced successfully!');
+    })->name('api-sync');
+    
+    Route::post('/api-sync-bills', function () {
+        Artisan::call('app:sync-bills-from-api');
+        return back()->with('success', 'Bills synced successfully!');
+    })->name('api-sync-bills');
 });
 
 // Public Payment Page
 Route::get('/payment', function () {
     return view('public.swahili-payment');
 })->name('public.payment');
-
-
-// Account Routes
-Route::prefix('account')->name('account.')->group(function () {
-    Route::get('/', [AccountController::class, 'index'])->name('index');
-    Route::get('/balance', [AccountController::class, 'balance'])->name('balance');
-    Route::get('/statement', [AccountController::class, 'statement'])->name('statement');
-    
-    // API Endpoints
-    Route::get('/balance/api', [AccountController::class, 'balanceApi'])->name('balance.api');
-});
 
 // Callback/Webhook Routes
 Route::prefix('webhooks')->name('webhooks.')->group(function () {

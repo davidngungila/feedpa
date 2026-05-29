@@ -190,6 +190,12 @@ class BillController extends Controller
             ]);
         }
         
+        // Get related transactions (match order_reference to bill_pay_number or bill_reference)
+        $transactions = \App\Models\Transaction::where('order_reference', $bill->bill_pay_number)
+            ->orWhere('order_reference', $bill->bill_reference)
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
         // Generate QR code with bill details
         $qrContent = "FEEDTAN BillPay\n" .
                    "Control Number: " . $bill->bill_pay_number . "\n" .
@@ -202,7 +208,7 @@ class BillController extends Controller
         $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
         $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
         
-        return view('bills.show', compact('bill', 'qrCodeImage'));
+        return view('bills.show', compact('bill', 'qrCodeImage', 'transactions'));
     }
 
     public function pdf($id)

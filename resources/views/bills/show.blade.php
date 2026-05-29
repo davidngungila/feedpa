@@ -149,5 +149,55 @@
             <i class="fas fa-list mr-2"></i> All Bills
         </a>
     </div>
+    
+    <!-- Transactions Section -->
+    @if($transactions->count() > 0)
+    <div class="card overflow-hidden">
+        <div class="p-6 border-b border-primary-100 dark:border-primary-800">
+            <h3 class="text-sm font-black text-primary-900 dark:text-white flex items-center gap-2">
+                <i class="fas fa-history text-primary-500"></i> Payment History
+            </h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-primary-50 dark:bg-primary-900/20">
+                    <tr>
+                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Order Reference</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Amount</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Payer</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-primary-100 dark:divide-primary-800">
+                    @foreach($transactions as $txn)
+                    <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
+                        <td class="px-6 py-4">
+                            <p class="text-sm font-semibold text-primary-900 dark:text-white">{{ $txn->created_at->format('M d, Y H:i:s') }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $txn->order_reference }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-sm font-bold text-primary-900 dark:text-white">{{ $txn->currency }} {{ number_format($txn->amount, 2) }}</p>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-full text-[10px] font-bold {{ in_array($txn->status, ['SUCCESS', 'SETTLED']) ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' : (in_array($txn->status, ['FAILED', 'ERROR']) ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300') }}">
+                                {{ $txn->status }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <p class="text-sm font-semibold text-primary-900 dark:text-white">{{ $txn->customer_name ?? $txn->payer_name ?? 'N/A' }}</p>
+                            @if($txn->phone)
+                            <p class="text-xs text-primary-500 font-mono">{{ $txn->phone }}</p>
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 </div>
 @endsection

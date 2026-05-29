@@ -75,8 +75,8 @@ class PaymentHistoryExport implements FromCollection, WithHeadings, WithMapping,
             $value = $payment[$col] ?? 'N/A';
             if ($col === 'amount') {
                 $value = number_format($value, 2);
-            } elseif (in_array($col, ['created_at', 'updated_at'])) {
-                $value = \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s');
+            } elseif (in_array($col, ['created_at', 'updated_at', 'sms_sent_at'])) {
+                $value = $value && $value !== 'N/A' ? \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s') : 'N/A';
             }
             $row[] = $value;
         }

@@ -78,39 +78,64 @@ class BillController extends Controller
     public function storeCustomer(Request $request)
     {
         $request->validate([
-            'customer_name' => 'required|string',
-            'customer_email' => 'nullable|email',
-            'customer_phone' => 'nullable|string',
-            'bill_description' => 'nullable|string',
-            'bill_amount' => 'nullable|numeric',
-            'bill_reference' => 'nullable|string',
+            'customer_name' => 'required|string|max:255',
+            'customer_email' => 'nullable|email|required_without:customer_phone',
+            'customer_phone' => 'nullable|string|required_without:customer_email',
+            'bill_description' => 'nullable|string|max:255',
+            'bill_amount' => 'nullable|numeric|min:1',
+            'bill_reference' => 'nullable|string|regex:/^[A-Za-z0-9]+$/|max:20',
             'bill_payment_mode' => 'required|in:ALLOW_PARTIAL_AND_OVER_PAYMENT,EXACT',
+        ], [
+            'customer_email.required_without' => 'Provide a phone number or email address (at least one is required).',
+            'customer_phone.required_without' => 'Provide a phone number or email address (at least one is required).',
+            'bill_reference.regex' => 'Bill reference must contain only letters and numbers (no spaces or symbols).',
+            'bill_amount.min' => 'Bill amount must be at least 1 TZS.',
         ]);
+
+        if ($request->bill_payment_mode === 'EXACT' && ! $request->filled('bill_amount')) {
+            return back()
+                ->withErrors(['bill_amount' => 'Amount is required when payment mode is Exact Amount Only.'])
+                ->withInput();
+        }
+
+        $phone = null;
+        if ($request->filled('customer_phone')) {
+            $phone = $this->clickPesaService->validatePhoneNumber($request->customer_phone);
+            if (! $phone) {
+                return back()
+                    ->withErrors(['customer_phone' => 'Use format 255712345678 (country code, no + sign).'])
+                    ->withInput();
+            }
+        }
+
+        $email = $request->filled('customer_email') ? trim($request->customer_email) : null;
+        $billAmount = $request->filled('bill_amount') ? (float) $request->bill_amount : null;
+        $billReference = $request->filled('bill_reference') ? strtoupper(trim($request->bill_reference)) : null;
 
         try {
             $response = $this->clickPesaService->createCustomerControlNumber(
-                $request->customer_name,
-                $request->customer_email,
-                $request->customer_phone,
-                $request->bill_description,
-                $request->bill_amount,
-                $request->bill_reference,
+                trim($request->customer_name),
+                $email,
+                $phone,
+                $request->filled('bill_description') ? trim($request->bill_description) : null,
+                $billAmount,
+                $billReference,
                 $request->bill_payment_mode
             );
 
             if (isset($response['billPayNumber'])) {
                 $bill = BillPayNumber::create([
                     'bill_pay_number' => $response['billPayNumber'],
-                    'bill_description' => $request->bill_description,
-                    'bill_amount' => $request->bill_amount,
+                    'bill_description' => $request->filled('bill_description') ? trim($request->bill_description) : null,
+                    'bill_amount' => $billAmount,
                     'bill_currency' => 'TZS',
                     'bill_payment_mode' => $request->bill_payment_mode,
                     'bill_status' => 'ACTIVE',
                     'bill_type' => 'customer',
-                    'customer_name' => $request->customer_name,
-                    'customer_email' => $request->customer_email,
-                    'customer_phone' => $request->customer_phone,
-                    'bill_reference' => $request->bill_reference,
+                    'customer_name' => trim($request->customer_name),
+                    'customer_email' => $email,
+                    'customer_phone' => $phone,
+                    'bill_reference' => $billReference ?? $response['billPayNumber'],
                     'created_by' => Auth::check() ? Auth::id() : null,
                 ]);
 

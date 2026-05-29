@@ -35,8 +35,11 @@ class Transaction extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'collected_amount' => 'decimal:2',
         'callback_data' => 'array',
-        'callback_received_at' => 'datetime'
+        'callback_received_at' => 'datetime',
+        'sms_sent' => 'boolean',
+        'sms_sent_at' => 'datetime',
     ];
 
     public function resolvedDescription($fallbackDescription = null)

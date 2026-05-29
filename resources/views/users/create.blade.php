@@ -67,6 +67,13 @@
                             <p class="mt-1 text-[10px] text-red-500 font-bold">{{ $message }}</p>
                         @enderror
                     </div>
+                    <div>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="is_admin" value="1" {{ old('is_admin') ? 'checked' : '' }}
+                                   class="rounded border-primary-300 text-primary-600 focus:ring-primary-500">
+                            <span class="text-[10px] font-bold text-primary-700 dark:text-primary-300 uppercase tracking-wider">Is Admin</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Contact & Security -->

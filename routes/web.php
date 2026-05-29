@@ -78,6 +78,7 @@ Route::middleware(['auth'])->group(function () {
 
     // User Management Routes
     Route::resource('users', UserController::class);
+    Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
 
     // Profile Routes
     Route::prefix('profile')->name('profile.')->group(function () {

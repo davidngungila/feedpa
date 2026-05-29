@@ -14,6 +14,10 @@ class UserController extends Controller
      */
     public function index()
     {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
         $users = User::latest()->paginate(10);
         return view('users.index', compact('users'));
     }
@@ -23,6 +27,10 @@ class UserController extends Controller
      */
     public function create()
     {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
         return view('users.create');
     }
 
@@ -31,12 +39,17 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
             'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'is_admin' => 'nullable|boolean',
         ]);
 
         $userData = [
@@ -44,6 +57,7 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'position' => $request->position,
+            'is_admin' => $request->is_admin ?? false,
         ];
 
         if ($request->hasFile('avatar')) {
@@ -61,6 +75,10 @@ class UserController extends Controller
      */
     public function show(string $id)
     {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
         $user = User::findOrFail($id);
         return view('users.show', compact('user'));
     }
@@ -70,6 +88,10 @@ class UserController extends Controller
      */
     public function edit(string $id)
     {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
         $user = User::findOrFail($id);
         return view('users.edit', compact('user'));
     }
@@ -79,6 +101,10 @@ class UserController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
         $user = User::findOrFail($id);
 
         $request->validate([
@@ -87,12 +113,14 @@ class UserController extends Controller
             'password' => 'nullable|string|min:6|confirmed',
             'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'is_admin' => 'nullable|boolean',
         ]);
 
         $userData = [
             'name' => $request->name,
             'email' => $request->email,
             'position' => $request->position,
+            'is_admin' => $request->is_admin ?? false,
         ];
 
         if ($request->password) {
@@ -117,6 +145,10 @@ class UserController extends Controller
      */
     public function destroy(string $id)
     {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
         $user = User::findOrFail($id);
         
         if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
@@ -125,6 +157,26 @@ class UserController extends Controller
 
         $user->delete();
         return redirect()->route('users.index')->with('success', 'User deleted successfully');
+    }
+    
+    /**
+     * Reset user password.
+     */
+    public function resetPassword(string $id)
+    {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
+        $user = User::findOrFail($id);
+        
+        $newPassword = \Illuminate\Support\Str::random(8);
+        
+        $user->update([
+            'password' => Hash::make($newPassword),
+        ]);
+        
+        return back()->with('success', "Password reset successfully! New password: {$newPassword}");
     }
 
     /**

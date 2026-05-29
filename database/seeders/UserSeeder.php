@@ -44,6 +44,7 @@ class UserSeeder extends Seeder
                 'email' => 'davidngungila@gmail.com',
                 'password' => Hash::make('password'),
                 'position' => 'IT and Marketing Officer (Admin)',
+                'is_admin' => true,
             ],
             [
                 'name' => 'Lukelo Neno',

@@ -12,11 +12,13 @@
             </h2>
             <p class="text-xs text-primary-500 mt-1">Manage all system users and their permissions</p>
         </div>
+        @if(auth()->user()->is_admin)
         <div class="flex gap-2">
             <a href="{{ route('users.create') }}" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
                 <i class="fas fa-plus mr-1"></i> Add New User
             </a>
         </div>
+        @endif
     </div>
 
     @if(session('success'))
@@ -36,6 +38,7 @@
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">User</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Position</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Email</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Role</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider text-right">Actions</th>
                     </tr>
                 </thead>
@@ -66,6 +69,11 @@
                                 <p class="text-xs text-primary-700 dark:text-primary-300">{{ $user->email }}</p>
                             </td>
                             <td class="px-6 py-4">
+                                <span class="px-3 py-1.5 rounded-full text-[10px] font-bold {{ $user->is_admin ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300' }}">
+                                    {{ $user->is_admin ? 'Admin' : 'User' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     <a href="{{ route('users.show', $user->id) }}" class="p-2 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 hover:bg-primary-600 hover:text-white transition-all" title="View">
                                         <i class="fas fa-eye text-xs"></i>
@@ -73,6 +81,12 @@
                                     <a href="{{ route('users.edit', $user->id) }}" class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-600 hover:text-white transition-all" title="Edit">
                                         <i class="fas fa-edit text-xs"></i>
                                     </a>
+                                    <form action="{{ route('users.reset-password', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to reset this user\'s password?')">
+                                        @csrf
+                                        <button type="submit" class="p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 hover:bg-yellow-600 hover:text-white transition-all" title="Reset Password">
+                                            <i class="fas fa-key text-xs"></i>
+                                        </button>
+                                    </form>
                                     <form action="{{ route('users.destroy', $user->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?')">
                                         @csrf
                                         @method('DELETE')

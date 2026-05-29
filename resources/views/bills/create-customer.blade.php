@@ -35,6 +35,19 @@
         </div>
     @endif
 
+    @if($errors->any())
+        <div class="card p-4 border-l-4 border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10">
+            <p class="text-xs font-bold text-amber-800 dark:text-amber-200 mb-2">
+                <i class="fas fa-triangle-exclamation me-1"></i> Please fix the following:
+            </p>
+            <ul class="list-disc list-inside text-[11px] text-amber-700 dark:text-amber-300 space-y-1">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div class="xl:col-span-2">
             <form action="{{ route('bills.store-customer') }}" method="POST" id="customerForm" class="card p-6 space-y-6">
@@ -52,11 +65,11 @@
                     </div>
 
                     <div>
-                        <label for="customer_phone" class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Customer Phone</label>
+                        <label for="customer_phone" class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Customer Phone *</label>
                         <input type="tel" id="customer_phone" name="customer_phone" value="{{ old('customer_phone') }}"
                                class="w-full bg-primary-50 dark:bg-dark-900 border {{ $errors->has('customer_phone') ? 'border-red-400' : 'border-primary-100 dark:border-dark-border' }} rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500"
-                               placeholder="255712345678">
-                        <p class="mt-1 text-[10px] text-primary-500">Optional</p>
+                               placeholder="255712345678" inputmode="numeric" pattern="255[0-9]{9}">
+                        <p class="mt-1 text-[10px] text-primary-500">Required if email is empty. Format: 255712345678 (no + sign)</p>
                         @error('customer_phone')
                             <p class="mt-1 text-[10px] text-red-500 font-bold">{{ $message }}</p>
                         @enderror
@@ -68,7 +81,7 @@
                     <input type="email" id="customer_email" name="customer_email" value="{{ old('customer_email') }}"
                            class="w-full bg-primary-50 dark:bg-dark-900 border {{ $errors->has('customer_email') ? 'border-red-400' : 'border-primary-100 dark:border-dark-border' }} rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500"
                            placeholder="customer@example.com">
-                    <p class="mt-1 text-[10px] text-primary-500">Optional</p>
+                    <p class="mt-1 text-[10px] text-primary-500">Required if phone is empty</p>
                     @error('customer_email')
                         <p class="mt-1 text-[10px] text-red-500 font-bold">{{ $message }}</p>
                     @enderror
@@ -103,7 +116,7 @@
                         <label for="bill_payment_mode" class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Payment Mode *</label>
                         <select id="bill_payment_mode" name="bill_payment_mode"
                                 class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500">
-                            <option value="ALLOW_PARTIAL_AND_OVER_PAYMENT" {{ old('bill_payment_mode') === 'ALLOW_PARTIAL_AND_OVER_PAYMENT' ? 'selected' : '' }}>Allow Partial & Over Payment</option>
+                            <option value="ALLOW_PARTIAL_AND_OVER_PAYMENT" {{ old('bill_payment_mode', 'ALLOW_PARTIAL_AND_OVER_PAYMENT') === 'ALLOW_PARTIAL_AND_OVER_PAYMENT' ? 'selected' : '' }}>Allow Partial & Over Payment</option>
                             <option value="EXACT" {{ old('bill_payment_mode') === 'EXACT' ? 'selected' : '' }}>Exact Amount Only</option>
                         </select>
                     </div>
@@ -141,6 +154,7 @@
                 <h3 class="text-xs font-black text-primary-900 dark:text-white uppercase tracking-wider mb-4">About Customer Control Numbers</h3>
                 <div class="space-y-3 text-[11px]">
                     <p class="text-primary-700 dark:text-primary-300">Customer control numbers are linked to specific customer information (name, email, phone) for better tracking and management.</p>
+                    <p class="text-primary-600 dark:text-primary-400 font-bold">ClickPesa requires at least a phone number <em>or</em> email address for each customer.</p>
                 </div>
             </div>
         </div>
@@ -187,6 +201,33 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     form.addEventListener('submit', function (e) {
+        const name = document.getElementById('customer_name').value.trim();
+        const phone = document.getElementById('customer_phone').value.trim();
+        const email = document.getElementById('customer_email').value.trim();
+        const amount = document.getElementById('bill_amount').value.trim();
+        const paymentMode = document.getElementById('bill_payment_mode').value;
+
+        if (!name) {
+            e.preventDefault();
+            alert('Customer name is required.');
+            return;
+        }
+        if (!phone && !email) {
+            e.preventDefault();
+            alert('Provide a customer phone number or email address (at least one is required).');
+            return;
+        }
+        if (phone && !/^255[67]\d{8}$/.test(phone.replace(/\D/g, ''))) {
+            e.preventDefault();
+            alert('Phone must be in format 255712345678 (country code, no + sign).');
+            return;
+        }
+        if (paymentMode === 'EXACT' && !amount) {
+            e.preventDefault();
+            alert('Amount is required when payment mode is Exact Amount Only.');
+            return;
+        }
+
         e.preventDefault();
         
         submitBtn.disabled = true;

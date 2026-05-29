@@ -282,12 +282,9 @@ class ClickPesaAPIService
      */
     public function getAccountBalance(string $currency = 'TZS'): array
     {
-        $url = 'https://api.clickpesa.com/third-parties/account/balance';
-        
-        // Ensure currency is valid - add as query parameter
         $currency = in_array($currency, ['TZS', 'USD']) ? $currency : 'TZS';
-        $url .= '?currency=' . urlencode($currency);
-        
+        $url = $this->config['api_base_url'] . '/account/balance?currency=' . urlencode($currency);
+
         return $this->makeRequest('GET', $url);
     }
 

@@ -33,6 +33,7 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard Routes
     Route::prefix('dashboard')->name('dashboard.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('index');
+        Route::get('/account-balance', [DashboardController::class, 'accountBalance'])->name('account-balance');
         Route::get('/advanced', [DashboardController::class, 'advanced'])->name('advanced');
         Route::get('/live-status', [DashboardController::class, 'liveStatus'])->name('live-status');
         Route::post('/send-manual-sms', [DashboardController::class, 'sendManualSMS'])->name('send.manual.sms');

@@ -3,18 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Services\ClickPesaAPIService;
+use App\Services\AccountBalanceService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class AccountController extends Controller
 {
-    protected ClickPesaAPIService $api;
-
-    public function __construct(ClickPesaAPIService $api)
-    {
-        $this->api = $api;
-    }
+    public function __construct(
+        protected ClickPesaAPIService $api,
+        protected AccountBalanceService $accountBalanceService
+    ) {}
 
     /**
      * Show account management page
@@ -26,12 +25,10 @@ class AccountController extends Controller
         $error = null;
         $success = null;
 
-        // Get account balance
         try {
-            $balanceData = $this->api->getAccountBalance();
-            if (isset($balanceData[0])) {
-                $success = 'Account balance retrieved successfully!';
-            }
+            $tzsBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
+            $balanceData = [['currency' => 'TZS', 'balance' => $tzsBalance['balance']]];
+            $success = 'Account balance retrieved successfully!';
         } catch (Exception $e) {
             $error = 'Failed to retrieve account balance: ' . $e->getMessage();
             Log::error($error);
@@ -81,7 +78,8 @@ class AccountController extends Controller
         $error = null;
 
         try {
-            $balanceData = $this->api->getAccountBalance();
+            $tzsBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
+            $balanceData = [['currency' => 'TZS', 'balance' => $tzsBalance['balance']]];
         } catch (Exception $e) {
             $error = 'Failed to retrieve account balance: ' . $e->getMessage();
             Log::error($error);
@@ -133,15 +131,19 @@ class AccountController extends Controller
     public function balanceApi()
     {
         try {
-            $balanceData = $this->api->getAccountBalance();
-            
+            $balance = $this->accountBalanceService->getTzsBalance(refresh: true);
+
             return response()->json([
                 'success' => true,
-                'data' => $balanceData
+                'data' => [
+                    ['currency' => $balance['currency'], 'balance' => $balance['balance']],
+                ],
+                'synced_at' => $balance['synced_at'],
+                'live' => $balance['live'],
             ]);
         } catch (Exception $e) {
             Log::error('Balance API error: ' . $e->getMessage());
-            
+
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage()

@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\BillPayNumber;
 use App\Models\Transaction;
+use App\Services\AccountBalanceService;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        protected AccountBalanceService $accountBalanceService
+    ) {}
     private function settledStatuses(): array
     {
         return ['SUCCESS', 'SETTLED', 'success', 'settled'];
@@ -60,7 +64,7 @@ class DashboardController extends Controller
             ? round(($periodSuccessfulCount / $periodTotalCount) * 100, 2)
             : 0;
 
-        $totalRevenue = Transaction::whereIn('status', $settledStatuses)->sum('amount');
+        $accountBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
 
         $topCustomers = (clone $settledQuery)->whereNotNull('phone')
             ->selectRaw('phone, max(customer_name) as customer_name, max(description) as description, count(*) as count, sum(amount) as total_amount')
@@ -129,10 +133,10 @@ class DashboardController extends Controller
         return view('dashboard.index', [
             'dateFilter' => $dateFilter,
             'periodLabel' => $periodLabel,
+            'accountBalance' => $accountBalance,
             'stats' => [
                 'period_settled_amount' => $periodSettledAmount,
                 'period_successful_count' => $periodSuccessfulCount,
-                'total_revenue' => $totalRevenue,
                 'success_rate' => $successRate,
                 'top_customers' => $topCustomers,
                 'payment_methods' => $paymentMethods,
@@ -141,6 +145,16 @@ class DashboardController extends Controller
             'recentPayments' => $recentPayments,
             'recentBills' => $recentBills,
             'apiStatus' => $apiStatus,
+        ]);
+    }
+
+    public function accountBalance()
+    {
+        $balance = $this->accountBalanceService->getTzsBalance(refresh: true);
+
+        return response()->json([
+            'success' => true,
+            'data' => $balance,
         ]);
     }
 }

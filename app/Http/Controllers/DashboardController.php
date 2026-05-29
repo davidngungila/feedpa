@@ -3,48 +3,66 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\ClickPesaAPIService;
 use App\Models\BillPayNumber;
 use App\Models\Transaction;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    private function settledStatuses(): array
+    {
+        return ['SUCCESS', 'SETTLED', 'success', 'settled'];
+    }
+
+    private function applyDateFilter($query, string $dateFilter, ?string $startDate = null, ?string $endDate = null)
+    {
+        return match ($dateFilter) {
+            'week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
+            'month' => $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]),
+            'quarter' => $query->whereBetween('created_at', [now()->copy()->subMonths(3)->startOfDay(), now()->endOfDay()]),
+            'year' => $query->whereBetween('created_at', [now()->startOfYear(), now()->endOfYear()]),
+            'custom' => ($startDate && $endDate)
+                ? $query->whereBetween('created_at', [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()])
+                : $query->whereDate('created_at', now()->toDateString()),
+            default => $query->whereDate('created_at', now()->toDateString()),
+        };
+    }
+
+    private function periodLabel(string $dateFilter): string
+    {
+        return match ($dateFilter) {
+            'week' => 'This Week',
+            'month' => 'This Month',
+            'quarter' => 'Last 3 Months',
+            'year' => 'This Year',
+            'custom' => 'Selected Period',
+            default => 'Today',
+        };
+    }
+
     public function index(Request $request)
     {
-        $dateFilter = $request->get('date_filter', 'all');
+        $dateFilter = $request->get('date_filter', 'today');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
+        $settledStatuses = $this->settledStatuses();
+        $periodLabel = $this->periodLabel($dateFilter);
 
-        // Build base query for transactions
         $baseQuery = Transaction::query();
-        
-        // Apply date filters to base query
-        if ($dateFilter !== 'all') {
-            if ($dateFilter === 'today') {
-                $baseQuery->whereDate('created_at', now()->toDateString());
-            } elseif ($dateFilter === 'week') {
-                $baseQuery->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]);
-            } elseif ($dateFilter === 'month') {
-                $baseQuery->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]);
-            } elseif ($dateFilter === 'year') {
-                $baseQuery->whereBetween('created_at', [now()->startOfYear(), now()->endOfYear()]);
-            } elseif ($dateFilter === 'custom' && $startDate && $endDate) {
-                $baseQuery->whereBetween('created_at', [$startDate, $endDate]);
-            }
-        }
+        $this->applyDateFilter($baseQuery, $dateFilter, $startDate, $endDate);
 
-        // Get transaction counts and amounts (each uses clone)
-        $totalTransactions = (clone $baseQuery)->count();
-        $successfulTransactions = (clone $baseQuery)->whereIn('status', ['SUCCESS', 'SETTLED', 'success', 'settled'])->count();
-        $pendingTransactions = (clone $baseQuery)->whereIn('status', ['PENDING', 'pending'])->count();
-        $failedTransactions = (clone $baseQuery)->whereIn('status', ['FAILED', 'ERROR', 'failed', 'error'])->count();
-        $totalAmount = (clone $baseQuery)->whereIn('status', ['SUCCESS', 'SETTLED', 'success', 'settled'])->sum('amount');
-        $todayRevenue = Transaction::whereDate('created_at', now()->toDateString())->whereIn('status', ['SUCCESS', 'SETTLED', 'success', 'settled'])->sum('amount');
-        $successRate = $totalTransactions > 0 ? round(($successfulTransactions / $totalTransactions) * 100, 2) : 0;
+        $settledQuery = (clone $baseQuery)->whereIn('status', $settledStatuses);
 
-        // Get top customers
-        $topCustomers = (clone $baseQuery)->whereNotNull('phone')
+        $periodSettledAmount = (clone $settledQuery)->sum('amount');
+        $periodSuccessfulCount = (clone $settledQuery)->count();
+        $periodTotalCount = (clone $baseQuery)->count();
+        $successRate = $periodTotalCount > 0
+            ? round(($periodSuccessfulCount / $periodTotalCount) * 100, 2)
+            : 0;
+
+        $totalRevenue = Transaction::whereIn('status', $settledStatuses)->sum('amount');
+
+        $topCustomers = (clone $settledQuery)->whereNotNull('phone')
             ->selectRaw('phone, max(customer_name) as customer_name, max(description) as description, count(*) as count, sum(amount) as total_amount')
             ->groupBy('phone')
             ->orderByDesc('total_amount')
@@ -60,28 +78,27 @@ class DashboardController extends Controller
             })
             ->toArray();
 
-        // Get payment methods
-        $paymentMethods = (clone $baseQuery)->whereNotNull('payment_method')
+        $paymentMethods = (clone $settledQuery)->whereNotNull('payment_method')
             ->selectRaw('payment_method as name, count(*) as count')
             ->groupBy('payment_method')
             ->orderByDesc('count')
             ->get()
             ->toArray();
 
-        // Daily stats (last 7 days)
         $dailyStats = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->toDateString();
-            $dayTransactions = Transaction::whereDate('created_at', $date);
+            $daySettled = Transaction::whereDate('created_at', $date)
+                ->whereIn('status', $settledStatuses);
+
             $dailyStats[] = [
                 'date' => $date,
-                'count' => $dayTransactions->count(),
-                'amount' => $dayTransactions->sum('amount'),
+                'count' => $daySettled->count(),
+                'amount' => $daySettled->sum('amount'),
             ];
         }
 
-        // Get recent transactions for display (only successful)
-        $recentPayments = (clone $baseQuery)->whereIn('status', ['SUCCESS', 'SETTLED', 'success', 'settled'])
+        $recentPayments = (clone $settledQuery)
             ->orderBy('created_at', 'desc')
             ->limit(10)
             ->get()
@@ -96,47 +113,30 @@ class DashboardController extends Controller
                 ];
             });
 
-        // Get bill stats
-        $billQuery = BillPayNumber::query();
-        $totalBills = $billQuery->count();
-        $activeBills = $billQuery->where('bill_status', 'ACTIVE')->count();
-        $settledBills = $billQuery->where('total_paid', '>', 0)->count();
-        $totalBillAmount = $billQuery->sum('bill_amount');
-        $todayBills = $billQuery->whereDate('created_at', now()->toDateString())->count();
-
-        // Get recent bills
         $recentBills = BillPayNumber::orderBy('created_at', 'desc')
             ->limit(5)
             ->get();
 
-        // Check API connection status
         try {
             $apiStatus = cache()->get('api_status', 'checking');
             if ($apiStatus === 'checking') {
-                // Quick check if needed
-                $apiStatus = 'connected'; // assume connected if cache is not set
+                $apiStatus = 'connected';
             }
         } catch (\Exception $e) {
             $apiStatus = 'disconnected';
         }
 
         return view('dashboard.index', [
+            'dateFilter' => $dateFilter,
+            'periodLabel' => $periodLabel,
             'stats' => [
-                'total_transactions' => $totalTransactions,
-                'successful' => $successfulTransactions,
-                'pending' => $pendingTransactions,
-                'failed' => $failedTransactions,
-                'total_amount' => $totalAmount,
-                'today_revenue' => $todayRevenue,
+                'period_settled_amount' => $periodSettledAmount,
+                'period_successful_count' => $periodSuccessfulCount,
+                'total_revenue' => $totalRevenue,
                 'success_rate' => $successRate,
                 'top_customers' => $topCustomers,
                 'payment_methods' => $paymentMethods,
                 'daily_stats' => $dailyStats,
-                'total_bills' => $totalBills,
-                'active_bills' => $activeBills,
-                'settled_bills' => $settledBills,
-                'total_bill_amount' => $totalBillAmount,
-                'today_bills' => $todayBills,
             ],
             'recentPayments' => $recentPayments,
             'recentBills' => $recentBills,

@@ -82,6 +82,7 @@ class PaymentController extends Controller
 
             // Save transaction to database first (preserve member purpose for later API/sync updates)
             $transaction = Transaction::create([
+                'id' => (string) \Illuminate\Support\Str::uuid(),
                 'order_reference' => $orderReference,
                 'status' => 'PROCESSING',
                 'amount' => $validated['amount'],

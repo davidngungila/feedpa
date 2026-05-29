@@ -372,16 +372,41 @@ class ClickPesaAPIService
     {
         $url = $this->config['api_base_url'] . '/billpay/create-customer-control-number';
 
+        $customerEmail = $customerEmail ? trim($customerEmail) : null;
+        $customerPhone = $customerPhone ? trim($customerPhone) : null;
+
+        if (! $customerEmail && ! $customerPhone) {
+            throw new Exception('Customer email or phone number is required. Provide at least one contact method.');
+        }
+
+        if ($customerPhone) {
+            $normalizedPhone = $this->validatePhoneNumber($customerPhone);
+            if (! $normalizedPhone) {
+                throw new Exception('Phone Number Error: Use format 255712345678 (country code, no + sign).');
+            }
+            $customerPhone = $normalizedPhone;
+        }
+
         $data = [
-            'customerName' => $customerName,
-            'billPaymentMode' => $billPaymentMode
+            'customerName' => trim($customerName),
         ];
 
-        if ($customerEmail) $data['customerEmail'] = $customerEmail;
-        if ($customerPhone) $data['customerPhone'] = $customerPhone;
-        if ($billDescription) $data['billDescription'] = $billDescription;
-        if ($billAmount !== null) $data['billAmount'] = $billAmount;
-        if ($billReference) $data['billReference'] = $billReference;
+        if ($customerEmail) {
+            $data['customerEmail'] = $customerEmail;
+        }
+        if ($customerPhone) {
+            $data['customerPhone'] = $customerPhone;
+        }
+        if ($billDescription) {
+            $data['billDescription'] = trim($billDescription);
+        }
+        if ($billAmount !== null && $billAmount > 0) {
+            $data['billAmount'] = $this->formatAmount($billAmount);
+            $data['billPaymentMode'] = $billPaymentMode;
+        }
+        if ($billReference) {
+            $data['billReference'] = strtoupper(trim($billReference));
+        }
 
         return $this->makeRequest('POST', $url, $data);
     }
@@ -561,8 +586,12 @@ class ClickPesaAPIService
             return "System Error: The payment system is temporarily unavailable. Please try again in a few minutes. If the problem continues, contact support.";
         }
 
-        // Validation errors
+        // Validation errors — surface API message when available
         if ($statusCode === 400) {
+            if (is_string($errorMessage) && trim($errorMessage) !== '' && stripos($errorMessage, 'unknown') === false) {
+                return $errorMessage;
+            }
+
             return "Validation Error: Please check all form fields and ensure all required information is provided correctly.";
         }
 
@@ -583,7 +612,13 @@ class ClickPesaAPIService
             if ($response->successful()) {
                 return $response->json();
             } else {
-                $errorMessage = $response->json('message') ?? $response->body() ?? 'Unknown API error';
+                $errorBody = $response->json();
+                $errorMessage = $errorBody['message'] ?? $response->body() ?? 'Unknown API error';
+
+                if (is_array($errorMessage)) {
+                    $errorMessage = collect($errorMessage)->flatten()->filter()->implode(' ');
+                }
+
                 $userFriendlyMessage = $this->getUserFriendlyErrorMessage($errorMessage, $response->status());
                 throw new Exception($userFriendlyMessage);
             }

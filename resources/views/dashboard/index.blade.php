@@ -31,100 +31,79 @@
         </div>
     </div>
     
+    <!-- Period Filter -->
+    <div class="card p-4">
+        <form method="GET" action="{{ route('dashboard.index') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500 shrink-0">
+                <i class="fas fa-filter me-1"></i> Filter period
+            </p>
+            <div class="flex flex-wrap gap-2">
+                @foreach([
+                    'today' => 'Today',
+                    'week' => 'This Week',
+                    'month' => 'This Month',
+                    'quarter' => '3 Months',
+                    'year' => 'This Year',
+                ] as $value => $label)
+                    <button type="submit" name="date_filter" value="{{ $value }}"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ ($dateFilter ?? 'today') === $value ? 'bg-primary-600 text-white shadow-md' : 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 hover:bg-primary-100' }}">
+                        {{ $label }}
+                    </button>
+                @endforeach
+            </div>
+        </form>
+    </div>
+
     <!-- Stats Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Total Transactions -->
+        <!-- Settled amount for period -->
         <div class="card p-5 flex items-center gap-4">
             <div class="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600 dark:text-primary-400">
-                <i class="fas fa-exchange-alt text-xl"></i>
+                <i class="fas fa-money-bill-wave text-xl"></i>
             </div>
             <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500">Total Payments</p>
-                <h3 class="text-2xl font-black text-primary-900 dark:text-white">{{ number_format($stats['total_transactions'] ?? 0) }}</h3>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500">{{ $periodLabel ?? 'Today' }} Payments</p>
+                <p class="text-[9px] text-primary-400 normal-case">Money settled in period</p>
+                <h3 class="text-xl font-black text-primary-900 dark:text-white mt-1">
+                    <span class="text-xs font-bold text-primary-500">TZS</span> {{ number_format($stats['period_settled_amount'] ?? 0, 0) }}
+                </h3>
             </div>
         </div>
 
-        <!-- Successful Payments -->
+        <!-- Successful count for period -->
         <div class="card p-5 flex items-center gap-4 border-l-4 border-l-green-500">
             <div class="w-12 h-12 rounded-2xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-600">
                 <i class="fas fa-check-double text-xl"></i>
             </div>
             <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Successful</p>
-                <h3 class="text-2xl font-black text-primary-900 dark:text-white">{{ number_format($stats['successful'] ?? 0) }}</h3>
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Successful for {{ strtolower($periodLabel ?? 'today') }}</p>
+                <h3 class="text-2xl font-black text-primary-900 dark:text-white mt-1">{{ number_format($stats['period_successful_count'] ?? 0) }}</h3>
             </div>
         </div>
 
-        <!-- Total Revenue -->
+        <!-- Total account balance (all-time settled) -->
         <div class="card p-5 flex items-center gap-4">
             <div class="w-12 h-12 rounded-2xl bg-primary-600 flex items-center justify-center text-white shadow-lg shadow-primary-900/20">
                 <i class="fas fa-wallet text-xl"></i>
             </div>
             <div>
                 <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500">Total Revenue</p>
-                <h3 class="text-xl font-black text-primary-900 dark:text-white">
-                    <span class="text-xs font-bold text-primary-500">TZS</span> {{ number_format($stats['total_amount'] ?? 0, 0) }}
+                <p class="text-[9px] text-primary-400 normal-case">Full account balance</p>
+                <h3 class="text-xl font-black text-primary-900 dark:text-white mt-1">
+                    <span class="text-xs font-bold text-primary-500">TZS</span> {{ number_format($stats['total_revenue'] ?? 0, 0) }}
                 </h3>
             </div>
         </div>
 
-        <!-- Success Rate -->
+        <!-- Success rate for period -->
         <div class="card p-5 flex items-center gap-4">
             <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
                 <i class="fas fa-chart-pie text-xl"></i>
             </div>
             <div>
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Success Rate</p>
-                <h3 class="text-2xl font-black text-primary-900 dark:text-white">{{ $stats['success_rate'] ?? 0 }}%</h3>
-            </div>
-        </div>
-    </div>
-
-    <!-- Second Stats Grid (Bills) -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Total Bills -->
-        <div class="card p-5 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-600">
-                <i class="fas fa-file-invoice text-xl"></i>
-            </div>
-            <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500">Total Bills</p>
-                <h3 class="text-2xl font-black text-primary-900 dark:text-white">{{ number_format($stats['total_bills'] ?? 0) }}</h3>
-            </div>
-        </div>
-
-        <!-- Active Bills -->
-        <div class="card p-5 flex items-center gap-4 border-l-4 border-l-yellow-500">
-            <div class="w-12 h-12 rounded-2xl bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center text-yellow-600">
-                <i class="fas fa-clock text-xl"></i>
-            </div>
-            <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Active Bills</p>
-                <h3 class="text-2xl font-black text-primary-900 dark:text-white">{{ number_format($stats['active_bills'] ?? 0) }}</h3>
-            </div>
-        </div>
-
-        <!-- Total Bill Amount -->
-        <div class="card p-5 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-pink-600 flex items-center justify-center text-white shadow-lg shadow-pink-900/20">
-                <i class="fas fa-coins text-xl"></i>
-            </div>
-            <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500">Total Bill Amount</p>
-                <h3 class="text-xl font-black text-primary-900 dark:text-white">
-                    <span class="text-xs font-bold text-primary-500">TZS</span> {{ number_format($stats['total_bill_amount'] ?? 0, 0) }}
-                </h3>
-            </div>
-        </div>
-
-        <!-- Today's Bills -->
-        <div class="card p-5 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center text-indigo-600">
-                <i class="fas fa-calendar-day text-xl"></i>
-            </div>
-            <div>
-                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Today's Bills</p>
-                <h3 class="text-2xl font-black text-primary-900 dark:text-white">{{ number_format($stats['today_bills'] ?? 0) }}</h3>
+                <p class="text-[9px] text-primary-400 normal-case">For {{ strtolower($periodLabel ?? 'today') }}</p>
+                <h3 class="text-2xl font-black text-primary-900 dark:text-white mt-1">{{ $stats['success_rate'] ?? 0 }}%</h3>
             </div>
         </div>
     </div>
@@ -134,7 +113,7 @@
         <!-- Daily Transactions Chart -->
         <div class="card p-5">
             <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
-                <i class="fas fa-chart-bar"></i> Daily Transactions (Last 7 Days)
+                <i class="fas fa-chart-bar"></i> Settled Payments (Last 7 Days)
             </h3>
             <div class="h-64">
                 <canvas id="dailyTransactionsChart"></canvas>
@@ -279,7 +258,7 @@
                             <div class="w-full h-1.5 bg-primary-50 dark:bg-dark-900 rounded-full overflow-hidden">
                                 @php 
                                     $methodCount = $method['count'] ?? 0;
-                                    $percent = ($stats['total_transactions'] ?? 0) > 0 ? ($methodCount / $stats['total_transactions'] * 100) : 0;
+                                    $percent = ($stats['period_successful_count'] ?? 0) > 0 ? ($methodCount / $stats['period_successful_count'] * 100) : 0;
                                 @endphp
                                 <div class="h-full bg-primary-600 rounded-full" style="width: {{ $percent }}%"></div>
                             </div>
@@ -307,7 +286,7 @@
             labels: dailyLabels,
             datasets: [
                 {
-                    label: 'Amount (TZS)',
+                    label: 'Settled Amount (TZS)',
                     data: dailyData,
                     backgroundColor: 'rgba(34, 197, 94, 0.7)',
                     borderColor: 'rgba(34, 197, 94, 1)',
@@ -315,7 +294,7 @@
                     yAxisID: 'y'
                 },
                 {
-                    label: 'Transactions',
+                    label: 'Settled Count',
                     data: dailyCounts,
                     backgroundColor: 'rgba(37, 99, 235, 0.7)',
                     borderColor: 'rgba(37, 99, 235, 1)',

@@ -45,11 +45,19 @@ class DashboardController extends Controller
 
         // Get top customers
         $topCustomers = (clone $baseQuery)->whereNotNull('phone')
-            ->selectRaw('phone, description, count(*) as count, sum(amount) as total_amount')
-            ->groupBy('phone', 'description')
+            ->selectRaw('phone, max(customer_name) as customer_name, max(description) as description, count(*) as count, sum(amount) as total_amount')
+            ->groupBy('phone')
             ->orderByDesc('total_amount')
             ->limit(5)
             ->get()
+            ->map(function ($row) {
+                return [
+                    'name' => $row->customer_name ?: $row->description ?: $row->phone,
+                    'phone' => $row->phone,
+                    'count' => (int) $row->count,
+                    'total_amount' => $row->total_amount,
+                ];
+            })
             ->toArray();
 
         // Get payment methods

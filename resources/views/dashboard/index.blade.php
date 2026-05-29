@@ -249,8 +249,8 @@
                                     {{ substr($customer['name'] ?? 'C', 0, 1) }}
                                 </div>
                                 <div>
-                                    <p class="text-xs font-bold text-primary-900 dark:text-white truncate max-w-[120px]">{{ $customer['name'] }}</p>
-                                    <p class="text-[10px] text-primary-500">{{ $customer['count'] }} payments</p>
+                                    <p class="text-xs font-bold text-primary-900 dark:text-white truncate max-w-[120px]">{{ $customer['name'] ?? 'Member' }}</p>
+                                    <p class="text-[10px] text-primary-500">{{ $customer['count'] ?? 0 }} payments</p>
                                 </div>
                             </div>
                             <div class="text-right">

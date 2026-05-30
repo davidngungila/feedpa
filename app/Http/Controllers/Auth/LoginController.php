@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -55,6 +56,8 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
+        Audit::log('logout', 'User logged out');
+        
         Auth::logout();
 
         $request->session()->invalidate();

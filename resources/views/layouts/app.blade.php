@@ -196,6 +196,7 @@
                     </div>
                 </div>
 
+                @if(auth()->check() && auth()->user()->is_admin)
                 <!-- Users Management -->
                 <div class="space-y-0.5">
                     <button @click="openDropdowns.includes('users') ? openDropdowns = openDropdowns.filter(d => d !== 'users') : openDropdowns.push('users')"
@@ -217,8 +218,14 @@
                             <i class="fa-solid fa-circle text-[6px] ml-1"></i>
                             <span>Add User</span>
                         </a>
+                        <a href="{{ route('audits.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('audits.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Audit Logs</span>
+                        </a>
                     </div>
                 </div>
+                @endif
             </nav>
 
             <!-- Sidebar Footer -->

@@ -34,9 +34,13 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
+            
+            Audit::log('login', 'User logged in successfully');
 
             return redirect()->intended('/dashboard');
         }
+        
+        Audit::log('login_failed', "Failed login attempt for email: {$request->email}");
 
         return back()->withErrors([
             'email' => 'The provided credentials do not match our records.',

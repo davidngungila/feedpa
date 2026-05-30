@@ -208,6 +208,8 @@ class BillController extends Controller
         $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
         $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
         
+        Audit::log('view_bill', "Viewed bill: {$bill->bill_pay_number} ({$bill->bill_description})");
+        
         return view('bills.show', compact('bill', 'qrCodeImage', 'transactions'));
     }
 

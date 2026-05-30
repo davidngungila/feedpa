@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -65,7 +66,9 @@ class UserController extends Controller
             $userData['avatar'] = $avatarPath;
         }
 
-        User::create($userData);
+        $user = User::create($userData);
+        
+        Audit::log('create_user', "Created user: {$user->name} ({$user->email})");
 
         return redirect()->route('users.index')->with('success', 'User created successfully');
     }
@@ -136,6 +139,8 @@ class UserController extends Controller
         }
 
         $user->update($userData);
+        
+        Audit::log('update_user', "Updated user: {$user->name} ({$user->email})");
 
         return redirect()->route('users.index')->with('success', 'User updated successfully');
     }
@@ -155,7 +160,13 @@ class UserController extends Controller
             Storage::disk('public')->delete($user->avatar);
         }
 
+        $deletedUserName = $user->name;
+        $deletedUserEmail = $user->email;
+        
         $user->delete();
+        
+        Audit::log('delete_user', "Deleted user: {$deletedUserName} ({$deletedUserEmail})");
+        
         return redirect()->route('users.index')->with('success', 'User deleted successfully');
     }
     
@@ -175,6 +186,8 @@ class UserController extends Controller
         $user->update([
             'password' => Hash::make($newPassword),
         ]);
+        
+        Audit::log('reset_password', "Reset password for user: {$user->name} ({$user->email})");
         
         return back()->with('success', "Password reset successfully! New password: {$newPassword}");
     }

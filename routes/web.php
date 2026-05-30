@@ -9,6 +9,7 @@ use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AuditController;
 
 /*
 |--------------------------------------------------------------------------

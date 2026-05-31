@@ -142,7 +142,7 @@
                     <div class="flex justify-between">
                         <span class="text-xs text-gray-400">Payment Method</span>
                         <span class="text-xs font-bold text-primary-900 dark:text-white uppercase">
-                            {{ $payment['channel'] ?? $payment['paymentMethod'] ?? 'N/A' }}
+                            {{ $payment['channel'] ?? $payment['paymentMethod'] ?? $payment['payment_method'] ?? 'USSD Push' }}
                         </span>
                     </div>
                 </div>

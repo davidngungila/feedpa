@@ -195,15 +195,28 @@ class PaymentController extends Controller
                         'currency' => $transaction->currency,
                         'phone' => $transaction->phone,
                         'payer_name' => $transaction->payer_name,
+                        'customer_name' => $transaction->customer_name,
+                        'email' => $transaction->email,
                         'description' => $transaction->resolvedDescription(),
                         'type' => $transaction->type,
                         'payment_method' => $transaction->payment_method,
+                        'paymentMethod' => $transaction->payment_method,
+                        'channel' => $transaction->payment_method,
                         'sms_sent' => $transaction->sms_sent,
                         'sms_message' => $transaction->sms_message,
                         'sms_sent_at' => $transaction->sms_sent_at,
                         'sms_error' => $transaction->sms_error,
                         'created_at' => $transaction->created_at,
-                        'updated_at' => $transaction->updated_at
+                        'updated_at' => $transaction->updated_at,
+                        'customer' => [
+                            'customerName' => $transaction->customer_name ?? $transaction->payer_name,
+                            'customerPhoneNumber' => $transaction->phone,
+                            'customerEmail' => $transaction->email
+                        ],
+                        'paymentPhoneNumber' => $transaction->phone,
+                        'collectedAmount' => $transaction->amount,
+                        'collectedCurrency' => $transaction->currency,
+                        'createdAt' => $transaction->created_at
                     ];
                     
                     // If status is still PROCESSING or PENDING, try to get updated status from API

@@ -18,9 +18,19 @@ class AccountBalanceService
     public function syncFromApi(string $currency = 'TZS'): ?AccountBalance
     {
         $response = $this->api->getAccountBalance($currency);
+        
+        Log::info('ClickPesa getAccountBalance raw response', [
+            'currency' => $currency,
+            'response' => $response
+        ]);
+        
         $parsed = $this->parseBalanceResponse($response, $currency);
 
         if (! $parsed) {
+            Log::warning('ClickPesa getAccountBalance failed to parse response', [
+                'currency' => $currency,
+                'response' => $response
+            ]);
             return null;
         }
 
@@ -95,6 +105,32 @@ class AccountBalanceService
             return null;
         }
 
+        // Check if response has a top-level 'balances' key
+        if (isset($response['balances']) && is_array($response['balances'])) {
+            foreach ($response['balances'] as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+                $itemCurrency = strtoupper($item['currency'] ?? $defaultCurrency);
+                if ($itemCurrency === strtoupper($defaultCurrency)) {
+                    return [
+                        'currency' => $itemCurrency,
+                        'balance' => (float) ($item['balance'] ?? 0),
+                    ];
+                }
+            }
+
+            // Fallback to first balance in list
+            $first = $response['balances'][0] ?? null;
+            if (is_array($first) && isset($first['balance'])) {
+                return [
+                    'currency' => strtoupper($first['currency'] ?? $defaultCurrency),
+                    'balance' => (float) $first['balance'],
+                ];
+            }
+        }
+
+        // Original logic for backward compatibility
         if (isset($response['balance'])) {
             return [
                 'currency' => strtoupper($response['currency'] ?? $defaultCurrency),

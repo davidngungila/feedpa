@@ -10,4 +10,5 @@ Artisan::command('inspire', function () {
 
 Schedule::command('app:sync-transactions-from-api')->everyFiveMinutes();
 Schedule::command('app:sync-bills-from-api')->everyFiveMinutes();
+Schedule::command('app:sync-click-pesa-payouts')->everyFiveMinutes();
 

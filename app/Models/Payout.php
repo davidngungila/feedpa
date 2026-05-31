@@ -21,12 +21,25 @@ class Payout extends Model
         'bic',
         'description',
         'callback_data',
-        'user_id'
+        'user_id',
+        'channel',
+        'channel_provider',
+        'transfer_type',
+        'fee',
+        'beneficiary_account_number',
+        'beneficiary_account_name',
+        'beneficiary_mobile',
+        'beneficiary_email',
+        'notes',
+        'clickpesa_payout_id',
+        'created_at',
+        'updated_at'
     ];
 
     protected $casts = [
         'callback_data' => 'array',
-        'amount' => 'decimal:2'
+        'amount' => 'decimal:2',
+        'fee' => 'decimal:2'
     ];
 
     public function user(): BelongsTo

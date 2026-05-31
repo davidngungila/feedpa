@@ -228,23 +228,42 @@ class PayoutController extends Controller
     public function syncFromApi()
     {
         try {
-            $apiPayouts = $this->api->queryAllPayouts();
+            $apiPayouts = $this->api->queryAllPayouts(['limit' => 100, 'orderBy' => 'DESC']);
+            $payoutsData = $apiPayouts['data'] ?? $apiPayouts['payouts'] ?? [];
             
-            $payoutsArray = $apiPayouts['payouts'] ?? $apiPayouts;
-            if (is_array($payoutsArray)) {
-                foreach ($payoutsArray as $apiPayout) {
+            if (is_array($payoutsData)) {
+                foreach ($payoutsData as $apiPayout) {
                     $orderRef = $apiPayout['order_reference'] ?? $apiPayout['orderReference'] ?? null;
                     if (!$orderRef) continue;
+
+                    $beneficiary = $apiPayout['beneficiary'] ?? [];
+                    $payoutType = ($apiPayout['channel'] ?? '') === 'BANK TRANSFER' ? 'BANK' : 'MOBILE MONEY';
 
                     Payout::updateOrCreate(
                         ['order_reference' => $orderRef],
                         [
+                            'clickpesa_payout_id' => $apiPayout['id'] ?? null,
                             'transaction_id' => $apiPayout['id'] ?? $apiPayout['transaction_id'] ?? null,
                             'status' => $apiPayout['status'] ?? 'UNKNOWN',
                             'amount' => $apiPayout['amount'] ?? 0,
                             'currency' => $apiPayout['currency'] ?? 'TZS',
-                            'recipient_name' => $apiPayout['recipient_name'] ?? $apiPayout['customerName'] ?? 'N/A',
-                            'recipient_phone' => $apiPayout['recipient_phone'] ?? $apiPayout['phoneNumber'] ?? null,
+                            'fee' => $apiPayout['fee'] ?? 0,
+                            'payout_type' => $payoutType,
+                            'recipient_name' => $beneficiary['accountName'] ?? $apiPayout['recipient_name'] ?? $apiPayout['customerName'] ?? 'N/A',
+                            'recipient_phone' => $beneficiary['beneficiaryMobileNumber'] ?? $apiPayout['recipient_phone'] ?? $apiPayout['phoneNumber'] ?? null,
+                            'bank_name' => $apiPayout['bank_name'] ?? null,
+                            'bank_account_number' => $beneficiary['accountNumber'] ?? $apiPayout['bank_account_number'] ?? null,
+                            'bic' => $beneficiary['bic'] ?? $apiPayout['bic'] ?? null,
+                            'channel' => $apiPayout['channel'] ?? null,
+                            'channel_provider' => $apiPayout['channelProvider'] ?? null,
+                            'transfer_type' => $apiPayout['transferType'] ?? null,
+                            'beneficiary_account_number' => $beneficiary['accountNumber'] ?? null,
+                            'beneficiary_account_name' => $beneficiary['accountName'] ?? null,
+                            'beneficiary_mobile' => $beneficiary['beneficiaryMobileNumber'] ?? null,
+                            'beneficiary_email' => $beneficiary['beneficiaryEmail'] ?? null,
+                            'notes' => $apiPayout['notes'] ?? null,
+                            'created_at' => isset($apiPayout['createdAt']) ? \Carbon\Carbon::parse($apiPayout['createdAt'])->toDateTimeString() : now(),
+                            'updated_at' => isset($apiPayout['updatedAt']) ? \Carbon\Carbon::parse($apiPayout['updatedAt'])->toDateTimeString() : now(),
                             'callback_data' => $apiPayout,
                             'user_id' => auth()->id()
                         ]
@@ -252,18 +271,40 @@ class PayoutController extends Controller
                 }
             }
 
-            return back()->with('success', 'Payouts synced successfully!');
+            return back()->with('success', 'Payouts synced successfully! Total synced: ' . count($payoutsData));
         } catch (\Exception $e) {
-            Log::error('Failed to sync payouts', ['error' => $e->getMessage()]);
+            Log::error('Failed to sync payouts', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return back()->with('error', 'Failed to sync payouts: ' . $e->getMessage());
         }
     }
 
     protected function updatePayoutFromApi(Payout $payout, array $apiData)
     {
+        $beneficiary = $apiData['beneficiary'] ?? [];
+        $payoutType = ($apiData['channel'] ?? '') === 'BANK TRANSFER' ? 'BANK' : 'MOBILE MONEY';
+
         $updateData = [
             'status' => $apiData['status'] ?? $payout->status,
             'transaction_id' => $apiData['id'] ?? $apiData['transaction_id'] ?? $payout->transaction_id,
+            'clickpesa_payout_id' => $apiData['id'] ?? $payout->clickpesa_payout_id,
+            'amount' => $apiData['amount'] ?? $payout->amount,
+            'currency' => $apiData['currency'] ?? $payout->currency,
+            'fee' => $apiData['fee'] ?? $payout->fee,
+            'payout_type' => $payoutType,
+            'recipient_name' => $beneficiary['accountName'] ?? $apiData['recipient_name'] ?? $apiData['customerName'] ?? $payout->recipient_name,
+            'recipient_phone' => $beneficiary['beneficiaryMobileNumber'] ?? $apiData['recipient_phone'] ?? $apiData['phoneNumber'] ?? $payout->recipient_phone,
+            'bank_name' => $apiData['bank_name'] ?? $payout->bank_name,
+            'bank_account_number' => $beneficiary['accountNumber'] ?? $apiData['bank_account_number'] ?? $payout->bank_account_number,
+            'bic' => $beneficiary['bic'] ?? $apiData['bic'] ?? $payout->bic,
+            'channel' => $apiData['channel'] ?? $payout->channel,
+            'channel_provider' => $apiData['channelProvider'] ?? $payout->channel_provider,
+            'transfer_type' => $apiData['transferType'] ?? $payout->transfer_type,
+            'beneficiary_account_number' => $beneficiary['accountNumber'] ?? $payout->beneficiary_account_number,
+            'beneficiary_account_name' => $beneficiary['accountName'] ?? $payout->beneficiary_account_name,
+            'beneficiary_mobile' => $beneficiary['beneficiaryMobileNumber'] ?? $payout->beneficiary_mobile,
+            'beneficiary_email' => $beneficiary['beneficiaryEmail'] ?? $payout->beneficiary_email,
+            'notes' => $apiData['notes'] ?? $payout->notes,
+            'updated_at' => isset($apiData['updatedAt']) ? \Carbon\Carbon::parse($apiData['updatedAt'])->toDateTimeString() : now(),
             'callback_data' => $apiData
         ];
         $payout->update($updateData);

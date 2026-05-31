@@ -156,16 +156,47 @@
                 <button type="submit" class="px-4 py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
                     <i class="fas fa-check-circle me-2"></i> Verify Payout
                 </button>
-                <form action="{{ route('payouts.resend-otp', $payout->order_reference) }}" method="POST">
-                    @csrf
-                    <button type="submit"
-                            class="w-full flex items-center justify-center px-4 py-3 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 dark:hover:bg-dark-800 transition-all">
-                        <i class="fas fa-redo me-2"></i> Resend OTP
-                    </button>
-                </form>
+                <button type="button" id="resendOtpBtn"
+                        class="flex items-center justify-center px-4 py-3 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 dark:hover:bg-dark-800 transition-all">
+                    <i class="fas fa-redo me-2"></i> Resend OTP
+                </button>
             </div>
         </form>
     </div>
 
 </div>
+
+@push('scripts')
+<script>
+document.getElementById('resendOtpBtn').addEventListener('click', async function() {
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
+    
+    try {
+        const response = await fetch('{{ route('payouts.resend-otp', $payout->order_reference) }}', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Accept': 'application/json'
+            },
+            redirect: 'follow'
+        });
+        
+        if (response.ok) {
+            // Reload the page to show success message
+            window.location.reload();
+        } else {
+            throw new Error('Failed to resend OTP');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to resend OTP. Please try again.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-redo me-2"></i> Resend OTP';
+    }
+});
+</script>
+@endpush
 @endsection

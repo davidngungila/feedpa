@@ -24,10 +24,22 @@ class ClickPesaAPIService
     {
         $url = $this->config['api_base_url'] . '/generate-token';
 
+        Log::info('ClickPesa generateToken request', [
+            'url' => $url,
+            'api_key_present' => !empty($this->config['api_key']),
+            'client_id_present' => !empty($this->config['client_id'])
+        ]);
+
         $response = Http::withHeaders([
             'api-key' => $this->config['api_key'],
             'client-id' => $this->config['client_id']
         ])->timeout(30)->post($url);
+
+        Log::info('ClickPesa generateToken response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'json' => $response->json()
+        ]);
 
         if ($response->successful() && $response->json('success')) {
             $rawToken = $response->json('token');
@@ -40,7 +52,8 @@ class ClickPesaAPIService
             return $rawToken;
         }
 
-        throw new Exception('Failed to generate token: ' . ($response->json('message') ?? 'Unknown error'));
+        $errorMessage = $response->json('message') ?? $response->body() ?? 'Unknown error';
+        throw new Exception('Failed to generate token: ' . $errorMessage);
     }
 
     /**

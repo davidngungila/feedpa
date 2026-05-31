@@ -233,7 +233,7 @@ class PayoutController extends Controller
             
             if (is_array($payoutsData)) {
                 foreach ($payoutsData as $apiPayout) {
-                    $orderRef = $apiPayout['order_reference'] ?? $apiPayout['orderReference'] ?? null;
+                    $orderRef = $apiPayout['order_reference'] ?? $apiPayout['orderReference'] ?? $apiPayout['id'] ?? null;
                     if (!$orderRef) continue;
 
                     $beneficiary = $apiPayout['beneficiary'] ?? [];
@@ -265,7 +265,7 @@ class PayoutController extends Controller
                             'created_at' => isset($apiPayout['createdAt']) ? \Carbon\Carbon::parse($apiPayout['createdAt'])->toDateTimeString() : now(),
                             'updated_at' => isset($apiPayout['updatedAt']) ? \Carbon\Carbon::parse($apiPayout['updatedAt'])->toDateTimeString() : now(),
                             'callback_data' => $apiPayout,
-                            'user_id' => auth()->id()
+                            'user_id' => auth()->check() ? auth()->id() : null
                         ]
                     );
                 }

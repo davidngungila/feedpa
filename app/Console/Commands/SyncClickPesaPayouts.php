@@ -37,7 +37,7 @@ class SyncClickPesaPayouts extends Command
 
             $syncedCount = 0;
             foreach ($payoutsData as $apiPayout) {
-                $orderRef = $apiPayout['order_reference'] ?? $apiPayout['orderReference'] ?? null;
+                $orderRef = $apiPayout['order_reference'] ?? $apiPayout['orderReference'] ?? $apiPayout['id'] ?? null;
                 if (!$orderRef) continue;
 
                 $beneficiary = $apiPayout['beneficiary'] ?? [];
@@ -68,7 +68,8 @@ class SyncClickPesaPayouts extends Command
                         'notes' => $apiPayout['notes'] ?? null,
                         'created_at' => isset($apiPayout['createdAt']) ? \Carbon\Carbon::parse($apiPayout['createdAt'])->toDateTimeString() : now(),
                         'updated_at' => isset($apiPayout['updatedAt']) ? \Carbon\Carbon::parse($apiPayout['updatedAt'])->toDateTimeString() : now(),
-                        'callback_data' => $apiPayout
+                        'callback_data' => $apiPayout,
+                        'user_id' => null
                     ]
                 );
 

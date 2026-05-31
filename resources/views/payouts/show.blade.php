@@ -7,7 +7,7 @@
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
             <h2 class="text-2xl font-black text-primary-900 dark:text-white flex items-center gap-2">
-                <i class="fas fa-check-circle text-primary-500"></i>
+                <i class="fas fa-wallet text-primary-500"></i>
                 Payout Status
             </h2>
             <p class="text-xs text-primary-500 mt-1">Reference: {{ $payout->order_reference }}</p>

@@ -55,7 +55,20 @@
                 <div class="flex items-center gap-6">
                     <!-- QR Code Section -->
                     <div class="p-3 bg-white rounded-2xl border border-primary-100 shadow-sm flex-shrink-0">
-                        {!! QrCode::size(100)->margin(1)->generate(request()->fullUrl()) !!}
+                        @php
+                            $qrContent = "ClickPesa Payment Receipt\n" .
+                                       "Order Reference: " . ($payment['orderReference'] ?? 'N/A') . "\n" .
+                                       "Transaction ID: " . ($payment['id'] ?? $payment['transaction_id'] ?? 'N/A') . "\n" .
+                                       "Amount: " . number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) . " " . ($payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS') . "\n" .
+                                       "Status: " . ($payment['status'] ?? 'UNKNOWN') . "\n" .
+                                       "Phone: " . ($payment['paymentPhoneNumber'] ?? $payment['phone'] ?? 'N/A') . "\n" .
+                                       "Channel: " . ($payment['channel'] ?? $payment['payment_method'] ?? 'N/A') . "\n" .
+                                       "Member: " . ($payment['customer_name'] ?? $payment['customer']['customerName'] ?? $payment['payer_name'] ?? 'N/A') . "\n" .
+                                       "Payer: " . ($payment['payer_name'] ?? 'N/A') . "\n" .
+                                       "Description: " . ($payment['description'] ?? 'N/A') . "\n" .
+                                       "Date: " . (isset($payment['createdAt']) ? \Carbon\Carbon::parse($payment['createdAt'])->format('Y-m-d H:i:s') : 'N/A');
+                        @endphp
+                        {!! QrCode::size(100)->margin(1)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent) !!}
                     </div>
                     <div>
                         <div class="text-[10px] text-primary-500 uppercase font-extrabold tracking-widest mb-1">Order Reference</div>

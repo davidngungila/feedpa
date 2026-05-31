@@ -56,7 +56,7 @@
                     <!-- QR Code Section -->
                     <div class="p-3 bg-white rounded-2xl border border-primary-100 shadow-sm flex-shrink-0">
                         @php
-                            $qrContent = "ClickPesa Payment Receipt\n" .
+                            $qrContent = "FEEDTAN DIGITAL PAYMENT SYSTEM\n" .
                                        "Order Reference: " . ($payment['orderReference'] ?? 'N/A') . "\n" .
                                        "Transaction ID: " . ($payment['id'] ?? $payment['transaction_id'] ?? 'N/A') . "\n" .
                                        "Amount: " . number_format($payment['collectedAmount'] ?? $payment['amount'] ?? 0, 2) . " " . ($payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS') . "\n" .

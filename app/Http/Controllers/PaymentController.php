@@ -638,7 +638,7 @@ class PaymentController extends Controller
             }
 
             // Generate QR code with full payment details
-            $qrContent = "ClickPesa Payment Receipt\n" .
+            $qrContent = "FEEDTAN DIGITAL PAYMENT SYSTEM\n" .
                        "Order Reference: " . ($paymentData['orderReference'] ?? 'N/A') . "\n" .
                        "Transaction ID: " . ($paymentData['id'] ?? $paymentData['transaction_id'] ?? 'N/A') . "\n" .
                        "Amount: " . number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 2) . " " . ($paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS') . "\n" .

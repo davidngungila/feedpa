@@ -48,6 +48,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/receipt/{orderReference}', [PaymentController::class, 'receipt'])->name('receipt');
         Route::post('/api/status', [PaymentController::class, 'apiStatus'])->name('api.status');
         Route::post('/resend-ussd', [PaymentController::class, 'resendUssd'])->name('resend-ussd');
+        Route::post('/{orderReference}/notes', [PaymentController::class, 'addNote'])->name('notes.add');
     });
 
     // Account Routes

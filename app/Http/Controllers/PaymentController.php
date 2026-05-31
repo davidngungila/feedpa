@@ -25,6 +25,22 @@ class PaymentController extends Controller
         $this->messaging = $messaging;
     }
 
+    public function addNote(Request $request, $orderReference)
+    {
+        $request->validate([
+            'content' => 'required|string|max:1000'
+        ]);
+
+        $transaction = Transaction::where('order_reference', $orderReference)->firstOrFail();
+
+        $transaction->notes()->create([
+            'user_id' => auth()->id(),
+            'content' => $request->content
+        ]);
+
+        return back()->with('success', 'Note added successfully!');
+    }
+
     /**
      * Show initiate payment form
      */
@@ -185,6 +201,9 @@ class PaymentController extends Controller
                 if ($transaction) {
                     Log::info('Transaction found in database', ['reference' => $orderReference, 'transaction_id' => $transaction->id]);
                     
+                    // Load notes
+                    $transaction->load('notes.user');
+                    
                     // Convert transaction to array format expected by view
                     $paymentData = [
                         'id' => $transaction->id,
@@ -216,7 +235,8 @@ class PaymentController extends Controller
                         'paymentPhoneNumber' => $transaction->phone,
                         'collectedAmount' => $transaction->amount,
                         'collectedCurrency' => $transaction->currency,
-                        'createdAt' => $transaction->created_at
+                        'createdAt' => $transaction->created_at,
+                        'notes' => $transaction->notes
                     ];
                     
                     // If status is still PROCESSING or PENDING, try to get updated status from API

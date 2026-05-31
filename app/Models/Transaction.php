@@ -51,4 +51,9 @@ class Transaction extends Model
     {
         return $this->resolvedDescription();
     }
+
+    public function notes()
+    {
+        return $this->hasMany(TransactionNote::class)->latest();
+    }
 }

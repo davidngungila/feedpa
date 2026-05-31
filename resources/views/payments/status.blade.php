@@ -159,6 +159,47 @@
             </div>
         </div>
 
+        <!-- Notes Card -->
+        <div class="card p-6">
+            <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 mb-3 flex items-center gap-2">
+                <i class="fas fa-comment-alt"></i> Notes
+            </h3>
+            
+            @if(auth()->check())
+                <form action="{{ route('payments.notes.add', $payment['orderReference']) }}" method="POST" class="mb-4">
+                    @csrf
+                    <div class="flex gap-2">
+                        <input type="text" name="content" required maxlength="1000" placeholder="Add a note..."
+                               class="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        <button type="submit"
+                                class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
+                            Save
+                        </button>
+                    </div>
+                </form>
+            @endif
+            
+            @if(isset($payment['notes']) && count($payment['notes']) > 0)
+                <div class="space-y-3">
+                    @foreach($payment['notes'] as $note)
+                        <div class="p-3 bg-gray-50 dark:bg-dark-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                    {{ $note->user->name ?? 'Unknown User' }}
+                                </span>
+                                <span class="text-xs text-gray-500">
+                                    {{ $note->created_at->format('M d, Y h:i A') }}
+                                </span>
+                            </div>
+                            <p class="text-sm text-gray-800 dark:text-gray-200">{{ $note->content }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            @else
+                <p class="text-sm text-gray-500 italic">No notes yet.</p>
+            @endif
+        </div>
+
         <!-- Action Buttons -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
@@ -178,9 +219,6 @@
             </button>
             <button onclick="alert('Sending Email...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
                 <i class="fas fa-envelope"></i> Email
-            </button>
-            <button onclick="const c=prompt('Comment:'); if(c) alert('Saved')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                <i class="fas fa-comment-alt"></i> Note
             </button>
         </div>
     @endif

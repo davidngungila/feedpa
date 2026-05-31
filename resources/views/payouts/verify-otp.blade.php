@@ -156,10 +156,13 @@
                 <button type="submit" class="px-4 py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
                     <i class="fas fa-check-circle me-2"></i> Verify Payout
                 </button>
-                <a href="{{ route('payouts.resend-otp', $payout->order_reference) }}"
-                   class="flex items-center justify-center px-4 py-3 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 dark:hover:bg-dark-800 transition-all">
-                    <i class="fas fa-redo me-2"></i> Resend OTP
-                </a>
+                <form action="{{ route('payouts.resend-otp', $payout->order_reference) }}" method="POST">
+                    @csrf
+                    <button type="submit"
+                            class="w-full flex items-center justify-center px-4 py-3 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 dark:hover:bg-dark-800 transition-all">
+                        <i class="fas fa-redo me-2"></i> Resend OTP
+                    </button>
+                </form>
             </div>
         </form>
     </div>

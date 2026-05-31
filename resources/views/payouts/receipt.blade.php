@@ -196,7 +196,7 @@
                  </tr> 
                  <tr> 
                      <td class="label">Description:</td> 
-                     <td class="value">{{ strtoupper((!empty($payoutData['description']) && $payoutData['description'] !== 'N/A' ? $payoutData['description'] : ($payoutData['notes'] ?? 'Malipo kutoka FEEDTAN')) }}</td> 
+                     <td class="value">{{ strtoupper((!empty($payoutData['description']) && $payoutData['description'] !== 'N/A' ? $payoutData['description'] : ($payoutData['notes'] ?? 'Malipo kutoka FEEDTAN'))) }}</td> 
                  </tr> 
                  <tr> 
                      <td class="label">Payout Mode:</td> 

@@ -439,7 +439,35 @@ class PayoutController extends Controller
             }
         }
 
-        return view('payouts.show', compact('payout'));
+        // Prepare payout data array
+        $payoutData = $payout->toArray();
+        $payoutData['beneficiary'] = [
+            'accountName' => $payout->beneficiary_account_name ?? $payout->recipient_name,
+            'accountNumber' => $payout->beneficiary_account_number ?? $payout->bank_account_number,
+            'beneficiaryMobileNumber' => $payout->beneficiary_mobile ?? $payout->recipient_phone,
+            'beneficiaryEmail' => $payout->beneficiary_email
+        ];
+
+        // Get notes
+        $notes = $payout->notes;
+
+        return view('payouts.show', compact('payout', 'payoutData', 'orderReference', 'notes'));
+    }
+
+    public function addNote(Request $request, string $orderReference)
+    {
+        $validated = $request->validate([
+            'content' => 'required|string|max:1000'
+        ]);
+
+        $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
+
+        $payout->notes()->create([
+            'user_id' => auth()->id(),
+            'content' => $validated['content']
+        ]);
+
+        return back()->with('success', 'Note added successfully!');
     }
 
     public function refreshStatus(string $orderReference)

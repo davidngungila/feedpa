@@ -62,6 +62,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReference}/resend-otp', [PayoutController::class, 'resendOtp'])->name('resend-otp');
         Route::get('/{orderReference}', [PayoutController::class, 'show'])->name('status');
         Route::post('/{orderReference}/refresh', [PayoutController::class, 'refreshStatus'])->name('refresh');
+        Route::post('/{orderReference}/notes', [PayoutController::class, 'addNote'])->name('notes.add');
         Route::post('/sync', [PayoutController::class, 'syncFromApi'])->name('sync');
         Route::get('/export/pdf', [PayoutController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/export/excel', [PayoutController::class, 'exportExcel'])->name('export.excel');

@@ -87,10 +87,8 @@ class PayoutController extends Controller
                 );
             }
 
-            // Update payout with transaction ID if available
-            if (isset($apiResponse['id'])) {
-                $payout->update(['transaction_id' => $apiResponse['id']]);
-            }
+            // Save complete API response and update payout
+            $this->updatePayoutFromApi($payout, $apiResponse);
 
             return redirect()->route('payouts.status', $orderReference)
                             ->with('success', 'Payout initiated successfully!');
@@ -129,6 +127,40 @@ class PayoutController extends Controller
         } catch (\Exception $e) {
             Log::error('Failed to refresh payout status', ['error' => $e->getMessage()]);
             return back()->with('error', 'Failed to refresh status: ' . $e->getMessage());
+        }
+    }
+
+    public function syncFromApi()
+    {
+        try {
+            $apiPayouts = $this->api->queryAllPayouts();
+            
+            $payoutsArray = $apiPayouts['payouts'] ?? $apiPayouts;
+            if (is_array($payoutsArray)) {
+                foreach ($payoutsArray as $apiPayout) {
+                    $orderRef = $apiPayout['order_reference'] ?? $apiPayout['orderReference'] ?? null;
+                    if (!$orderRef) continue;
+
+                    Payout::updateOrCreate(
+                        ['order_reference' => $orderRef],
+                        [
+                            'transaction_id' => $apiPayout['id'] ?? $apiPayout['transaction_id'] ?? null,
+                            'status' => $apiPayout['status'] ?? 'UNKNOWN',
+                            'amount' => $apiPayout['amount'] ?? 0,
+                            'currency' => $apiPayout['currency'] ?? 'TZS',
+                            'recipient_name' => $apiPayout['recipient_name'] ?? $apiPayout['customerName'] ?? 'N/A',
+                            'recipient_phone' => $apiPayout['recipient_phone'] ?? $apiPayout['phoneNumber'] ?? null,
+                            'callback_data' => $apiPayout,
+                            'user_id' => auth()->id()
+                        ]
+                    );
+                }
+            }
+
+            return back()->with('success', 'Payouts synced successfully!');
+        } catch (\Exception $e) {
+            Log::error('Failed to sync payouts', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Failed to sync payouts: ' . $e->getMessage());
         }
     }
 

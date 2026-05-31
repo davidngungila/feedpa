@@ -5,22 +5,28 @@
 @section('content')
 <div class="space-y-6 animate-fade-in">
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-            <h2 class="text-2xl font-black text-primary-900 dark:text-white flex items-center gap-2">
-                <i class="fas fa-arrow-right-from-bracket text-primary-500"></i>
-                Payout History
-            </h2>
-            <p class="text-xs text-primary-500 mt-1">View and manage all payouts.</p>
+            <div>
+                <h2 class="text-2xl font-black text-primary-900 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-arrow-right-from-bracket text-primary-500"></i>
+                    Payout History
+                </h2>
+                <p class="text-xs text-primary-500 mt-1">View and manage all payouts.</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ route('dashboard.index') }}" class="px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border text-xs font-bold text-primary-600 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                    <i class="fas fa-home me-1"></i> Dashboard
+                </a>
+                <form action="{{ route('payouts.sync') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-black text-white transition-all">
+                        <i class="fas fa-sync-alt me-1"></i> Sync Payouts
+                    </button>
+                </form>
+                <a href="{{ route('payouts.create') }}" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-xs font-black text-white transition-all">
+                    <i class="fas fa-plus me-1"></i> New Payout
+                </a>
+            </div>
         </div>
-        <div class="flex gap-2">
-            <a href="{{ route('dashboard.index') }}" class="px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border text-xs font-bold text-primary-600 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
-                <i class="fas fa-home me-1"></i> Dashboard
-            </a>
-            <a href="{{ route('payouts.create') }}" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-xs font-black text-white transition-all">
-                <i class="fas fa-plus me-1"></i> New Payout
-            </a>
-        </div>
-    </div>
 
     @if(session('error'))
         <div class="card p-4 border-l-4 border-l-red-500 bg-red-50/60 dark:bg-red-900/10">

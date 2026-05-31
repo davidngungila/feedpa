@@ -58,6 +58,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/', [PayoutController::class, 'store'])->name('store');
         Route::get('/{orderReference}', [PayoutController::class, 'show'])->name('status');
         Route::post('/{orderReference}/refresh', [PayoutController::class, 'refreshStatus'])->name('refresh');
+        Route::post('/sync', [PayoutController::class, 'syncFromApi'])->name('sync');
     });
 
     // Account Routes

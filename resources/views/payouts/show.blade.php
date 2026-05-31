@@ -80,8 +80,8 @@
                     </div>
 
                     <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
-                        <p class="text-[10px] font-bold text-primary-500 uppercase">Recipient Name</p>
-                        <p class="text-sm font-semibold text-primary-900 dark:text-white">{{ $payout->recipient_name }}</p>
+                        <p class="text-[10px] font-bold text-primary-500 uppercase">Fee</p>
+                        <p class="text-sm font-semibold text-primary-900 dark:text-white">{{ $payout->currency }} {{ number_format($payout->fee ?? 0, 2) }}</p>
                     </div>
 
                     <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
@@ -91,6 +91,25 @@
                         </p>
                     </div>
 
+                    @if($payout->channel)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">Channel</p>
+                            <p class="text-sm font-semibold text-primary-900 dark:text-white">{{ $payout->channel }}</p>
+                        </div>
+                    @endif
+
+                    @if($payout->channel_provider)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">Channel Provider</p>
+                            <p class="text-sm font-semibold text-primary-900 dark:text-white">{{ $payout->channel_provider }}</p>
+                        </div>
+                    @endif
+
+                    <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                        <p class="text-[10px] font-bold text-primary-500 uppercase">Recipient Name</p>
+                        <p class="text-sm font-semibold text-primary-900 dark:text-white">{{ $payout->recipient_name }}</p>
+                    </div>
+
                     @if($payout->recipient_phone)
                         <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
                             <p class="text-[10px] font-bold text-primary-500 uppercase">Phone Number</p>
@@ -98,10 +117,45 @@
                         </div>
                     @endif
 
+                    @if($payout->beneficiary_mobile)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">Beneficiary Phone</p>
+                            <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $payout->beneficiary_mobile }}</p>
+                        </div>
+                    @endif
+
+                    @if($payout->beneficiary_email)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">Beneficiary Email</p>
+                            <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $payout->beneficiary_email }}</p>
+                        </div>
+                    @endif
+
                     @if($payout->bank_name)
                         <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
-                            <p class="text-[10px] font-bold text-primary-500 uppercase">Bank Details</p>
-                            <p class="text-xs text-primary-900 dark:text-white">{{ $payout->bank_name }} • {{ $payout->bank_account_number }}</p>
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">Bank</p>
+                            <p class="text-xs text-primary-900 dark:text-white">{{ $payout->bank_name }}</p>
+                        </div>
+                    @endif
+
+                    @if($payout->bank_account_number)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">Bank Account</p>
+                            <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $payout->bank_account_number }}</p>
+                        </div>
+                    @endif
+
+                    @if($payout->beneficiary_account_name)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">Account Name</p>
+                            <p class="text-sm font-semibold text-primary-900 dark:text-white">{{ $payout->beneficiary_account_name }}</p>
+                        </div>
+                    @endif
+
+                    @if($payout->bic)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">BIC/SWIFT</p>
+                            <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $payout->bic }}</p>
                         </div>
                     @endif
 
@@ -110,23 +164,50 @@
                         <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $payout->order_reference }}</p>
                     </div>
 
-                    <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
-                        <p class="text-[10px] font-bold text-primary-500 uppercase">Transaction ID</p>
-                        <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $payout->transaction_id ?? '-' }}</p>
-                    </div>
+                    @if($payout->transaction_id)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">Transaction ID</p>
+                            <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $payout->transaction_id }}</p>
+                        </div>
+                    @endif
+
+                    @if($payout->clickpesa_payout_id)
+                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                            <p class="text-[10px] font-bold text-primary-500 uppercase">ClickPesa ID</p>
+                            <p class="text-sm font-mono text-primary-900 dark:text-white">{{ $payout->clickpesa_payout_id }}</p>
+                        </div>
+                    @endif
 
                     <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
                         <p class="text-[10px] font-bold text-primary-500 uppercase">Date Created</p>
                         <p class="text-sm text-primary-900 dark:text-white">{{ $payout->created_at->format('M d, Y h:i A') }}</p>
                     </div>
+
+                    <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl">
+                        <p class="text-[10px] font-bold text-primary-500 uppercase">Last Updated</p>
+                        <p class="text-sm text-primary-900 dark:text-white">{{ $payout->updated_at->format('M d, Y h:i A') }}</p>
+                    </div>
                 </div>
 
-                @if($payout->description)
-                    <div class="mt-4">
-                        <p class="text-[10px] font-bold text-primary-500 uppercase mb-1">Description</p>
-                        <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl italic text-xs text-primary-800 dark:text-primary-300">
-                            {{ $payout->description }}
-                        </div>
+                @if($payout->description || $payout->notes)
+                    <div class="mt-4 space-y-4">
+                        @if($payout->description)
+                            <div>
+                                <p class="text-[10px] font-bold text-primary-500 uppercase mb-1">Description</p>
+                                <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl italic text-xs text-primary-800 dark:text-primary-300">
+                                    {{ $payout->description }}
+                                </div>
+                            </div>
+                        @endif
+                        
+                        @if($payout->notes)
+                            <div>
+                                <p class="text-[10px] font-bold text-primary-500 uppercase mb-1">Notes</p>
+                                <div class="p-3 bg-primary-50 dark:bg-dark-800 rounded-xl text-xs text-primary-800 dark:text-primary-300">
+                                    {{ $payout->notes }}
+                                </div>
+                            </div>
+                        @endif
                     </div>
                 @endif
             </div>

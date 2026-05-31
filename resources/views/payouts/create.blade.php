@@ -7,7 +7,7 @@
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
             <h2 class="text-2xl font-black text-primary-900 dark:text-white flex items-center gap-2">
-                <i class="fas fa-arrow-right-from-bracket text-primary-500"></i>
+                <i class="fas fa-wallet text-primary-500"></i>
                 Create Payout
             </h2>
             <p class="text-xs text-primary-500 mt-1">Initiate a secure payout via Mobile Money or Bank transfer.</p>
@@ -161,7 +161,7 @@
 
                 <div class="flex flex-wrap gap-2">
                     <button type="submit" id="submitBtn" class="px-5 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-black transition-all">
-                        <i class="fas fa-paper-plane me-1"></i> Initiate Payout
+                        <i class="fas fa-paper-plane me-1"></i> Continue to Verify
                     </button>
                     <button type="button" id="resetBtn" class="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-dark-border dark:hover:bg-dark-700 text-xs font-bold text-gray-700 dark:text-gray-200 transition-all">
                         <i class="fas fa-rotate-left me-1"></i> Reset
@@ -192,9 +192,9 @@
             <div class="card p-5">
                 <h3 class="text-xs font-black text-primary-900 dark:text-white uppercase tracking-wider mb-4">Process</h3>
                 <div class="space-y-3 text-[11px]">
-                    <p class="text-primary-700 dark:text-primary-300"><span class="font-black">1.</span> Enter recipient and payout details.</p>
-                    <p class="text-primary-700 dark:text-primary-300"><span class="font-black">2.</span> Submit to initiate the payout.</p>
-                    <p class="text-primary-700 dark:text-primary-300"><span class="font-black">3.</span> Track status from history page.</p>
+                    <p class="text-primary-700 dark:text-primary-300"><span class="font-black">1.</span> Enter payout details</p>
+                    <p class="text-primary-700 dark:text-primary-300"><span class="font-black">2.</span> Verify OTP sent to your phone</p>
+                    <p class="text-primary-700 dark:text-primary-300"><span class="font-black">3.</span> Payout is initiated securely</p>
                 </div>
             </div>
         </div>

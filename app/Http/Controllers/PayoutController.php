@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payout;
+use App\Models\PayoutOtp;
 use App\Services\ClickPesaAPIService;
+use App\Services\MessagingServiceAPI;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -11,10 +13,12 @@ use Illuminate\Support\Str;
 class PayoutController extends Controller
 {
     protected ClickPesaAPIService $api;
+    protected MessagingServiceAPI $sms;
 
-    public function __construct(ClickPesaAPIService $api)
+    public function __construct(ClickPesaAPIService $api, MessagingServiceAPI $sms)
     {
         $this->api = $api;
+        $this->sms = $sms;
     }
 
     public function index(Request $request)
@@ -54,7 +58,7 @@ class PayoutController extends Controller
             $orderReference = $this->api->generateOrderReference('FEEDTANPAY');
             $payout = Payout::create([
                 'order_reference' => $orderReference,
-                'status' => 'PENDING',
+                'status' => 'PENDING_VERIFICATION',
                 'amount' => $validated['amount'],
                 'currency' => $validated['currency'],
                 'payout_type' => $validated['payout_type'],
@@ -67,21 +71,80 @@ class PayoutController extends Controller
                 'user_id' => auth()->id()
             ]);
 
+            // Generate and send OTP
+            $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            $adminPhone = auth()->user()->phone ?? '255712345678'; // Use authenticated user's phone or default
+            
+            $payoutOtp = PayoutOtp::create([
+                'payout_id' => $payout->id,
+                'user_id' => auth()->id(),
+                'otp' => $otp,
+                'phone' => $adminPhone,
+                'expires_at' => now()->addMinutes(10),
+                'is_verified' => false
+            ]);
+
+            // Send SMS with full details and OTP
+            $smsMessage = "FEEDTAN PAYOUT REQUEST:\n";
+            $smsMessage .= "Reference: {$orderReference}\n";
+            $smsMessage .= "Amount: {$validated['amount']} {$validated['currency']}\n";
+            $smsMessage .= "Recipient: {$validated['recipient_name']}\n";
+            $smsMessage .= $validated['payout_type'] === 'MOBILE_MONEY' ? "Phone: {$validated['recipient_phone']}\n" : "Bank: {$validated['bank_name']}\nAcc: {$validated['bank_account_number']}\n";
+            $smsMessage .= "Description: {$validated['description']}\n";
+            $smsMessage .= "OTP: {$otp}\n";
+            $smsMessage .= "Expires in 10 minutes.\nDo not share.";
+
+            $this->sms->sendSMS($adminPhone, $smsMessage);
+
+            return redirect()->route('payouts.verify-otp', $orderReference);
+
+        } catch (\Exception $e) {
+            Log::error('Payout initiation failed', ['error' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage())->withInput();
+        }
+    }
+
+    public function showVerifyOtp(string $orderReference)
+    {
+        $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
+        return view('payouts.verify-otp', compact('payout'));
+    }
+
+    public function verifyOtp(Request $request, string $orderReference)
+    {
+        $validated = $request->validate([
+            'otp' => 'required|string|size:6'
+        ]);
+
+        try {
+            $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
+            $otpRecord = PayoutOtp::where('payout_id', $payout->id)
+                ->where('is_verified', false)
+                ->where('expires_at', '>', now())
+                ->latest()
+                ->firstOrFail();
+
+            if ($otpRecord->otp !== $validated['otp']) {
+                return back()->with('error', 'Invalid OTP');
+            }
+
+            $otpRecord->update(['is_verified' => true]);
+
             // Initiate payout via ClickPesa
-            if ($validated['payout_type'] === 'MOBILE_MONEY') {
+            if ($payout->payout_type === 'MOBILE_MONEY') {
                 $apiResponse = $this->api->createMobileMoneyPayout(
-                    $validated['amount'],
-                    $validated['recipient_phone'],
-                    $validated['currency'],
+                    $payout->amount,
+                    $payout->recipient_phone,
+                    $payout->currency,
                     $orderReference
                 );
             } else {
                 $apiResponse = $this->api->createBankPayout(
-                    $validated['amount'],
-                    $validated['currency'],
-                    $validated['bank_account_number'],
-                    $validated['recipient_name'],
-                    $validated['bic'],
+                    $payout->amount,
+                    $payout->currency,
+                    $payout->bank_account_number,
+                    $payout->recipient_name,
+                    $payout->bic,
                     'ACH',
                     $orderReference
                 );
@@ -94,8 +157,40 @@ class PayoutController extends Controller
                             ->with('success', 'Payout initiated successfully!');
 
         } catch (\Exception $e) {
-            Log::error('Payout initiation failed', ['error' => $e->getMessage()]);
-            return back()->with('error', $e->getMessage())->withInput();
+            Log::error('OTP verification failed', ['error' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
+    public function resendOtp(string $orderReference)
+    {
+        try {
+            $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
+            
+            // Generate new OTP
+            $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
+            $adminPhone = auth()->user()->phone ?? '255712345678';
+            
+            $payoutOtp = PayoutOtp::create([
+                'payout_id' => $payout->id,
+                'user_id' => auth()->id(),
+                'otp' => $otp,
+                'phone' => $adminPhone,
+                'expires_at' => now()->addMinutes(10),
+                'is_verified' => false
+            ]);
+
+            // Send SMS
+            $smsMessage = "FEEDTAN PAYOUT REQUEST:\n";
+            $smsMessage .= "Reference: {$orderReference}\n";
+            $smsMessage .= "New OTP: {$otp}\n";
+            $smsMessage .= "Expires in 10 minutes.\nDo not share.";
+            $this->sms->sendSMS($adminPhone, $smsMessage);
+
+            return back()->with('success', 'OTP resent successfully');
+        } catch (\Exception $e) {
+            Log::error('OTP resend failed', ['error' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage());
         }
     }
 

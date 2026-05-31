@@ -57,6 +57,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [PayoutController::class, 'index'])->name('index');
         Route::get('/create', [PayoutController::class, 'create'])->name('create');
         Route::post('/', [PayoutController::class, 'store'])->name('store');
+        Route::get('/{orderReference}/verify', [PayoutController::class, 'showVerifyOtp'])->name('verify-otp');
+        Route::post('/{orderReference}/verify', [PayoutController::class, 'verifyOtp'])->name('verify');
+        Route::post('/{orderReference}/resend-otp', [PayoutController::class, 'resendOtp'])->name('resend-otp');
         Route::get('/{orderReference}', [PayoutController::class, 'show'])->name('status');
         Route::post('/{orderReference}/refresh', [PayoutController::class, 'refreshStatus'])->name('refresh');
         Route::post('/sync', [PayoutController::class, 'syncFromApi'])->name('sync');

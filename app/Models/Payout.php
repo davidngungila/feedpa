@@ -33,4 +33,9 @@ class Payout extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function otps()
+    {
+        return $this->hasMany(PayoutOtp::class);
+    }
 }

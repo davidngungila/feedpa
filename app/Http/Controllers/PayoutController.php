@@ -9,6 +9,8 @@ use App\Services\MessagingServiceAPI;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class PayoutController extends Controller
 {
@@ -23,16 +25,245 @@ class PayoutController extends Controller
 
     public function index(Request $request)
     {
-        $status = $request->get('status', 'all');
-        $query = Payout::orderBy('created_at', 'desc');
+        $activeStatus = $request->get('status', 'SUCCESS');
+        $selectedColumns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'recipient_name', 'recipient_phone', 'payout_type', 'created_at']);
+        $availableColumns = [
+            'order_reference' => 'Reference',
+            'transaction_id' => 'Transaction ID',
+            'status' => 'Status',
+            'amount' => 'Amount',
+            'currency' => 'Currency',
+            'fee' => 'Fee',
+            'recipient_name' => 'Recipient Name',
+            'recipient_phone' => 'Recipient Phone',
+            'beneficiary_account_name' => 'Beneficiary Account Name',
+            'beneficiary_account_number' => 'Beneficiary Account Number',
+            'beneficiary_mobile' => 'Beneficiary Mobile',
+            'beneficiary_email' => 'Beneficiary Email',
+            'payout_type' => 'Payout Type',
+            'channel' => 'Channel',
+            'channel_provider' => 'Channel Provider',
+            'transfer_type' => 'Transfer Type',
+            'created_at' => 'Created At',
+            'updated_at' => 'Updated At',
+        ];
 
-        if ($status !== 'all') {
-            $query->where('status', $status);
+        $query = Payout::query();
+
+        $this->applyHistoryTabFilter($query, $activeStatus);
+        if ($request->filled('currency')) {
+            $query->where('currency', $request->currency);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($subQuery) use ($search) {
+                $subQuery->where('order_reference', 'like', '%' . $search . '%')
+                    ->orWhere('transaction_id', 'like', '%' . $search . '%')
+                    ->orWhere('recipient_name', 'like', '%' . $search . '%')
+                    ->orWhere('beneficiary_account_name', 'like', '%' . $search . '%')
+                    ->orWhere('recipient_phone', 'like', '%' . $search . '%')
+                    ->orWhere('beneficiary_mobile', 'like', '%' . $search . '%')
+                    ->orWhere('beneficiary_account_number', 'like', '%' . $search . '%');
+            });
+        }
+        if ($request->filled('start_date')) {
+            $query->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $query->whereDate('created_at', '<=', $request->end_date);
         }
 
-        $payouts = $query->paginate(20);
+        $payouts = $query->orderBy('created_at', 'desc')->paginate(20);
 
-        return view('payouts.index', compact('payouts', 'status'));
+        // Get count stats
+        $successCount = Payout::whereIn('status', ['SUCCESS', 'SETTLED'])->count();
+        $failedCount = Payout::whereIn('status', ['FAILED', 'ERROR', 'CANCELLED'])->count();
+        $pendingCount = Payout::whereNotIn('status', ['SUCCESS', 'SETTLED', 'FAILED', 'ERROR', 'CANCELLED'])->count();
+
+        return view('payouts.index', compact(
+            'payouts',
+            'activeStatus',
+            'selectedColumns',
+            'availableColumns',
+            'successCount',
+            'failedCount',
+            'pendingCount'
+        ));
+    }
+    
+    protected function applyHistoryTabFilter($query, $status)
+    {
+        switch (strtoupper($status)) {
+            case 'SUCCESS':
+            case 'SETTLED':
+                $query->whereIn('status', ['SUCCESS', 'SETTLED']);
+                break;
+            case 'FAILED':
+            case 'ERROR':
+            case 'CANCELLED':
+                $query->whereIn('status', ['FAILED', 'ERROR', 'CANCELLED']);
+                break;
+            case 'PENDING':
+                $query->whereNotIn('status', ['SUCCESS', 'SETTLED', 'FAILED', 'ERROR', 'CANCELLED']);
+                break;
+        }
+    }
+    
+    /**
+     * Export payout history to PDF
+     */
+    public function exportPdf(Request $request)
+    {
+        try {
+            // Check if this is a single payout receipt request
+            if ($request->filled('order_reference') && !$request->filled('bulk')) {
+                return $this->receipt($request->order_reference);
+            }
+
+            // Get filtered payouts from database
+            $query = Payout::query();
+
+            $this->applyHistoryTabFilter($query, $request->get('status', 'SUCCESS'));
+            if ($request->filled('currency')) {
+                $query->where('currency', $request->currency);
+            }
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('order_reference', 'like', '%' . $search . '%')
+                        ->orWhere('transaction_id', 'like', '%' . $search . '%')
+                        ->orWhere('recipient_name', 'like', '%' . $search . '%')
+                        ->orWhere('beneficiary_account_name', 'like', '%' . $search . '%')
+                        ->orWhere('recipient_phone', 'like', '%' . $search . '%');
+                });
+            }
+            if ($request->filled('start_date')) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->filled('end_date')) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+
+            $payouts = $query->orderBy('created_at', 'desc')->get()->toArray();
+            
+            // Selected columns
+            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'fee', 'recipient_name', 'recipient_phone', 'beneficiary_account_name', 'beneficiary_account_number', 'beneficiary_mobile', 'beneficiary_email', 'payout_type', 'channel', 'channel_provider', 'transfer_type', 'created_at', 'updated_at'];
+            $columns = array_values(array_intersect($request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'recipient_name', 'payout_type', 'created_at']), $allowedColumns));
+            if (empty($columns)) {
+                $columns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'recipient_name', 'payout_type', 'created_at'];
+            }
+
+            $pdf = Pdf::loadView('payouts.exports.pdf', [
+                'payouts' => $payouts,
+                'columns' => $columns
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOption('margin-bottom', 10);
+
+            return $pdf->download('payout-history-' . date('Y-m-d') . '.pdf');
+        } catch (\Exception $e) {
+            Log::error('PDF export failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to export PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Export payout history to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        try {
+            // Get filtered payouts from database
+            $query = Payout::query();
+
+            $this->applyHistoryTabFilter($query, $request->get('status', 'SUCCESS'));
+            if ($request->filled('currency')) {
+                $query->where('currency', $request->currency);
+            }
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($subQuery) use ($search) {
+                    $subQuery->where('order_reference', 'like', '%' . $search . '%')
+                        ->orWhere('transaction_id', 'like', '%' . $search . '%')
+                        ->orWhere('recipient_name', 'like', '%' . $search . '%')
+                        ->orWhere('beneficiary_account_name', 'like', '%' . $search . '%')
+                        ->orWhere('recipient_phone', 'like', '%' . $search . '%');
+                });
+            }
+            if ($request->filled('start_date')) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->filled('end_date')) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+
+            $payouts = $query->orderBy('created_at', 'desc')->get()->toArray();
+            
+            // Selected columns
+            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'fee', 'recipient_name', 'recipient_phone', 'beneficiary_account_name', 'beneficiary_account_number', 'beneficiary_mobile', 'beneficiary_email', 'payout_type', 'channel', 'channel_provider', 'transfer_type', 'created_at', 'updated_at'];
+            $columns = array_values(array_intersect($request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'recipient_name', 'payout_type', 'created_at', 'updated_at']), $allowedColumns));
+            if (empty($columns)) {
+                $columns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'recipient_name', 'payout_type', 'created_at', 'updated_at'];
+            }
+
+            return Excel::download(new \App\Exports\PaymentHistoryExport($payouts, $columns), 'payout-history-' . date('Y-m-d') . '.xlsx');
+        } catch (\Exception $e) {
+            Log::error('Excel export failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generate payout receipt PDF
+     */
+    public function receipt($orderReference)
+    {
+        try {
+            $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
+            
+            $payoutData = [
+                'orderReference' => $payout->order_reference,
+                'transaction_id' => $payout->transaction_id ?? $payout->clickpesa_payout_id,
+                'status' => $payout->status,
+                'amount' => $payout->amount,
+                'currency' => $payout->currency,
+                'fee' => $payout->fee,
+                'payout_type' => $payout->payout_type,
+                'channel' => $payout->channel,
+                'channel_provider' => $payout->channel_provider,
+                'transfer_type' => $payout->transfer_type,
+                'recipient_name' => $payout->recipient_name ?? $payout->beneficiary_account_name,
+                'recipient_phone' => $payout->recipient_phone ?? $payout->beneficiary_mobile,
+                'beneficiary' => [
+                    'accountName' => $payout->beneficiary_account_name ?? $payout->recipient_name,
+                    'accountNumber' => $payout->beneficiary_account_number ?? $payout->bank_account_number,
+                    'beneficiaryMobileNumber' => $payout->beneficiary_mobile ?? $payout->recipient_phone,
+                    'beneficiaryEmail' => $payout->beneficiary_email
+                ],
+                'description' => $payout->resolvedDescription(),
+                'createdAt' => $payout->created_at,
+                'id' => $payout->clickpesa_payout_id ?? $payout->transaction_id
+            ];
+            
+            // Generate QR code
+            $qrContent = "FEEDTAN PAYOUT RECEIPT:\n" .
+                        "Reference: {$orderReference}\n" .
+                        "Amount: {$payoutData['amount']} {$payoutData['currency']}\n" .
+                        "Status: {$payoutData['status']}\n" .
+                        "Date: " . (isset($payoutData['createdAt']) ? \Carbon\Carbon::parse($payoutData['createdAt'])->format('Y-m-d H:i:s') : 'N/A');
+            
+            $qrCodeSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
+            $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
+
+            $pdf = Pdf::loadView('payouts.receipt', ['payoutData' => $payoutData, 'qrCodeImage' => $qrCodeImage])
+                ->setPaper('a4', 'portrait')
+                ->setOption('margin-bottom', 20);
+
+            return $pdf->download('payout-receipt-' . $orderReference . '.pdf');
+        } catch (\Exception $e) {
+            Log::error('Receipt generation failed: ' . $e->getMessage());
+            return back()->with('error', 'Failed to generate receipt: ' . $e->getMessage());
+        }
     }
 
     public function create()

@@ -51,4 +51,13 @@ class Payout extends Model
     {
         return $this->hasMany(PayoutOtp::class);
     }
+    
+    public function resolvedDescription()
+    {
+        $callbackData = $this->callback_data ?? [];
+        return $this->description 
+            ?? $callbackData['notes'] 
+            ?? $callbackData['description']
+            ?? 'N/A';
+    }
 }

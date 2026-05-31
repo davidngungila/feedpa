@@ -37,10 +37,26 @@
 
     <!-- Payment History -->
     <li class="menu-item {{ request()->routeIs('payments.history') ? 'active' : '' }}">
-      <a href="{{ route('payments.history') }}" class="menu-link">
-        <i class="menu-icon tf-icons bx bx-history"></i>
-        <div data-i18n="Payment History">Payment History</div>
-      </a>
+        <a href="{{ route('payments.history') }}" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-history"></i>
+            <div data-i18n="Payment History">Payment History</div>
+        </a>
+    </li>
+
+    <!-- Create Payout -->
+    <li class="menu-item {{ request()->routeIs('payouts.create') ? 'active' : '' }}">
+        <a href="{{ route('payouts.create') }}" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-money-withdraw"></i>
+            <div data-i18n="Create Payout">Create Payout</div>
+        </a>
+    </li>
+
+    <!-- Payout History -->
+    <li class="menu-item {{ request()->routeIs('payouts.index') ? 'active' : '' }}">
+        <a href="{{ route('payouts.index') }}" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-list-check"></i>
+            <div data-i18n="Payout History">Payout History</div>
+        </a>
     </li>
 
     <!-- Generate statement -->

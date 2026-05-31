@@ -51,6 +51,15 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReference}/notes', [PaymentController::class, 'addNote'])->name('notes.add');
     });
 
+    // Payout Routes (Authenticated)
+    Route::prefix('payouts')->name('payouts.')->group(function () {
+        Route::get('/', [PayoutController::class, 'index'])->name('index');
+        Route::get('/create', [PayoutController::class, 'create'])->name('create');
+        Route::post('/', [PayoutController::class, 'store'])->name('store');
+        Route::get('/{orderReference}', [PayoutController::class, 'show'])->name('status');
+        Route::post('/{orderReference}/refresh', [PayoutController::class, 'refreshStatus'])->name('refresh');
+    });
+
     // Account Routes
     Route::prefix('account')->name('account.')->group(function () {
         Route::get('/', [AccountController::class, 'index'])->name('index');

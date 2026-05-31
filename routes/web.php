@@ -39,15 +39,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/sync-bills', [DashboardController::class, 'syncBills'])->name('sync-bills');
     });
 
-    // Payment Routes
+    // Payment Routes (Authenticated)
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/create', [PaymentController::class, 'create'])->name('create');
-        Route::post('/', [PaymentController::class, 'store'])->name('store');
-        Route::post('/store', [PaymentController::class, 'store'])->name('store.alt'); // Add explicit /store route
-        Route::get('/store', function() {
-            return redirect('/payment')->with('info', 'Please use the payment form to submit payments.');
-        }); // Handle direct access to /store
-        Route::get('/status', [PaymentController::class, 'status'])->name('status');
         Route::get('/history', [PaymentController::class, 'history'])->name('history');
         Route::get('/export/pdf', [PaymentController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/export/excel', [PaymentController::class, 'exportExcel'])->name('export.excel');
@@ -108,6 +102,16 @@ Route::middleware(['auth'])->group(function () {
 Route::get('/payment', function () {
     return view('public.swahili-payment');
 })->name('public.payment');
+
+// Public Payment Routes (No authentication required)
+Route::prefix('payments')->name('payments.')->group(function () {
+    Route::post('/', [PaymentController::class, 'store'])->name('store');
+    Route::post('/store', [PaymentController::class, 'store'])->name('store.alt'); // Add explicit /store route
+    Route::get('/store', function() {
+        return redirect('/payment')->with('info', 'Please use the payment form to submit payments.');
+    }); // Handle direct access to /store
+    Route::get('/status', [PaymentController::class, 'status'])->name('status');
+});
 
 // Callback/Webhook Routes
 Route::prefix('webhooks')->name('webhooks.')->group(function () {

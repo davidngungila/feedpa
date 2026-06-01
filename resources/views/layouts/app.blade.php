@@ -301,6 +301,35 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- System Settings -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('settings') ? openDropdowns = openDropdowns.filter(d => d !== 'settings') : openDropdowns.push('settings')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('settings.*') ? 'bg-primary-800/60 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-cog w-4 text-center"></i>
+                            <span>System Settings</span>
+                        </div>
+                        <i :class="openDropdowns.includes('settings') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('settings') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('settings.sms') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('settings.sms') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>SMS Settings</span>
+                        </a>
+                        <a href="{{ route('settings.email') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('settings.email') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Email Settings</span>
+                        </a>
+                        <a href="{{ route('settings.general') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('settings.general') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>General Settings</span>
+                        </a>
+                    </div>
+                </div>
                 @endif
             </nav>
 

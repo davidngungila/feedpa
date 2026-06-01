@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\BillPayNumber;
 use App\Models\Transaction;
 use App\Services\AccountBalanceService;
 use Carbon\Carbon;
@@ -115,10 +114,6 @@ class DashboardController extends Controller
                 ];
             });
 
-        $recentBills = BillPayNumber::orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
-
         try {
             $apiStatus = cache()->get('api_status', 'checking');
             if ($apiStatus === 'checking') {
@@ -143,7 +138,6 @@ class DashboardController extends Controller
                 'status_stats' => $statusStats,
             ],
             'recentPayments' => $recentPayments,
-            'recentBills' => $recentBills,
             'apiStatus' => $apiStatus,
         ]);
     }

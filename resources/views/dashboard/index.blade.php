@@ -230,37 +230,8 @@
             </div>
         </div>
 
-        <!-- Right Column: Recent Bills + Top Customers + Payment Channels -->
+        <!-- Right Column: Top Customers + Payment Channels -->
         <div class="space-y-4">
-            <!-- Recent Bills -->
-            <div>
-                <h3 class="font-bold text-primary-900 dark:text-white flex items-center gap-2">
-                    <i class="fas fa-file-invoice-dollar text-purple-500"></i> Recent Bills
-                </h3>
-                <div class="card p-4 space-y-3">
-                    @forelse($recentBills ?? [] as $bill)
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 font-bold text-xs uppercase">
-                                    {{ substr($bill->customer_name ?? 'B', 0, 1) }}
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold text-primary-900 dark:text-white truncate max-w-[120px]">{{ $bill->bill_description ?? $bill->customer_name ?? 'Bill' }}</p>
-                                    <p class="text-[10px] text-primary-500">{{ $bill->bill_pay_number ?? 'N/A' }}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs font-black text-purple-600 dark:text-purple-400">{{ number_format($bill->bill_amount ?? 0, 0) }}</p>
-                                <p class="text-[9px] text-gray-400 uppercase font-bold">{{ $bill->bill_currency ?? 'TZS' }}</p>
-                            </div>
-                        </div>
-                    @empty
-                        <p class="text-center py-4 text-primary-500 text-xs italic">No bills yet</p>
-                    @endforelse
-                    <a href="{{ route('bills.index') }}" class="text-center text-xs font-bold text-primary-600 hover:underline block mt-2">View All Bills</a>
-                </div>
-            </div>
-
             <!-- Top Customers -->
             <div>
                 <h3 class="font-bold text-primary-900 dark:text-white flex items-center gap-2">

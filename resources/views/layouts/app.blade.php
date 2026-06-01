@@ -220,6 +220,35 @@
                     </div>
                 </div>
 
+                <!-- Financial Reports Dropdown -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('reports') ? openDropdowns = openDropdowns.filter(d => d !== 'reports') : openDropdowns.push('reports')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('reports.*') ? 'bg-primary-800/60 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-chart-bar w-4 text-center"></i>
+                            <span>Financial Reports</span>
+                        </div>
+                        <i :class="openDropdowns.includes('reports') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('reports') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('reports.trial-balance') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('reports.trial-balance') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Trial Balance</span>
+                        </a>
+                        <a href="{{ route('reports.balance-sheet') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('reports.balance-sheet') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Balance Sheet</span>
+                        </a>
+                        <a href="{{ route('reports.profit-loss') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('reports.profit-loss') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Profit & Loss</span>
+                        </a>
+                    </div>
+                </div>
+
                 @if(auth()->check() && auth()->user()->is_admin)
                 <!-- Users Management -->
                 <div class="space-y-0.5">

@@ -425,7 +425,11 @@ class PaymentController extends Controller
             Log::warning('No order reference in request');
         }
 
-        return view('payments.status', compact('paymentData', 'error', 'orderReference'));
+        // Check if user is authenticated, use appropriate view
+        if (auth()->check()) {
+            return view('payments.status', compact('paymentData', 'error', 'orderReference'));
+        }
+        return view('public.status', compact('paymentData', 'error', 'orderReference'));
     }
 
     /**

@@ -47,8 +47,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/history', [PaymentController::class, 'history'])->name('history');
         Route::get('/export/pdf', [PaymentController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/export/excel', [PaymentController::class, 'exportExcel'])->name('export.excel');
-        Route::get('/receipt/{orderReference}', [PaymentController::class, 'receipt'])->name('receipt');
-        Route::post('/api/status', [PaymentController::class, 'apiStatus'])->name('api.status');
         Route::post('/resend-ussd', [PaymentController::class, 'resendUssd'])->name('resend-ussd');
         Route::post('/{orderReference}/notes', [PaymentController::class, 'addNote'])->name('notes.add');
     });
@@ -141,6 +139,8 @@ Route::prefix('payments')->name('payments.')->group(function () {
         return redirect('/payment')->with('info', 'Please use the payment form to submit payments.');
     }); // Handle direct access to /store
     Route::get('/status', [PaymentController::class, 'status'])->name('status');
+    Route::get('/receipt/{orderReference}', [PaymentController::class, 'receipt'])->name('receipt');
+    Route::post('/api/status', [PaymentController::class, 'apiStatus'])->name('api.status');
 });
 
 // Callback/Webhook Routes

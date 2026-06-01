@@ -12,6 +12,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -112,6 +113,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit', [UserController::class, 'editProfile'])->name('edit');
         Route::put('/update', [UserController::class, 'updateProfile'])->name('update');
         Route::put('/change-password', [UserController::class, 'updatePassword'])->name('password');
+    });
+    
+    // Settings Routes (Admin Only)
+    Route::prefix('settings')->name('settings.')->group(function () {
+        Route::get('/sms', [SettingsController::class, 'sms'])->name('sms');
+        Route::get('/email', [SettingsController::class, 'email'])->name('email');
+        Route::get('/general', [SettingsController::class, 'general'])->name('general');
+        Route::post('/email/update', [SettingsController::class, 'updateEmail'])->name('email.update');
     });
     
     // Sync Trigger Routes

@@ -124,5 +124,35 @@
         </li>
       </ul>
     </li>
+
+    <!-- System Settings (Admin Only) -->
+    @if(auth()->user()->is_admin)
+    <li class="menu-item {{ request()->routeIs('settings.*') ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons bx bx-cog"></i>
+        <div data-i18n="System Settings">System Settings</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('settings.sms') ? 'active' : '' }}">
+          <a href="{{ route('settings.sms') }}" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-message-rounded"></i>
+            <div data-i18n="SMS Settings">SMS Settings</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('settings.email') ? 'active' : '' }}">
+          <a href="{{ route('settings.email') }}" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-envelope"></i>
+            <div data-i18n="Email Settings">Email Settings</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('settings.general') ? 'active' : '' }}">
+          <a href="{{ route('settings.general') }}" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-slideshow"></i>
+            <div data-i18n="General Settings">General Settings</div>
+          </a>
+        </li>
+      </ul>
+    </li>
+    @endif
   </ul>
 </aside>

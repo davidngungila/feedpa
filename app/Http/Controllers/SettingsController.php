@@ -180,15 +180,15 @@ class SettingsController extends Controller
     {
         $this->checkAdmin();
         $validated = $request->validate([
-            'session_timeout' => 'nullable|integer|min:5|max:1440',
-            'api_timeout' => 'nullable|integer|min:5|max:300',
+            'session_timeout' => 'nullable|numeric|min:0.1|max:1440',
+            'api_timeout' => 'nullable|integer|min:1|max:300',
             'site_name' => 'nullable|string|max:255',
             'site_description' => 'nullable|string',
             'payment_notifications_enabled' => 'nullable',
             'payout_notifications_enabled' => 'nullable',
         ]);
 
-        SystemSetting::set('session_timeout', $validated['session_timeout'] ?? 120, 'integer', 'general', 'Session Timeout (minutes)', 'How long until session expires');
+        SystemSetting::set('session_timeout', $validated['session_timeout'] ?? 120, 'number', 'general', 'Session Timeout (minutes)', 'How long until session expires');
         SystemSetting::set('api_timeout', $validated['api_timeout'] ?? 30, 'integer', 'general', 'API Timeout (seconds)', 'API request timeout');
         SystemSetting::set('site_name', $validated['site_name'] ?? 'FEEDTAN CMG', 'string', 'general', 'Site Name', 'Name of the website');
         SystemSetting::set('site_description', $validated['site_description'] ?? '', 'string', 'general', 'Site Description', 'Short description of the site');

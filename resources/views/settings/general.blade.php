@@ -123,7 +123,7 @@
                     </div>
                     <div>
                         <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Session Timeout (minutes)</div>
-                        <input type="number" name="session_timeout" value="{{ old('session_timeout', $sessionTimeout) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="120" min="5" max="1440">
+                        <input type="number" name="session_timeout" value="{{ old('session_timeout', $sessionTimeout) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="120" step="any" min="0.1" max="1440">
                     </div>
                     <div>
                         <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">API Timeout (seconds)</div>

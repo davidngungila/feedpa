@@ -95,7 +95,8 @@
             <div class="relative">
               <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
               <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="you@example.com"
-                     class="form-input pl-9"/>
+                     class="form-input pl-9"
+                     @keypress.enter="submitLogin()"/>
             </div>
             @error('email')
               <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
@@ -108,7 +109,8 @@
             <div class="relative">
               <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
               <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="••••••••"
-                     class="form-input pl-9"/>
+                     class="form-input pl-9"
+                     @keypress.enter="submitLogin()"/>
             </div>
             @error('password')
               <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>

@@ -11,16 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 class SettingsController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-        $this->middleware(function ($request, $next) {
-            if (!auth()->user()->is_admin) {
-                abort(403, 'Unauthorized');
-            }
-            return $next($request);
-        });
-    }
+
 
     public function sms()
     {

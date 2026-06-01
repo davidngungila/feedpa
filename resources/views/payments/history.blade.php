@@ -7,11 +7,19 @@
     <!-- Status Tabs -->
     <div class="card p-1">
         <div class="flex gap-1">
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'ALL', 'page' => 1]) }}"
+               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status', 'ALL')) === 'ALL' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
+                <i class="fas fa-list"></i>
+                ALL
+                <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status', 'ALL')) === 'ALL' ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/40' }}">
+                    {{ number_format($allCount ?? 0) }}
+                </span>
+            </a>
             <a href="{{ request()->fullUrlWithQuery(['status' => 'SETTLED', 'page' => 1]) }}"
-               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status', 'SETTLED')) !== 'FAILED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
+               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'SETTLED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
                 <i class="fas fa-check-circle"></i>
                 SETTLED
-                <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status', 'SETTLED')) !== 'FAILED' ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/40' }}">
+                <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status')) === 'SETTLED' ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/40' }}">
                     {{ number_format($settledCount ?? 0) }}
                 </span>
             </a>
@@ -266,7 +274,13 @@
                                     </div>
                                     <h4 class="font-bold text-primary-900 dark:text-white">No Transactions Found</h4>
                                     <p class="text-xs text-primary-500">
-                                        No {{ ($activeStatus ?? 'SETTLED') === 'FAILED' ? 'failed' : 'settled' }} payments match your filters.
+                                        @if(($activeStatus ?? 'ALL') === 'ALL')
+                                            No payments match your filters.
+                                        @elseif(($activeStatus ?? 'ALL') === 'FAILED')
+                                            No failed payments match your filters.
+                                        @else
+                                            No settled payments match your filters.
+                                        @endif
                                     </p>
                                 </div>
                             </td>

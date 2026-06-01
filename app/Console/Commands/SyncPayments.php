@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 use App\Services\MessagingServiceAPI;
 use App\Support\TransactionFieldResolver;
@@ -19,7 +20,7 @@ class SyncPayments extends Command
      *
      * @var string
      */
-    protected $signature = 'payments:sync {--days=1 : Number of days to look back} {--force-sms : Force sending SMS for all synced transactions} {--daemon : Run as a daemon for real-time polling} {--interval=5 : Sleep interval in seconds for daemon mode}';
+    protected $signature = 'payments:sync {--days=1 : Number of days to look back} {--force-sms : Force sending SMS for all synced transactions} {--daemon : Run as a daemon for real-time polling} {--interval=1 : Sleep interval in seconds for daemon mode}';
 
     /**
      * The description of the console command.
@@ -45,7 +46,7 @@ class SyncPayments extends Command
     {
         if ($this->option('daemon')) {
             $interval = (int) $this->option('interval');
-            $this->info("Starting Real-Time Sync Daemon (Polling every {$interval} seconds)...");
+            $this->info("Starting Real-Time Sync Daemon (Polling every {$interval} second(s))...");
             
             while (true) {
                 $this->performSync();
@@ -84,7 +85,9 @@ class SyncPayments extends Command
             $response = $this->api->queryAllPayments($params);
             
             if (!isset($response['data']) || empty($response['data'])) {
-                $this->warn("No payments found in the specified range.");
+                if (!$this->option('daemon')) {
+                    $this->warn("No payments found in the specified range.");
+                }
                 Log::info("SyncPayments: No payments found.");
                 return 0;
             }
@@ -112,7 +115,6 @@ class SyncPayments extends Command
                  );
 
                  $data = [
-                     'order_reference' => $orderReference,
                      'transaction_id' => $paymentData['id'] ?? $paymentData['transaction_id'] ?? null,
                      'status' => $paymentData['status'] ?? 'UNKNOWN',
                      'amount' => $paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0,
@@ -144,6 +146,8 @@ class SyncPayments extends Command
                     $transaction->update($data);
                     $synced++;
                 } else {
+                    $data['id'] = (string) Str::uuid();
+                    $data['order_reference'] = $orderReference;
                     $data['type'] = 'payment';
                     $data['created_at'] = isset($paymentData['createdAt']) ? Carbon::parse($paymentData['createdAt']) : now();
                     $transaction = Transaction::create($data);
@@ -173,7 +177,7 @@ class SyncPayments extends Command
 
             if (!$this->option('daemon')) {
                 $this->info("Sync complete. Total processed: {$total}. Synced: {$synced}. Created: {$created}. SMS Sent: {$smsSent}");
-            } else if ($created > 0 || $statusChanged > 0 || $smsSent > 0) {
+            } else if ($created > 0 || $synced > 0 || $smsSent > 0) {
                 // In daemon mode, only output to console if something actually happened
                 $this->info(now()->format('Y-m-d H:i:s') . " - New/Updated transactions found! Created: {$created}, Updated: {$synced}, SMS Sent: {$smsSent}");
             }

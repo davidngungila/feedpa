@@ -433,7 +433,7 @@ class PaymentController extends Controller
      */
     public function history(Request $request)
     {
-        $activeStatus = $request->get('status', 'SETTLED');
+        $activeStatus = $request->get('status', 'ALL');
         $selectedColumns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']);
         $availableColumns = [
             'order_reference' => 'Reference',
@@ -487,6 +487,7 @@ class PaymentController extends Controller
         $totalCount = $query->count();
         $payments = $query->orderBy('created_at', 'desc')->paginate($request->get('limit', 20));
 
+        $allCount = Transaction::where('type', 'payment')->count();
         $settledCount = Transaction::where('type', 'payment')->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
         $failedCount = Transaction::where('type', 'payment')->whereIn('status', ['FAILED', 'ERROR'])->count();
         
@@ -499,6 +500,7 @@ class PaymentController extends Controller
         return view('payments.history', compact(
             'payments',
             'totalCount',
+            'allCount',
             'settledCount',
             'failedCount',
             'activeStatus',
@@ -1004,10 +1006,12 @@ class PaymentController extends Controller
         }
     }
 
-    private function applyHistoryTabFilter($query, string $activeStatus = 'SETTLED'): void
+    private function applyHistoryTabFilter($query, string $activeStatus = 'ALL'): void
     {
         if ($activeStatus === 'FAILED') {
             $query->whereIn('status', ['FAILED', 'ERROR']);
+        } elseif ($activeStatus === 'ALL') {
+            // No filter - show all transactions
         } else {
             $query->whereIn('status', ['SETTLED', 'SUCCESS']);
         }

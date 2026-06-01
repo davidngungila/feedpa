@@ -89,10 +89,10 @@ class Audit extends Model
         $timezone = null;
 
         if ($ip && in_array($ip, ['127.0.0.1', '::1', 'localhost'])) {
-            // For local testing, default to Dar es Salaam
+            // For local testing, default to Arusha
             return [
                 'country' => 'Tanzania',
-                'city' => 'Dar es Salaam',
+                'city' => 'Arusha',
                 'timezone' => 'Africa/Dar_es_Salaam'
             ];
         }

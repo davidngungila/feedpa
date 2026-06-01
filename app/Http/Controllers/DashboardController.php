@@ -89,18 +89,16 @@ class DashboardController extends Controller
             ->get()
             ->toArray();
 
-        $dailyStats = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i)->toDateString();
-            $daySettled = Transaction::whereDate('created_at', $date)
-                ->whereIn('status', $settledStatuses);
-
-            $dailyStats[] = [
-                'date' => $date,
-                'count' => $daySettled->count(),
-                'amount' => $daySettled->sum('amount'),
-            ];
-        }
+        // Get date range for period stats
+        $dateRange = $this->getDateRange($dateFilter, $startDate, $endDate);
+        $dailyStats = $this->generateDailyStats($dateRange['start'], $dateRange['end'], $settledStatuses);
+        $monthlyStats = $this->generateMonthlyStats($dateRange['start'], $dateRange['end'], $settledStatuses);
+        $statusStats = (clone $baseQuery)
+            ->selectRaw('status, count(*) as count, sum(amount) as amount')
+            ->groupBy('status')
+            ->orderByDesc('count')
+            ->get()
+            ->toArray();
 
         $recentPayments = (clone $settledQuery)
             ->orderBy('created_at', 'desc')
@@ -141,11 +139,65 @@ class DashboardController extends Controller
                 'top_customers' => $topCustomers,
                 'payment_methods' => $paymentMethods,
                 'daily_stats' => $dailyStats,
+                'monthly_stats' => $monthlyStats,
+                'status_stats' => $statusStats,
             ],
             'recentPayments' => $recentPayments,
             'recentBills' => $recentBills,
             'apiStatus' => $apiStatus,
         ]);
+    }
+
+    private function getDateRange(string $dateFilter, ?string $startDate, ?string $endDate): array
+    {
+        return match ($dateFilter) {
+            'week' => ['start' => now()->startOfWeek(), 'end' => now()->endOfWeek()],
+            'month' => ['start' => now()->startOfMonth(), 'end' => now()->endOfMonth()],
+            'quarter' => ['start' => now()->copy()->subMonths(3)->startOfDay(), 'end' => now()->endOfDay()],
+            'year' => ['start' => now()->startOfYear(), 'end' => now()->endOfYear()],
+            'custom' => ($startDate && $endDate)
+                ? ['start' => Carbon::parse($startDate)->startOfDay(), 'end' => Carbon::parse($endDate)->endOfDay()]
+                : ['start' => now()->startOfDay(), 'end' => now()->endOfDay()],
+            default => ['start' => now()->startOfDay(), 'end' => now()->endOfDay()],
+        };
+    }
+
+    private function generateDailyStats(Carbon $start, Carbon $end, array $settledStatuses): array
+    {
+        $dailyStats = [];
+        $currentDate = $start->copy();
+        while ($currentDate->lte($end)) {
+            $dateStr = $currentDate->toDateString();
+            $dayQuery = Transaction::whereDate('created_at', $dateStr)->whereIn('status', $settledStatuses);
+            $dailyStats[] = [
+                'date' => $currentDate->format('M j'),
+                'full_date' => $dateStr,
+                'count' => $dayQuery->count(),
+                'amount' => $dayQuery->sum('amount'),
+            ];
+            $currentDate->addDay();
+        }
+        return $dailyStats;
+    }
+
+    private function generateMonthlyStats(Carbon $start, Carbon $end, array $settledStatuses): array
+    {
+        $monthlyStats = [];
+        $currentDate = $start->copy()->startOfMonth();
+        $endDate = $end->copy()->startOfMonth();
+        
+        while ($currentDate->lte($endDate)) {
+            $monthQuery = Transaction::whereYear('created_at', $currentDate->year)
+                ->whereMonth('created_at', $currentDate->month)
+                ->whereIn('status', $settledStatuses);
+            $monthlyStats[] = [
+                'month' => $currentDate->format('M Y'),
+                'count' => $monthQuery->count(),
+                'amount' => $monthQuery->sum('amount'),
+            ];
+            $currentDate->addMonth();
+        }
+        return $monthlyStats;
     }
 
     public function accountBalance()

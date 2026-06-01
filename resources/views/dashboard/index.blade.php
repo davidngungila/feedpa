@@ -33,23 +33,40 @@
     
     <!-- Period Filter -->
     <div class="card p-4">
-        <form method="GET" action="{{ route('dashboard.index') }}" class="flex flex-col sm:flex-row sm:items-center gap-3">
-            <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500 shrink-0">
-                <i class="fas fa-filter me-1"></i> Filter period
-            </p>
-            <div class="flex flex-wrap gap-2">
-                @foreach([
-                    'today' => 'Today',
-                    'week' => 'This Week',
-                    'month' => 'This Month',
-                    'quarter' => '3 Months',
-                    'year' => 'This Year',
-                ] as $value => $label)
-                    <button type="submit" name="date_filter" value="{{ $value }}"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ ($dateFilter ?? 'today') === $value ? 'bg-primary-600 text-white shadow-md' : 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 hover:bg-primary-100' }}">
-                        {{ $label }}
+        <form method="GET" action="{{ route('dashboard.index') }}" class="flex flex-col gap-4">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500 shrink-0">
+                    <i class="fas fa-filter me-1"></i> Filter period
+                </p>
+                <div class="flex flex-wrap gap-2">
+                    @foreach([
+                        'today' => 'Today',
+                        'week' => 'This Week',
+                        'month' => 'This Month',
+                        'quarter' => '3 Months',
+                        'year' => 'This Year',
+                    ] as $value => $label)
+                        <button type="submit" name="date_filter" value="{{ $value }}"
+                                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ ($dateFilter ?? 'today') === $value ? 'bg-primary-600 text-white shadow-md' : 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 hover:bg-primary-100' }}">
+                            {{ $label }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+            
+            <!-- Custom Date Range -->
+            <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500 shrink-0">
+                    <i class="fas fa-calendar-alt me-1"></i> Custom Range
+                </p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="date" name="start_date" value="{{ request('start_date') }}" class="px-3 py-1.5 rounded-lg text-xs border border-primary-200 dark:border-primary-800 bg-white dark:bg-dark-card focus:ring-2 focus:ring-primary-500">
+                    <span class="text-xs text-primary-400">to</span>
+                    <input type="date" name="end_date" value="{{ request('end_date') }}" class="px-3 py-1.5 rounded-lg text-xs border border-primary-200 dark:border-primary-800 bg-white dark:bg-dark-card focus:ring-2 focus:ring-primary-500">
+                    <button type="submit" name="date_filter" value="custom" class="px-4 py-1.5 rounded-lg text-xs font-bold bg-gradient-to-r from-primary-600 to-primary-500 text-white hover:shadow-lg transition-all">
+                        Apply Range
                     </button>
-                @endforeach
+                </div>
             </div>
         </form>
     </div>
@@ -122,7 +139,7 @@
         <!-- Daily Transactions Chart -->
         <div class="card p-5">
             <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
-                <i class="fas fa-chart-bar"></i> Settled Payments (Last 7 Days)
+                <i class="fas fa-chart-bar"></i> Settled Payments ({{ $periodLabel }})
             </h3>
             <div class="h-64">
                 <canvas id="dailyTransactionsChart"></canvas>
@@ -136,6 +153,26 @@
             </h3>
             <div class="h-64">
                 <canvas id="paymentMethodsChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Monthly Comparison Chart -->
+        <div class="card p-5">
+            <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
+                <i class="fas fa-chart-line"></i> Monthly Comparison
+            </h3>
+            <div class="h-64">
+                <canvas id="monthlyComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Status Distribution Chart -->
+        <div class="card p-5">
+            <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
+                <i class="fas fa-chart-doughnut"></i> Transaction Status Distribution
+            </h3>
+            <div class="h-64">
+                <canvas id="statusDistributionChart"></canvas>
             </div>
         </div>
     </div>
@@ -422,6 +459,103 @@
             datasets: [{
                 data: methodCounts,
                 backgroundColor: colors,
+                borderColor: '#fff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Monthly Comparison Chart
+    const monthlyLabels = @json(array_column($stats['monthly_stats'] ?? [], 'month'));
+    const monthlyAmounts = @json(array_column($stats['monthly_stats'] ?? [], 'amount'));
+    const monthlyCounts = @json(array_column($stats['monthly_stats'] ?? [], 'count'));
+    
+    const monthlyCtx = document.getElementById('monthlyComparisonChart');
+    new Chart(monthlyCtx, {
+        type: 'line',
+        data: {
+            labels: monthlyLabels,
+            datasets: [
+                {
+                    label: 'Amount (TZS)',
+                    data: monthlyAmounts,
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Count',
+                    data: monthlyCounts,
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Amount'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: {
+                        drawOnChartArea: false
+                    },
+                    title: {
+                        display: true,
+                        text: 'Count'
+                    }
+                }
+            }
+        }
+    });
+
+    // Status Distribution Chart
+    const statusLabels = @json(array_column($stats['status_stats'] ?? [], 'status'));
+    const statusCounts = @json(array_column($stats['status_stats'] ?? [], 'count'));
+    const statusColors = [
+        'rgba(34, 197, 94, 0.8)',
+        'rgba(245, 158, 11, 0.8)',
+        'rgba(239, 68, 68, 0.8)',
+        'rgba(168, 85, 247, 0.8)'
+    ];
+    
+    const statusCtx = document.getElementById('statusDistributionChart');
+    new Chart(statusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: statusLabels,
+            datasets: [{
+                data: statusCounts,
+                backgroundColor: statusColors,
                 borderColor: '#fff',
                 borderWidth: 2
             }]

@@ -123,6 +123,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/email/update', [SettingsController::class, 'updateEmail'])->name('email.update');
         Route::get('/general', [SettingsController::class, 'general'])->name('general');
         Route::post('/general/update', [SettingsController::class, 'updateGeneral'])->name('general.update');
+        Route::post('/users/{user}/toggle-lock', [SettingsController::class, 'toggleUserLock'])->name('users.toggle-lock');
+        Route::delete('/users/{user}', [SettingsController::class, 'deleteUser'])->name('users.delete');
     });
     
     // Sync Trigger Routes

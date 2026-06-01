@@ -120,6 +120,8 @@ class SettingsController extends Controller
         $paymentNotificationsEnabled = SystemSetting::get('payment_notifications_enabled', true);
         $payoutNotificationsEnabled = SystemSetting::get('payout_notifications_enabled', true);
         
+        $users = User::all();
+        
         return view('settings.general', compact(
             'activeUsers',
             'systemHealth',
@@ -129,8 +131,23 @@ class SettingsController extends Controller
             'apiTimeout',
             'siteDescription',
             'paymentNotificationsEnabled',
-            'payoutNotificationsEnabled'
+            'payoutNotificationsEnabled',
+            'users'
         ));
+    }
+    
+    public function toggleUserLock(User $user)
+    {
+        $this->checkAdmin();
+        $user->update(['is_locked' => !$user->is_locked]);
+        return back()->with('success', 'User ' . ($user->is_locked ? 'locked' : 'unlocked') . ' successfully!');
+    }
+    
+    public function deleteUser(User $user)
+    {
+        $this->checkAdmin();
+        $user->delete();
+        return back()->with('success', 'User deleted successfully!');
     }
 
     public function updateGeneral(Request $request)

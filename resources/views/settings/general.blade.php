@@ -3,7 +3,7 @@
 @section('title', 'General Settings')
 
 @section('content')
-<div class="max-w-4xl mx-auto space-y-6 animate-fade-in">
+<div class="max-w-6xl mx-auto space-y-6 animate-fade-in">
     <!-- Status Header Card -->
     <div class="card overflow-hidden">
         <div class="p-6 sm:p-8">
@@ -153,5 +153,116 @@
             </div>
         </form>
     </div>
+
+    <!-- Users Management -->
+    <div class="card p-6 space-y-4">
+        <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+            <i class="fas fa-users-cog"></i> System Users
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Position</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    @foreach($users as $user)
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <div class="text-sm font-medium text-primary-900 dark:text-white">{{ $user->name }}</div>
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {{ $user->email }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {{ $user->phone ?? 'N/A' }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                {{ $user->position ?? 'N/A' }}
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap">
+                                <span class="px-2 py-1 rounded text-xs font-bold {{ $user->is_locked ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700' }}">
+                                    {{ $user->is_locked ? 'Locked' : 'Active' }}
+                                </span>
+                                @if($user->is_admin)
+                                    <span class="ml-1 px-2 py-1 rounded text-xs font-bold bg-blue-100 text-blue-700">
+                                        Admin
+                                    </span>
+                                @endif
+                            </td>
+                            <td class="px-4 py-3 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                                <form method="POST" action="{{ route('settings.users.toggle-lock', $user) }}" class="inline">
+                                    @csrf
+                                    <button type="submit" class="px-3 py-1 rounded-lg text-xs font-bold {{ $user->is_locked ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-yellow-500 hover:bg-yellow-600 text-white' }}">
+                                        {{ $user->is_locked ? 'Unlock' : 'Lock' }}
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ route('settings.users.delete', $user) }}" class="inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="px-3 py-1 rounded-lg text-xs font-bold bg-red-500 hover:bg-red-600 text-white">
+                                        Delete
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+
+<!-- Session Timeout Notification Script -->
+<script>
+    let sessionTimeout = {{ $sessionTimeout * 60 * 1000 }}; // convert to ms
+    let warningTime = sessionTimeout / 3; // 1/3 of time
+    let lastActivity = Date.now();
+
+    function resetTimer() {
+        lastActivity = Date.now();
+    }
+
+    // Listen for user activity to reset timer
+    document.addEventListener('mousemove', resetTimer);
+    document.addEventListener('keypress', resetTimer);
+    document.addEventListener('click', resetTimer);
+    document.addEventListener('scroll', resetTimer);
+
+    // Check every second
+    setInterval(() => {
+        const now = Date.now();
+        const timeSinceActivity = now - lastActivity;
+        
+        if (timeSinceActivity >= sessionTimeout) {
+            // Auto logout
+            window.location.href = '{{ route('logout') }}';
+        } else if (timeSinceActivity >= warningTime && timeSinceActivity < warningTime + 1000) {
+            // Show warning
+            const warning = document.createElement('div');
+            warning.className = 'fixed top-4 right-4 z-50 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded-xl shadow-lg animate-pulse';
+            warning.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-exclamation-triangle text-2xl"></i>
+                    <div>
+                        <p class="font-bold">Session Warning!</p>
+                        <p class="text-sm">Your session will expire soon. Move your mouse or press any key to stay logged in.</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(warning);
+            
+            // Remove warning after 5 seconds or on activity
+            setTimeout(() => warning.remove(), 5000);
+            document.addEventListener('mousemove', () => warning.remove(), { once: true });
+            document.addEventListener('keypress', () => warning.remove(), { once: true });
+        }
+    }, 1000);
+</script>
 @endsection

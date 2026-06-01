@@ -13,14 +13,26 @@ class SettingsController extends Controller
 {
 
 
+    private function checkAdmin()
+    {
+        if (!auth()->check()) {
+            return redirect()->route('login');
+        }
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+    }
+
     public function sms()
     {
+        $this->checkAdmin();
         $settings = SystemSetting::where('group', 'sms')->get()->keyBy('key');
         return view('settings.sms', compact('settings'));
     }
 
     public function updateSms(Request $request)
     {
+        $this->checkAdmin();
         $validated = $request->validate([
             'sms_provider' => 'nullable|string',
             'sms_api_key' => 'nullable|string',
@@ -42,12 +54,14 @@ class SettingsController extends Controller
 
     public function email()
     {
+        $this->checkAdmin();
         $emailSettings = EmailCredential::where('is_active', true)->first();
         return view('settings.email', compact('emailSettings'));
     }
 
     public function updateEmail(Request $request)
     {
+        $this->checkAdmin();
         $request->validate([
             'email_address' => 'required|email',
             'password' => 'required|string',
@@ -79,6 +93,7 @@ class SettingsController extends Controller
 
     public function general()
     {
+        $this->checkAdmin();
         $activeUsers = User::whereNotNull('email')->count();
         $systemHealth = $this->checkSystemHealth();
         $settings = SystemSetting::where('group', 'general')->get()->keyBy('key');
@@ -87,6 +102,7 @@ class SettingsController extends Controller
 
     public function updateGeneral(Request $request)
     {
+        $this->checkAdmin();
         $validated = $request->validate([
             'session_timeout' => 'nullable|integer|min:5|max:1440',
             'api_timeout' => 'nullable|integer|min:5|max:300',

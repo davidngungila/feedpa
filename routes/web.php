@@ -116,15 +116,7 @@ Route::middleware(['auth'])->group(function () {
     });
     
     // Settings Routes (Admin Only)
-    Route::prefix('settings')->name('settings.')->middleware(function ($request, $next) {
-        if (!auth()->check()) {
-            return redirect()->route('login');
-        }
-        if (!auth()->user()->is_admin) {
-            abort(403, 'Unauthorized');
-        }
-        return $next($request);
-    })->group(function () {
+    Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/sms', [SettingsController::class, 'sms'])->name('sms');
         Route::post('/sms/update', [SettingsController::class, 'updateSms'])->name('sms.update');
         Route::get('/email', [SettingsController::class, 'email'])->name('email');

@@ -11,6 +11,7 @@ use App\Http\Controllers\BillController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\PayoutController;
+use App\Http\Controllers\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -96,6 +97,16 @@ Route::middleware(['auth'])->group(function () {
     
     // Audit Log Routes
     Route::get('audits', [AuditController::class, 'index'])->name('audits.index');
+    
+    // Financial Reports Routes
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/trial-balance', [ReportController::class, 'trialBalance'])->name('trial-balance');
+        Route::get('/trial-balance/export/pdf', [ReportController::class, 'exportTrialBalance'])->name('trial-balance.export.pdf');
+        Route::get('/balance-sheet', [ReportController::class, 'balanceSheet'])->name('balance-sheet');
+        Route::get('/balance-sheet/export/pdf', [ReportController::class, 'exportBalanceSheet'])->name('balance-sheet.export.pdf');
+        Route::get('/profit-loss', [ReportController::class, 'profitLoss'])->name('profit-loss');
+        Route::get('/profit-loss/export/pdf', [ReportController::class, 'exportProfitLoss'])->name('profit-loss.export.pdf');
+    });
 
     // Profile Routes
     Route::prefix('profile')->name('profile.')->group(function () {

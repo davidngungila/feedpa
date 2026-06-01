@@ -67,12 +67,62 @@
       </a>
     </li>
 
+    <!-- Financial Reports -->
+    <li class="menu-item {{ request()->routeIs('reports.*') ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i>
+        <div data-i18n="Financial Reports">Financial Reports</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('reports.trial-balance') ? 'active' : '' }}">
+          <a href="{{ route('reports.trial-balance') }}" class="menu-link">
+            <div data-i18n="Trial Balance">Trial Balance</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('reports.balance-sheet') ? 'active' : '' }}">
+          <a href="{{ route('reports.balance-sheet') }}" class="menu-link">
+            <div data-i18n="Balance Sheet">Balance Sheet</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('reports.profit-loss') ? 'active' : '' }}">
+          <a href="{{ route('reports.profit-loss') }}" class="menu-link">
+            <div data-i18n="Profit & Loss">Profit & Loss</div>
+          </a>
+        </li>
+      </ul>
+    </li>
+
     <!-- Bill Management -->
     <li class="menu-item {{ request()->routeIs('bills.*') ? 'active' : '' }}">
       <a href="{{ route('bills.index') }}" class="menu-link">
         <i class="menu-icon tf-icons bx bx-file-invoice"></i>
         <div data-i18n="Bill Management">Bill Management</div>
       </a>
+    </li>
+
+    <!-- Financial Reports -->
+    <li class="menu-item {{ request()->routeIs('reports.*') ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons bx bx-bar-chart-alt"></i>
+        <div data-i18n="Financial Reports">Financial Reports</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('reports.trial-balance') ? 'active' : '' }}">
+          <a href="{{ route('reports.trial-balance') }}" class="menu-link">
+            <div data-i18n="Trial Balance">Trial Balance</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('reports.balance-sheet') ? 'active' : '' }}">
+          <a href="{{ route('reports.balance-sheet') }}" class="menu-link">
+            <div data-i18n="Balance Sheet">Balance Sheet</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('reports.profit-loss') ? 'active' : '' }}">
+          <a href="{{ route('reports.profit-loss') }}" class="menu-link">
+            <div data-i18n="Profit & Loss">Profit & Loss</div>
+          </a>
+        </li>
+      </ul>
     </li>
   </ul>
 </aside>

@@ -17,6 +17,17 @@ class TransactionObserver
             return;
         }
 
+        // Check if transaction is settled (or completed)
+        $status = strtolower($transaction->status ?? '');
+        $allowedStatuses = ['settled', 'completed', 'success', 'successful'];
+        if (!in_array($status, $allowedStatuses)) {
+            Log::info('Transaction status not eligible for email alert', [
+                'transaction_id' => $transaction->id,
+                'status' => $status
+            ]);
+            return;
+        }
+
         try {
             $this->sendTransactionAlertToOfficers($transaction);
         } catch (\Exception $e) {
@@ -41,12 +52,11 @@ class TransactionObserver
         $emailConfigService = new EmailConfigService();
         $emailConfigService->configureMail();
         
-        // Build email template
-        $emailTemplate = $this->buildTransactionEmailTemplate($transaction);
-        
         // Send emails to all officers
         foreach ($officers as $officer) {
             try {
+                $emailTemplate = $this->buildTransactionEmailTemplate($transaction, $officer);
+                
                 Mail::html($emailTemplate['html'], function ($message) use ($emailTemplate, $officer, $emailConfigService) {
                     $config = $emailConfigService->getEmailConfig();
                     $message->to($officer->email, $officer->name)
@@ -67,7 +77,7 @@ class TransactionObserver
         }
     }
 
-    private function buildTransactionEmailTemplate(Transaction $transaction): array
+    private function buildTransactionEmailTemplate(Transaction $transaction, \App\Models\User $officer): array
     {
         $subject = "🔔 New Payment Notification - {$transaction->order_reference}";
         
@@ -82,6 +92,7 @@ class TransactionObserver
         $paymentMethod = $transaction->payment_method ?? 'Unknown';
         $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
         $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment received';
+        $officerName = $officer->name ?? 'Officer';
         
         $html = <<<HTML
 <!DOCTYPE html>
@@ -210,7 +221,7 @@ class TransactionObserver
         </div>
         
         <div class="content">
-            <p style="font-size: 16px; color: #374151;">Hi Officer,</p>
+            <p style="font-size: 16px; color: #374151;">Hi {$officerName},</p>
             <p style="font-size: 16px; color: #374151;">A new payment has been successfully made. Please login to record this transaction in the system.</p>
             
             <div class="section-title">📊 Payment Details</div>

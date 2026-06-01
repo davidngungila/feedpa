@@ -57,9 +57,9 @@ class SettingsController extends Controller
             'sms_token' => 'required|string',
             'sms_api_key' => 'required|string',
             'sms_sender_id' => 'required|string',
-            'sms_enabled' => 'nullable|boolean',
+            'sms_enabled' => 'nullable',
             'sms_timeout' => 'required|integer|min:5|max:300',
-            'sms_test_mode' => 'nullable|boolean',
+            'sms_test_mode' => 'nullable',
             'sms_template_payment' => 'nullable|string',
         ]);
 
@@ -67,9 +67,9 @@ class SettingsController extends Controller
         SystemSetting::set('sms_token', $validated['sms_token'], 'string', 'sms', 'API Token', 'API token for SMS provider');
         SystemSetting::set('sms_api_key', $validated['sms_api_key'], 'string', 'sms', 'API Key', 'API key for SMS provider');
         SystemSetting::set('sms_sender_id', $validated['sms_sender_id'], 'string', 'sms', 'Sender ID', 'Sender ID to use for SMS');
-        SystemSetting::set('sms_enabled', isset($validated['sms_enabled']), 'boolean', 'sms', 'Enable SMS Notifications', 'Whether to send SMS notifications');
+        SystemSetting::set('sms_enabled', $request->has('sms_enabled'), 'boolean', 'sms', 'Enable SMS Notifications', 'Whether to send SMS notifications');
         SystemSetting::set('sms_timeout', $validated['sms_timeout'], 'integer', 'sms', 'API Timeout (seconds)', 'API request timeout');
-        SystemSetting::set('sms_test_mode', isset($validated['sms_test_mode']), 'boolean', 'sms', 'Test Mode', 'Enable test mode (no real SMS sent)');
+        SystemSetting::set('sms_test_mode', $request->has('sms_test_mode'), 'boolean', 'sms', 'Test Mode', 'Enable test mode (no real SMS sent)');
         SystemSetting::set('sms_template_payment', $validated['sms_template_payment'] ?? '', 'string', 'sms', 'Payment SMS Template', 'Template for payment confirmation SMS');
 
         return back()->with('success', 'SMS Settings updated successfully!');
@@ -184,16 +184,16 @@ class SettingsController extends Controller
             'api_timeout' => 'nullable|integer|min:5|max:300',
             'site_name' => 'nullable|string|max:255',
             'site_description' => 'nullable|string',
-            'payment_notifications_enabled' => 'nullable|boolean',
-            'payout_notifications_enabled' => 'nullable|boolean',
+            'payment_notifications_enabled' => 'nullable',
+            'payout_notifications_enabled' => 'nullable',
         ]);
 
         SystemSetting::set('session_timeout', $validated['session_timeout'] ?? 120, 'integer', 'general', 'Session Timeout (minutes)', 'How long until session expires');
         SystemSetting::set('api_timeout', $validated['api_timeout'] ?? 30, 'integer', 'general', 'API Timeout (seconds)', 'API request timeout');
         SystemSetting::set('site_name', $validated['site_name'] ?? 'FEEDTAN CMG', 'string', 'general', 'Site Name', 'Name of the website');
         SystemSetting::set('site_description', $validated['site_description'] ?? '', 'string', 'general', 'Site Description', 'Short description of the site');
-        SystemSetting::set('payment_notifications_enabled', isset($validated['payment_notifications_enabled']), 'boolean', 'general', 'Payment Notifications', 'Email officers when payment is made');
-        SystemSetting::set('payout_notifications_enabled', isset($validated['payout_notifications_enabled']), 'boolean', 'general', 'Payout Notifications', 'Email officers when payout is made');
+        SystemSetting::set('payment_notifications_enabled', $request->has('payment_notifications_enabled'), 'boolean', 'general', 'Payment Notifications', 'Email officers when payment is made');
+        SystemSetting::set('payout_notifications_enabled', $request->has('payout_notifications_enabled'), 'boolean', 'general', 'Payout Notifications', 'Email officers when payout is made');
 
         return back()->with('success', 'General Settings updated successfully!');
     }

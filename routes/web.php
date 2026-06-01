@@ -119,6 +119,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/sms', [SettingsController::class, 'sms'])->name('sms');
         Route::post('/sms/update', [SettingsController::class, 'updateSms'])->name('sms.update');
+        Route::post('/sms/test', [SettingsController::class, 'testSms'])->name('sms.test');
         Route::get('/email', [SettingsController::class, 'email'])->name('email');
         Route::post('/email/update', [SettingsController::class, 'updateEmail'])->name('email.update');
         Route::get('/general', [SettingsController::class, 'general'])->name('general');

@@ -27,21 +27,25 @@ class SettingsController extends Controller
     {
         $this->checkAdmin();
         $settings = SystemSetting::where('group', 'sms')->get()->keyBy('key');
-        $smsProvider = SystemSetting::get('sms_provider', '');
-        $smsApiKey = SystemSetting::get('sms_api_key', '');
-        $smsApiSecret = SystemSetting::get('sms_api_secret', '');
-        $smsSenderId = SystemSetting::get('sms_sender_id', '');
-        $smsEnabled = SystemSetting::get('sms_enabled', false);
+        $smsBaseUrl = SystemSetting::get('sms_base_url', 'https://messaging-service.co.tz');
+        $smsToken = SystemSetting::get('sms_token', 'f9a89f439206e27169ead766463ca92c');
+        $smsApiKey = SystemSetting::get('sms_api_key', 'f9a89f439206e27169ead766463ca92c');
+        $smsSenderId = SystemSetting::get('sms_sender_id', 'FEEDTAN');
+        $smsEnabled = SystemSetting::get('sms_enabled', true);
         $smsTemplatePayment = SystemSetting::get('sms_template_payment', '');
+        $smsTimeout = SystemSetting::get('sms_timeout', 30);
+        $smsTestMode = SystemSetting::get('sms_test_mode', false);
         
         return view('settings.sms', compact(
             'settings',
-            'smsProvider',
+            'smsBaseUrl',
+            'smsToken',
             'smsApiKey',
-            'smsApiSecret',
             'smsSenderId',
             'smsEnabled',
-            'smsTemplatePayment'
+            'smsTemplatePayment',
+            'smsTimeout',
+            'smsTestMode'
         ));
     }
 
@@ -49,22 +53,44 @@ class SettingsController extends Controller
     {
         $this->checkAdmin();
         $validated = $request->validate([
-            'sms_provider' => 'nullable|string',
-            'sms_api_key' => 'nullable|string',
-            'sms_api_secret' => 'nullable|string',
-            'sms_sender_id' => 'nullable|string',
+            'sms_base_url' => 'required|url',
+            'sms_token' => 'required|string',
+            'sms_api_key' => 'required|string',
+            'sms_sender_id' => 'required|string',
             'sms_enabled' => 'nullable|boolean',
+            'sms_timeout' => 'required|integer|min:5|max:300',
+            'sms_test_mode' => 'nullable|boolean',
             'sms_template_payment' => 'nullable|string',
         ]);
 
-        SystemSetting::set('sms_provider', $validated['sms_provider'] ?? '', 'string', 'sms', 'SMS Provider', 'Which SMS provider to use');
-        SystemSetting::set('sms_api_key', $validated['sms_api_key'] ?? '', 'string', 'sms', 'API Key', 'API key for SMS provider');
-        SystemSetting::set('sms_api_secret', $validated['sms_api_secret'] ?? '', 'string', 'sms', 'API Secret', 'API secret for SMS provider');
-        SystemSetting::set('sms_sender_id', $validated['sms_sender_id'] ?? '', 'string', 'sms', 'Sender ID', 'Sender ID to use for SMS');
-        SystemSetting::set('sms_enabled', isset($validated['sms_enabled']), 'boolean', 'sms', 'Enable SMS', 'Whether to send SMS notifications');
+        SystemSetting::set('sms_base_url', $validated['sms_base_url'], 'string', 'sms', 'SMS Base URL', 'Base URL for SMS API');
+        SystemSetting::set('sms_token', $validated['sms_token'], 'string', 'sms', 'API Token', 'API token for SMS provider');
+        SystemSetting::set('sms_api_key', $validated['sms_api_key'], 'string', 'sms', 'API Key', 'API key for SMS provider');
+        SystemSetting::set('sms_sender_id', $validated['sms_sender_id'], 'string', 'sms', 'Sender ID', 'Sender ID to use for SMS');
+        SystemSetting::set('sms_enabled', isset($validated['sms_enabled']), 'boolean', 'sms', 'Enable SMS Notifications', 'Whether to send SMS notifications');
+        SystemSetting::set('sms_timeout', $validated['sms_timeout'], 'integer', 'sms', 'API Timeout (seconds)', 'API request timeout');
+        SystemSetting::set('sms_test_mode', isset($validated['sms_test_mode']), 'boolean', 'sms', 'Test Mode', 'Enable test mode (no real SMS sent)');
         SystemSetting::set('sms_template_payment', $validated['sms_template_payment'] ?? '', 'string', 'sms', 'Payment SMS Template', 'Template for payment confirmation SMS');
 
         return back()->with('success', 'SMS Settings updated successfully!');
+    }
+    
+    public function testSms(Request $request)
+    {
+        $this->checkAdmin();
+        $request->validate([
+            'test_phone' => 'required|string',
+            'test_message' => 'required|string|max:1600',
+        ]);
+        
+        try {
+            $messagingService = new \App\Services\MessagingServiceAPI();
+            $result = $messagingService->testSMS($request->test_phone, $request->test_message);
+            
+            return back()->with('success', 'Test SMS sent successfully! Response: ' . json_encode($result));
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to send test SMS: ' . $e->getMessage());
+        }
     }
 
     public function email()

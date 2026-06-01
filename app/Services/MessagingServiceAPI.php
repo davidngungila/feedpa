@@ -5,18 +5,23 @@ namespace App\Services;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use App\Models\SystemSetting;
 
 class MessagingServiceAPI
 {
     private string $baseUrl;
     private string $token;
     private string $senderId;
+    private int $timeout;
+    private bool $testMode;
 
     public function __construct()
     {
-        $this->baseUrl = 'https://messaging-service.co.tz';
-        $this->token = config('messaging.token', 'f9a89f439206e27169ead766463ca92c');
-        $this->senderId = config('messaging.sender_id', 'FEEDTAN');
+        $this->baseUrl = SystemSetting::get('sms_base_url', 'https://messaging-service.co.tz');
+        $this->token = SystemSetting::get('sms_token', 'f9a89f439206e27169ead766463ca92c');
+        $this->senderId = SystemSetting::get('sms_sender_id', 'FEEDTAN');
+        $this->timeout = SystemSetting::get('sms_timeout', 30);
+        $this->testMode = SystemSetting::get('sms_test_mode', false);
     }
 
     /**
@@ -49,7 +54,7 @@ class MessagingServiceAPI
                 'Authorization' => 'Bearer ' . $this->token,
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
-            ])->timeout(30)->post($url, $data);
+            ])->timeout($this->timeout)->post($url, $data);
 
             if ($response->successful()) {
                 Log::info('SMS sent successfully', ['response' => $response->json()]);
@@ -281,7 +286,7 @@ class MessagingServiceAPI
             $response = Http::withHeaders([
                 'Authorization' => 'Bearer ' . $this->token,
                 'Accept' => 'application/json'
-            ])->timeout(30)->get($url);
+            ])->timeout($this->timeout)->get($url);
 
             if ($response->successful()) {
                 return $response->json();
@@ -312,7 +317,7 @@ class MessagingServiceAPI
                 'Authorization' => 'Bearer ' . $this->token,
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json'
-            ])->timeout(30)->post($url, $data);
+            ])->timeout($this->timeout)->post($url, $data);
 
             if ($response->successful()) {
                 return $response->json();

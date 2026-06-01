@@ -405,6 +405,16 @@
             }
 
             
+            // Add blurred backdrop style
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .modal-backdrop {
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                }
+            `;
+            document.head.appendChild(style);
+
             // Show processing modal
             function showProcessingModal() {
                 const modalHtml = `
@@ -412,10 +422,10 @@
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content">
                                 <div class="modal-body text-center py-4">
-                                    <div class="spinner-border text-primary mb-3" role="status">
+                                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
                                         <span class="visually-hidden">Processing...</span>
                                     </div>
-                                    <h5>Processing Payment</h5>
+                                    <h5 class="fw-bold">Processing Payment</h5>
                                     <p class="text-muted">Please wait while we process your payment...</p>
                                     <div class="progress" style="height: 6px;">
                                         <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%"></div>

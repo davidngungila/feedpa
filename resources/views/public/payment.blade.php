@@ -183,15 +183,21 @@
         </div>
     </div>
 
+    <style>
+        .modal-backdrop {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+    </style>
     <!-- Loading Modal -->
     <div class="modal fade" id="loadingModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-body text-center py-5">
-                    <div class="spinner-border text-primary mb-3" role="status">
+                    <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
                         <span class="visually-hidden">Inasubiri...</span>
                     </div>
-                    <h5>Inachakata malipo yako...</h5>
+                    <h5 class="fw-bold">Inachakata malipo yako...</h5>
                     <p class="text-muted mb-0">Tafadhali subiri, usifanye kitu.</p>
                 </div>
             </div>

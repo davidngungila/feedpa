@@ -68,7 +68,10 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-up { animation: fadeUp 0.45s ease-out both; }
-        .modal-backdrop { backdrop-filter: blur(6px); }
+        .modal-backdrop { 
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
     </style>
 </head>
 <body class="mesh-bg min-h-screen text-slate-800 antialiased">

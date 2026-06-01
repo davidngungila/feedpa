@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Str;
 
 class Transaction extends Model
 {
@@ -32,6 +33,17 @@ class Transaction extends Model
         'callback_data',
         'callback_received_at'
     ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($transaction) {
+            if (empty($transaction->id)) {
+                $transaction->id = (string) Str::uuid();
+            }
+        });
+    }
 
     protected $casts = [
         'amount' => 'decimal:2',

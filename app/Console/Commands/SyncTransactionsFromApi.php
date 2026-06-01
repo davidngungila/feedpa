@@ -2,77 +2,138 @@
 
 namespace App\Console\Commands;
 
-use Illuminate\Console\Attributes\Description;
-use Illuminate\Console\Attributes\Signature;
-use Illuminate\Console\Command;
 use App\Models\Transaction;
-use App\Services\ClickPesaAPIService;
+use App\Support\TransactionFieldResolver;
+use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
-#[Signature('app:sync-transactions-from-api')]
-#[Description('Sync transactions from ClickPesa API to local database')]
 class SyncTransactionsFromApi extends Command
 {
-    public function __construct(private ClickPesaAPIService $api)
-    {
-        parent::__construct();
-    }
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'transactions:sync {--limit=100 : Number of transactions to fetch from API}';
 
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Sync missing transactions from ClickPesa API to database';
+
+    /**
+     * Execute the console command.
+     */
     public function handle()
     {
-        $this->info('Starting transaction sync...');
-        $synced = 0;
-        $failed = 0;
+        $this->info('==============================================');
+        $this->info('Starting Transaction Sync from ClickPesa API');
+        $this->info('==============================================');
+        $this->newLine();
 
+        // Step 1: Get existing references
+        $this->info('Step 1: Fetching existing transactions from database...');
+        $existingReferences = Transaction::pluck('order_reference')->filter()->unique()->toArray();
+        $this->info("✅ Found " . count($existingReferences) . " existing transactions");
+        $this->newLine();
+
+        // Step 2: Query API
+        $this->info('Step 2: Querying ClickPesa API...');
         try {
-            $response = $this->api->queryAllPayments(['limit' => 1000, 'orderBy' => 'DESC']);
-
-            if (isset($response['data'])) {
-                $payments = $response['data'];
-
-                foreach ($payments as $payment) {
-                    $orderRef = $payment['orderReference'] ?? null;
-                    if (!$orderRef) continue;
-
-                    try {
-                        Transaction::updateOrCreate(
-                            ['order_reference' => $orderRef],
-                            [
-                                'id' => (string) Str::uuid(),
-                                'transaction_id' => $payment['transactionId'] ?? $payment['id'] ?? null,
-                                'status' => $payment['status'] ?? 'PENDING',
-                                'amount' => $payment['amount'] ?? $payment['collectedAmount'] ?? 0,
-                                'currency' => $payment['currency'] ?? 'TZS',
-                                'phone' => $payment['customer_phone'] ?? $payment['customerPhone'] ?? null,
-                                'email' => $payment['customer_email'] ?? $payment['customerEmail'] ?? null,
-                                'description' => $payment['customer_name'] ?? $payment['customerName'] ?? 'Payment',
-                                'type' => 'payment',
-                                'payment_method' => $payment['paymentMethod'] ?? $payment['channel'] ?? null,
-                                'callback_data' => $payment
-                            ]
-                        );
-
-                        $synced++;
-                        $this->line("Synced transaction: {$orderRef}");
-                    } catch (\Exception $e) {
-                        $failed++;
-                        $this->error("Failed to sync {$orderRef}: " . $e->getMessage());
-                    }
-                }
-            }
-
-            $this->info("Sync complete! Synced {$synced} transactions. Failed: {$failed}");
-
-            // Store last sync status as timestamp
-            cache()->put('api_last_sync', now()->timestamp, now()->addHours(1));
-            cache()->put('api_status', 'connected', now()->addMinutes(5));
-
+            $api = app('App\Services\ClickPesaAPIService');
+            $limit = $this->option('limit');
+            $allPayments = $api->queryAllPayments([
+                'limit' => $limit,
+                'status' => 'all'
+            ]);
+            $this->info("✅ API responded successfully");
         } catch (\Exception $e) {
-            $this->error('Failed to sync: ' . $e->getMessage());
-            cache()->put('api_status', 'disconnected', now()->addMinutes(5));
-            $failed++;
+            $this->error("❌ Error querying API: " . $e->getMessage());
+            return 1;
         }
 
-        return Command::SUCCESS;
+        // Parse payments data
+        $paymentsData = [];
+        if (isset($allPayments['data']) && is_array($allPayments['data'])) {
+            $paymentsData = $allPayments['data'];
+        } elseif (is_array($allPayments)) {
+            $paymentsData = $allPayments;
+        }
+
+        $this->info("📊 Found " . count($paymentsData) . " payments from API");
+        $this->newLine();
+
+        // Step 3: Process each payment
+        $this->info('Step 3: Processing payments...');
+        $syncedCount = 0;
+        $skippedCount = 0;
+
+        foreach ($paymentsData as $payment) {
+            $orderRef = $payment['orderReference'] ?? $payment['order_reference'] ?? null;
+
+            if (!$orderRef) {
+                $this->warn("⚠️ Skipping payment with no order reference");
+                continue;
+            }
+
+            if (in_array($orderRef, $existingReferences)) {
+                $skippedCount++;
+                continue;
+            }
+
+            // Extract data
+            $transactionId = $payment['id'] ?? $payment['transaction_id'] ?? null;
+            $status = $payment['status'] ?? 'UNKNOWN';
+            $amount = $payment['collectedAmount'] ?? $payment['amount'] ?? 0;
+            $currency = $payment['collectedCurrency'] ?? $payment['currency'] ?? 'TZS';
+            $phone = $payment['customer']['customerPhoneNumber'] ?? $payment['paymentPhoneNumber'] ?? $payment['phone'] ?? null;
+            $payerName = $payment['customer']['customerName'] ?? $payment['payer_name'] ?? $payment['customerName'] ?? 'Unknown';
+            $description = $payment['description'] ?? $payment['narrative'] ?? 'Payment';
+            $paymentMethod = $payment['channel'] ?? $payment['paymentMethod'] ?? $payment['payment_method'] ?? null;
+            $createdAt = $payment['createdAt'] ?? now();
+            $updatedAt = $payment['updatedAt'] ?? now();
+
+            // Create transaction
+            try {
+                Transaction::create([
+                    'id' => (string) Str::uuid(),
+                    'order_reference' => $orderRef,
+                    'transaction_id' => $transactionId,
+                    'status' => $status,
+                    'amount' => $amount,
+                    'currency' => $currency,
+                    'phone' => $phone,
+                    'payer_name' => $payerName,
+                    'customer_name' => $payerName,
+                    'description' => $description,
+                    'payment_method' => $paymentMethod,
+                    'callback_data' => $payment,
+                    'callback_received_at' => now(),
+                    'type' => 'payment',
+                    'created_at' => $createdAt,
+                    'updated_at' => $updatedAt
+                ]);
+
+                $syncedCount++;
+                $this->info("✅ Synced: {$orderRef} | {$status} | {$amount} {$currency}");
+
+            } catch (\Exception $e) {
+                $this->error("❌ Failed to sync {$orderRef}: " . $e->getMessage());
+            }
+        }
+
+        // Summary
+        $this->newLine();
+        $this->info('==============================================');
+        $this->info('Sync Complete!');
+        $this->info('==============================================');
+        $this->info("✅ Synced: {$syncedCount} new transactions");
+        $this->info("⚠️ Skipped: {$skippedCount} existing transactions");
+        $this->info("Total processed: " . ($syncedCount + $skippedCount));
+        $this->info('==============================================');
+
+        return 0;
     }
 }

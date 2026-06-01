@@ -353,6 +353,7 @@ class PaymentController extends Controller
                         } else {
                             // Create transaction in database from API data for future reference
                             Transaction::create([
+                                'id' => (string) \Illuminate\Support\Str::uuid(),
                                 'order_reference' => $orderReference,
                                 'transaction_id' => $apiPaymentData['id'] ?? $apiPaymentData['transaction_id'] ?? null,
                                 'status' => $apiPaymentData['status'] ?? 'UNKNOWN',
@@ -360,6 +361,7 @@ class PaymentController extends Controller
                                 'currency' => $apiPaymentData['collectedCurrency'] ?? 'TZS',
                                 'phone' => $apiPaymentData['customer']['customerPhoneNumber'] ?? $apiPaymentData['paymentPhoneNumber'] ?? null,
                                 'payer_name' => $apiPaymentData['customer']['customerName'] ?? $apiPaymentData['payer_name'] ?? null,
+                                'customer_name' => $apiPaymentData['customer']['customerName'] ?? $apiPaymentData['payer_name'] ?? null,
                                 'payment_method' => $apiPaymentData['channel'] ?? $apiPaymentData['paymentMethod'] ?? null,
                                 'description' => $apiPaymentData['description'] ?? $apiPaymentData['narrative'] ?? null,
                                 'type' => 'payment',

@@ -229,6 +229,22 @@
         lastActivity = Date.now();
     }
 
+    function autoLogout() {
+        // Create form and submit POST request for logout
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ route('logout') }}';
+        
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = '_token';
+        csrfToken.value = '{{ csrf_token() }}';
+        
+        form.appendChild(csrfToken);
+        document.body.appendChild(form);
+        form.submit();
+    }
+
     // Listen for user activity to reset timer
     document.addEventListener('mousemove', resetTimer);
     document.addEventListener('keypress', resetTimer);
@@ -242,7 +258,7 @@
         
         if (timeSinceActivity >= sessionTimeout) {
             // Auto logout
-            window.location.href = '{{ route('logout') }}';
+            autoLogout();
         } else if (timeSinceActivity >= warningTime && timeSinceActivity < warningTime + 1000) {
             // Show warning
             const warning = document.createElement('div');

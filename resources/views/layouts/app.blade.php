@@ -96,7 +96,7 @@
     
     @stack('styles')
 </head>
-<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false, isLoading: false }" :class="{'dark': darkMode}" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null">
+<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false, isLoading: true }" :class="{'dark': darkMode}" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300)">
     
     <!-- Loading Overlay -->
     <div x-show="isLoading"
@@ -425,14 +425,22 @@
     </div>
 
     <script>
+        // Show loading when page starts loading (from cache or navigation)
+        window.addEventListener('beforeunload', function() {
+            const bodyEl = document.body;
+            if (bodyEl.__x) {
+                bodyEl.__x.$data.isLoading = true;
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             // Handle all navigation links
             document.querySelectorAll('a:not([href^="#"]):not([target="_blank"])').forEach(link => {
                 link.addEventListener('click', function(e) {
-                    // Skip if it's a download link or has a special handler
+                    // Skip if it's a download link
                     if (this.hasAttribute('download')) return;
                     
-                    // Get Alpine.js instance from body
+                    // Show loading
                     const bodyEl = document.body;
                     if (bodyEl.__x) {
                         bodyEl.__x.$data.isLoading = true;
@@ -443,7 +451,6 @@
             // Handle all form submissions
             document.querySelectorAll('form').forEach(form => {
                 form.addEventListener('submit', function(e) {
-                    // Get Alpine.js instance from body
                     const bodyEl = document.body;
                     if (bodyEl.__x) {
                         bodyEl.__x.$data.isLoading = true;

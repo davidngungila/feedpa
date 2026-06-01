@@ -25,7 +25,7 @@
               dark: { 800:'#0f1a14',850:'#111f17',900:'#0a140e',card:'#0d1f16',border:'#1a3328' }
             },
             fontFamily: { sans:['Plus Jakarta Sans','sans-serif'], mono:['JetBrains Mono','monospace'] },
-            animation: { 'fade-in':'fadeIn 0.4s ease','slide-in':'slideIn 0.3s ease' },
+            animation: { 'fade-in':'fadeIn 0.4s ease','slide-in':'slideIn 0.3s ease','spin-slow':'spin 1.5s linear infinite','bounce-slow':'bounce 1.5s infinite' },
             keyframes: { fadeIn:{from:{opacity:0,transform:'translateY(10px)'},to:{opacity:1,transform:'translateY(0)'}}, slideIn:{from:{opacity:0,transform:'translateX(-20px)'},to:{opacity:1,transform:'translateX(0)'}} }
           }
         }
@@ -96,7 +96,30 @@
     
     @stack('styles')
 </head>
-<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false }" :class="{'dark': darkMode}">
+<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false, isLoading: false }" :class="{'dark': darkMode}" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null">
+    
+    <!-- Loading Overlay -->
+    <div x-show="isLoading"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[9999] bg-primary-50/80 dark:bg-dark-900/90 backdrop-blur-sm flex items-center justify-center">
+        <div class="text-center space-y-4">
+            <div class="flex items-center justify-center gap-2">
+                <div class="w-4 h-4 rounded-full bg-primary-500 animate-bounce-slow" style="animation-delay: 0s;"></div>
+                <div class="w-4 h-4 rounded-full bg-primary-500 animate-bounce-slow" style="animation-delay: 0.1s;"></div>
+                <div class="w-4 h-4 rounded-full bg-primary-500 animate-bounce-slow" style="animation-delay: 0.2s;"></div>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 rounded-full border-4 border-primary-200 dark:border-primary-900 border-t-primary-500 animate-spin-slow"></div>
+            </div>
+            <p class="text-sm font-semibold text-primary-700 dark:text-primary-300">Loading...</p>
+        </div>
+    </div>
+    
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" 
@@ -401,6 +424,34 @@
         </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle all navigation links
+            document.querySelectorAll('a:not([href^="#"]):not([target="_blank"])').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    // Skip if it's a download link or has a special handler
+                    if (this.hasAttribute('download')) return;
+                    
+                    // Get Alpine.js instance from body
+                    const bodyEl = document.body;
+                    if (bodyEl.__x) {
+                        bodyEl.__x.$data.isLoading = true;
+                    }
+                });
+            });
+            
+            // Handle all form submissions
+            document.querySelectorAll('form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    // Get Alpine.js instance from body
+                    const bodyEl = document.body;
+                    if (bodyEl.__x) {
+                        bodyEl.__x.$data.isLoading = true;
+                    }
+                });
+            });
+        });
+    </script>
     @stack('scripts')
 </body>
 </html>

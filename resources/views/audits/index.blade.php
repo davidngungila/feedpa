@@ -48,6 +48,12 @@
                                 'time' => $createdAt?->format('H:i:s'),
                                 'user_name' => $audit->user?->name ?? 'Guest / System',
                                 'user_email' => $audit->user?->email,
+                                'country' => $audit->country,
+                                'city' => $audit->city,
+                                'timezone' => $audit->timezone,
+                                'device_type' => $audit->device_type,
+                                'device_browser' => $audit->device_browser,
+                                'device_platform' => $audit->device_platform
                             ];
                         @endphp
                         <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
@@ -179,7 +185,45 @@
 
                         <div class="space-y-3">
                             <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                                <i class="fas fa-laptop"></i> Request Details
+                                <i class="fas fa-map-marker-alt"></i> Location
+                            </h4>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">Country</p>
+                                <p class="text-sm" x-text="selected.country || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">City</p>
+                                <p class="text-sm" x-text="selected.city || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">Timezone</p>
+                                <p class="text-sm" x-text="selected.timezone || 'N/A'"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-3">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                                <i class="fas fa-laptop"></i> Device Information
+                            </h4>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">Device Type</p>
+                                <p class="text-sm" x-text="selected.device_type || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">Browser</p>
+                                <p class="text-sm" x-text="selected.device_browser || 'N/A'"></p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-primary-500 uppercase font-bold">Platform</p>
+                                <p class="text-sm" x-text="selected.device_platform || 'N/A'"></p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                                <i class="fas fa-info-circle"></i> Request Details
                             </h4>
                             <template x-if="selected.method">
                                 <div class="flex justify-between items-start gap-2 border-b border-primary-50 dark:border-dark-border pb-2">

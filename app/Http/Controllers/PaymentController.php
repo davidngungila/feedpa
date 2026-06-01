@@ -709,11 +709,82 @@ class PaymentController extends Controller
         ]);
 
         try {
-            $paymentData = $this->api->queryPaymentStatus($request->order_reference);
+            $orderReference = $request->order_reference;
+            $transaction = Transaction::where('order_reference', $orderReference)->first();
+            $paymentData = null;
+            
+            if ($transaction) {
+                // Update from API and get transaction
+                $apiResponse = $this->api->queryPaymentStatus($orderReference);
+                
+                if ($apiResponse) {
+                    $apiData = null;
+                    if (is_array($apiResponse) && isset($apiResponse[0])) {
+                        $apiData = $apiResponse[0];
+                    } elseif (is_array($apiResponse)) {
+                        $apiData = $apiResponse;
+                    }
+                    
+                    if ($apiData && isset($apiData['status'])) {
+                        $mergedCallback = TransactionFieldResolver::mergeCallbackData(
+                            $transaction->callback_data,
+                            $apiData
+                        );
+                        $resolvedDescription = TransactionFieldResolver::description(
+                            $transaction->description,
+                            $apiData['description'] ?? $apiData['narrative'] ?? null,
+                            null,
+                            $mergedCallback
+                        );
+
+                        $transaction->update([
+                            'status' => $apiData['status'],
+                            'transaction_id' => $apiData['id'] ?? $apiData['transaction_id'] ?? $transaction->transaction_id,
+                            'payment_method' => $apiData['channel'] ?? $apiData['paymentMethod'] ?? $transaction->payment_method,
+                            'amount' => $apiData['collectedAmount'] ?? $apiData['amount'] ?? $transaction->amount,
+                            'currency' => $apiData['collectedCurrency'] ?? $apiData['currency'] ?? $transaction->currency,
+                            'phone' => $apiData['customer']['customerPhoneNumber'] ?? $apiData['paymentPhoneNumber'] ?? $transaction->phone,
+                            'customer_name' => TransactionFieldResolver::memberName(
+                                $transaction->customer_name,
+                                $apiData['customer']['customerName'] ?? $apiData['customerName'] ?? null
+                            ),
+                            'payer_name' => TransactionFieldResolver::payerName(
+                                $transaction->payer_name,
+                                $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? null
+                            ),
+                            'email' => $apiData['customer']['customerEmail'] ?? $apiData['email'] ?? $transaction->email,
+                            'description' => $resolvedDescription,
+                            'callback_data' => $mergedCallback,
+                            'updated_at' => now()
+                        ]);
+                    }
+                }
+                
+                $paymentData = [
+                    'id' => $transaction->id,
+                    'orderReference' => $transaction->order_reference,
+                    'transaction_id' => $transaction->transaction_id,
+                    'status' => $transaction->status,
+                    'amount' => $transaction->amount,
+                    'currency' => $transaction->currency,
+                    'phone' => $transaction->phone,
+                    'payer_name' => $transaction->payer_name,
+                    'customer_name' => $transaction->customer_name,
+                    'email' => $transaction->email,
+                    'description' => $transaction->resolvedDescription(),
+                    'type' => $transaction->type,
+                    'payment_method' => $transaction->payment_method,
+                    'created_at' => $transaction->created_at,
+                    'updated_at' => $transaction->updated_at
+                ];
+            } else {
+                $paymentData = $this->api->queryPaymentStatus($orderReference);
+            }
             
             return response()->json([
                 'success' => true,
-                'data' => $paymentData
+                'data' => $paymentData,
+                'transaction' => $transaction ? $transaction->toArray() : null
             ]);
         } catch (Exception $e) {
             return response()->json([

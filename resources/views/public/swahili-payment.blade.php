@@ -116,7 +116,7 @@
                                     </li>
                                     <li class="flex items-start gap-3">
                                         <span class="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center shrink-0 mt-0.5"><i class="fas fa-lock text-xs"></i></span>
-                                        <span>Salama — ClickPesa &amp; mobile money</span>
+                                        <span>Salama — ClickPesa & mobile money</span>
                                     </li>
                                     <li class="flex items-start gap-3">
                                         <span class="w-6 h-6 rounded-lg bg-white/15 flex items-center justify-center shrink-0 mt-0.5"><i class="fas fa-sms text-xs"></i></span>
@@ -238,7 +238,7 @@
                                 </button>
 
                                 <p class="hidden sm:block text-center text-[10px] text-slate-400 leading-relaxed">
-                                    Kwa kubofya <strong>Lipa Sasa</strong>, USSD itatumwa kwenye namba uliyoingiza. Thibitisha kwa PIN yako.
+                                    Kwa kubofya <strong>Lipa Sasa</strong>, USSD itatumwa kwenye namba uliyoingiza. Thibitisha na PIN yako.
                                 </p>
                             </form>
                         </div>
@@ -265,6 +265,12 @@
         const descriptionInput = document.getElementById('description');
         const phoneInput = document.getElementById('phone_number');
         const modalRoot = document.getElementById('modalRoot');
+
+        // Polling variables
+        let pollingInterval = null;
+        let pollingStartTime = null;
+        const POLLING_DURATION = 60000; // 1 minute
+        const POLLING_INTERVAL = 3000; // 3 seconds per poll
 
         function formatAmountDisplay(value) {
             const n = Number(value) || 0;
@@ -394,6 +400,7 @@
         function showUSSDNotification(data) {
             const phone = data.phone_number || data.phone || '—';
             const amount = formatAmountDisplay(data.amount);
+            const orderReference = data.order_reference;
             modalRoot.innerHTML = `
                 <div id="ussdNotification" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/50">
                     <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
@@ -413,21 +420,238 @@
                                 <span class="text-xs text-brand-600 font-medium">Kiasi</span>
                                 <span class="text-sm font-bold text-brand-800">TZS ${amount}</span>
                             </div>
-                            <p class="text-xs text-slate-500 text-center pt-2">Thibitisha kwa PIN. Utapokea SMS baada ya malipo kukamilika.</p>
-                            <button type="button" onclick="closeUSSDNotification()"
-                                    class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold transition-colors mt-2">
-                                Nimeelewa
+                            <div class="flex justify-between items-center py-2.5 px-4 rounded-xl bg-slate-50 border border-slate-100">
+                                <span class="text-xs text-slate-500 font-medium">Reference</span>
+                                <span class="text-sm font-mono font-bold text-slate-800">${orderReference}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 text-center pt-2">Thibitisha na PIN. Tunaangalia hali ya malipo yako mara kwa mara…</p>
+                            <div id="statusIndicator" class="mt-3 text-center">
+                                <i class="fas fa-spinner fa-spin text-brand-600 mr-1"></i>
+                                <span class="text-sm text-slate-600">Inaangalia hali ya malipo…</span>
+                            </div>
+                            <div id="pollingProgress" class="mt-3">
+                                <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
+                                    <div id="progressBar" class="h-full bg-brand-500 transition-all duration-300" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+            
+            // Start polling
+            startPolling(orderReference);
+        }
+
+        window.closeUSSDNotification = function () {
+            stopPolling();
+            closeModal('ussdNotification');
+            form.reset();
+            btnAmount.textContent = '0';
+            resetButton();
+        };
+
+        function startPolling(orderReference) {
+            pollingStartTime = Date.now();
+            updateProgressBar();
+            
+            pollingInterval = setInterval(() => {
+                const elapsed = Date.now() - pollingStartTime;
+                updateProgressBar();
+                
+                if (elapsed >= POLLING_DURATION) {
+                    stopPolling();
+                    showPollingTimeout(orderReference);
+                    return;
+                }
+                
+                checkPaymentStatus(orderReference);
+            }, POLLING_INTERVAL);
+            
+            // Initial check
+            checkPaymentStatus(orderReference);
+        }
+
+        function stopPolling() {
+            if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+            }
+        }
+
+        function updateProgressBar() {
+            const progressBar = document.getElementById('progressBar');
+            const statusIndicator = document.getElementById('statusIndicator');
+            
+            if (!progressBar || !statusIndicator) return;
+            
+            const elapsed = Date.now() - pollingStartTime;
+            const percentage = Math.min((elapsed / POLLING_DURATION) * 100, 100);
+            progressBar.style.width = `${percentage}%`;
+        }
+
+        async function checkPaymentStatus(orderReference) {
+            try {
+                const response = await fetch('/payments/api/status', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    },
+                    body: JSON.stringify({ order_reference: orderReference })
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    console.error('Status check failed', result);
+                    return;
+                }
+                
+                const data = result.data;
+                const transaction = result.transaction;
+                let status = null;
+                
+                if (transaction && transaction.status) {
+                    status = transaction.status;
+                } else if (data && data.status) {
+                    status = data.status;
+                } else if (Array.isArray(data) && data[0] && data[0].status) {
+                    status = data[0].status;
+                }
+                
+                if (!status) {
+                    return;
+                }
+                
+                const isSuccessful = ['SUCCESS', 'SETTLED', 'COMPLETED'].includes(status);
+                const isFailed = ['FAILED', 'DECLINED', 'CANCELLED', 'ERROR', 'REVERSED'].includes(status);
+                
+                if (isSuccessful) {
+                    stopPolling();
+                    showSuccessModal(orderReference, data || transaction);
+                } else if (isFailed) {
+                    stopPolling();
+                    showFailureModal(status);
+                }
+                
+            } catch (error) {
+                console.error('Error checking payment status', error);
+            }
+        }
+
+        function showSuccessModal(orderReference, paymentData) {
+            const amount = formatAmountDisplay(paymentData.amount || paymentData.collectedAmount || 0);
+            
+            modalRoot.innerHTML = `
+                <div id="successModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/50">
+                    <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
+                        <div class="bg-gradient-to-r from-green-600 to-emerald-700 px-6 py-5 text-white text-center">
+                            <div class="w-14 h-14 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
+                                <i class="fas fa-check-circle text-2xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold">Hongera! Malipo Yamekamilika</h3>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <p class="text-sm text-slate-600 text-center">Asante! Malipo yako yamekamilika.</p>
+                            <div class="flex justify-between items-center py-2.5 px-4 rounded-xl bg-green-50 border border-green-100">
+                                <span class="text-xs text-green-700 font-medium">Kiasi</span>
+                                <span class="text-sm font-bold text-green-800">TZS ${amount}</span>
+                            </div>
+                            <div class="flex justify-between items-center py-2.5 px-4 rounded-xl bg-slate-50 border border-slate-100">
+                                <span class="text-xs text-slate-500 font-medium">Reference</span>
+                                <span class="text-sm font-mono font-bold text-slate-800">${orderReference}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <a href="/payments/receipt/${orderReference}" target="_blank"
+                                   class="flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold transition-colors">
+                                    <i class="fas fa-download"></i>
+                                    Pakua Rcpt
+                                </a>
+                                <a href="/payments/status?reference=${orderReference}"
+                                   class="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold transition-colors">
+                                    <i class="fas fa-eye"></i>
+                                    Angalia
+                                </a>
+                            </div>
+                            <button type="button" onclick="closeSuccessModal()"
+                                    class="w-full py-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold transition-colors">
+                                Funga
                             </button>
                         </div>
                     </div>
                 </div>`;
+        }
+
+        window.closeSuccessModal = function () {
+            closeModal('successModal');
             form.reset();
             btnAmount.textContent = '0';
             resetButton();
+        };
+
+        function showFailureModal(status) {
+            modalRoot.innerHTML = `
+                <div id="failureModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/50">
+                    <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
+                        <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-5 text-white text-center">
+                            <div class="w-14 h-14 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
+                                <i class="fas fa-times-circle text-2xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold">Malipo Haujaweza</h3>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <p class="text-sm text-slate-600 text-center">Malipo haujaweza kukamilika. Tafadhali jaribu tena.</p>
+                            <div class="flex justify-between items-center py-2.5 px-4 rounded-xl bg-red-50 border border-red-100">
+                                <span class="text-xs text-red-700 font-medium">Hali</span>
+                                <span class="text-sm font-bold text-red-800">${status}</span>
+                            </div>
+                            <button type="button" onclick="closeFailureModal()"
+                                    class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-colors">
+                                Jaribu Tena
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
         }
 
-        window.closeUSSDNotification = function () {
-            closeModal('ussdNotification');
+        window.closeFailureModal = function () {
+            closeModal('failureModal');
+            form.reset();
+            btnAmount.textContent = '0';
+            resetButton();
+        };
+
+        function showPollingTimeout(orderReference) {
+            modalRoot.innerHTML = `
+                <div id="timeoutModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/50">
+                    <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
+                        <div class="bg-gradient-to-r from-amber-600 to-amber-700 px-6 py-5 text-white text-center">
+                            <div class="w-14 h-14 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
+                                <i class="fas fa-clock text-2xl"></i>
+                            </div>
+                            <h3 class="text-lg font-bold">Tulikuwa Tunasubiri Sana</h3>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <p class="text-sm text-slate-600 text-center">Hakuna majibu kuhusiana na hali ya malipo. Unaweza kuangalia hali ya malipo baadaye.</p>
+                            <a href="/payments/status?reference=${orderReference}"
+                               class="flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold transition-colors">
+                                <i class="fas fa-eye"></i>
+                                Angalia Hali
+                            </a>
+                            <button type="button" onclick="closeTimeoutModal()"
+                                    class="w-full py-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold transition-colors">
+                                Funga
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        window.closeTimeoutModal = function () {
+            closeModal('timeoutModal');
+            form.reset();
+            btnAmount.textContent = '0';
+            resetButton();
         };
 
         function showAlert(type, message) {

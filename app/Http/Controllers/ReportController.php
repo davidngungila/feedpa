@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Models\Payout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -13,31 +14,46 @@ class ReportController extends Controller
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         
-        $query = Transaction::where('type', 'payment');
+        $paymentsQuery = Transaction::where('type', 'payment')->whereIn('status', ['SETTLED', 'SUCCESS']);
         
-        if ($startDate) $query->whereDate('created_at', '>=', $startDate);
-        if ($endDate) $query->whereDate('created_at', '<=', $endDate);
+        if ($startDate) $paymentsQuery->whereDate('created_at', '>=', $startDate);
+        if ($endDate) $paymentsQuery->whereDate('created_at', '<=', $endDate);
         
-        $transactions = $query->get();
+        $payments = $paymentsQuery->get();
+        
+        $payoutsQuery = Payout::whereIn('status', ['SUCCESS', 'SETTLED']);
+        if ($startDate) $payoutsQuery->whereDate('created_at', '>=', $startDate);
+        if ($endDate) $payoutsQuery->whereDate('created_at', '<=', $endDate);
+        $payouts = $payoutsQuery->get();
+        
+        $totalRevenue = $payments->sum('amount');
+        $totalExpenses = $payouts->sum('amount');
+        $netProfit = $totalRevenue - $totalExpenses;
         
         $trialBalance = [
             'accounts' => [
                 [
                     'name' => 'Cash',
-                    'debit' => $transactions->sum('amount'),
-                    'credit' => 0,
-                    'balance' => $transactions->sum('amount'),
+                    'debit' => $totalRevenue,
+                    'credit' => $totalExpenses,
+                    'balance' => $netProfit,
                 ],
                 [
                     'name' => 'Revenue',
                     'debit' => 0,
-                    'credit' => $transactions->sum('amount'),
-                    'balance' => -$transactions->sum('amount'),
+                    'credit' => $totalRevenue,
+                    'balance' => -$totalRevenue,
+                ],
+                [
+                    'name' => 'Payout Expenses',
+                    'debit' => $totalExpenses,
+                    'credit' => 0,
+                    'balance' => $totalExpenses,
                 ],
             ],
             'totals' => [
-                'debit' => $transactions->sum('amount'),
-                'credit' => $transactions->sum('amount'),
+                'debit' => $totalRevenue + $totalExpenses,
+                'credit' => $totalRevenue + $totalExpenses,
             ]
         ];
         
@@ -48,33 +64,39 @@ class ReportController extends Controller
     {
         $asOfDate = $request->get('as_of_date', now()->format('Y-m-d'));
         
-        $transactions = Transaction::where('type', 'payment')
+        $payments = Transaction::where('type', 'payment')
+            ->whereIn('status', ['SETTLED', 'SUCCESS'])
             ->whereDate('created_at', '<=', $asOfDate)
             ->get();
         
-        $totalAssets = $transactions->sum('amount');
-        $totalEquity = $totalAssets;
+        $payouts = Payout::whereIn('status', ['SUCCESS', 'SETTLED'])
+            ->whereDate('created_at', '<=', $asOfDate)
+            ->get();
+            
+        $totalRevenue = $payments->sum('amount');
+        $totalExpenses = $payouts->sum('amount');
+        $netAssets = $totalRevenue - $totalExpenses;
         
         $balanceSheet = [
             'as_of_date' => $asOfDate,
             'assets' => [
                 [
                     'name' => 'Cash',
-                    'value' => $totalAssets,
+                    'value' => $netAssets,
                 ],
             ],
             'liabilities' => [],
             'equity' => [
                 [
                     'name' => 'Retained Earnings',
-                    'value' => $totalEquity,
+                    'value' => $netAssets,
                 ],
             ],
             'totals' => [
-                'assets' => $totalAssets,
+                'assets' => $netAssets,
                 'liabilities' => 0,
-                'equity' => $totalEquity,
-                'total_liabilities_equity' => $totalEquity,
+                'equity' => $netAssets,
+                'total_liabilities_equity' => $netAssets,
             ],
         ];
         
@@ -86,12 +108,21 @@ class ReportController extends Controller
         $startDate = $request->get('start_date', now()->subMonth()->format('Y-m-01'));
         $endDate = $request->get('end_date', now()->format('Y-m-d'));
         
-        $query = Transaction::where('type', 'payment');
+        $paymentsQuery = Transaction::where('type', 'payment')->whereIn('status', ['SETTLED', 'SUCCESS']);
+        $payoutsQuery = Payout::whereIn('status', ['SUCCESS', 'SETTLED']);
         
-        if ($startDate) $query->whereDate('created_at', '>=', $startDate);
-        if ($endDate) $query->whereDate('created_at', '<=', $endDate);
+        if ($startDate) {
+            $paymentsQuery->whereDate('created_at', '>=', $startDate);
+            $payoutsQuery->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $paymentsQuery->whereDate('created_at', '<=', $endDate);
+            $payoutsQuery->whereDate('created_at', '<=', $endDate);
+        }
         
-        $revenue = $query->sum('amount');
+        $revenue = $paymentsQuery->sum('amount');
+        $expenses = $payoutsQuery->sum('amount');
+        $netProfit = $revenue - $expenses;
         
         $profitLoss = [
             'start_date' => $startDate,
@@ -102,12 +133,17 @@ class ReportController extends Controller
                     'amount' => $revenue,
                 ],
             ],
-            'expenses' => [],
-            'net_profit' => $revenue,
+            'expenses' => [
+                [
+                    'name' => 'Payouts',
+                    'amount' => $expenses,
+                ],
+            ],
+            'net_profit' => $netProfit,
             'totals' => [
                 'total_revenue' => $revenue,
-                'total_expenses' => 0,
-                'net_profit' => $revenue,
+                'total_expenses' => $expenses,
+                'net_profit' => $netProfit,
             ],
         ];
         
@@ -119,31 +155,49 @@ class ReportController extends Controller
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         
-        $query = Transaction::where('type', 'payment');
+        $paymentsQuery = Transaction::where('type', 'payment')->whereIn('status', ['SETTLED', 'SUCCESS']);
+        $payoutsQuery = Payout::whereIn('status', ['SUCCESS', 'SETTLED']);
         
-        if ($startDate) $query->whereDate('created_at', '>=', $startDate);
-        if ($endDate) $query->whereDate('created_at', '<=', $endDate);
+        if ($startDate) {
+            $paymentsQuery->whereDate('created_at', '>=', $startDate);
+            $payoutsQuery->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $paymentsQuery->whereDate('created_at', '<=', $endDate);
+            $payoutsQuery->whereDate('created_at', '<=', $endDate);
+        }
         
-        $transactions = $query->get();
+        $payments = $paymentsQuery->get();
+        $payouts = $payoutsQuery->get();
+        
+        $totalRevenue = $payments->sum('amount');
+        $totalExpenses = $payouts->sum('amount');
+        $netProfit = $totalRevenue - $totalExpenses;
         
         $trialBalance = [
             'accounts' => [
                 [
                     'name' => 'Cash',
-                    'debit' => $transactions->sum('amount'),
-                    'credit' => 0,
-                    'balance' => $transactions->sum('amount'),
+                    'debit' => $totalRevenue,
+                    'credit' => $totalExpenses,
+                    'balance' => $netProfit,
                 ],
                 [
                     'name' => 'Revenue',
                     'debit' => 0,
-                    'credit' => $transactions->sum('amount'),
-                    'balance' => -$transactions->sum('amount'),
+                    'credit' => $totalRevenue,
+                    'balance' => -$totalRevenue,
+                ],
+                [
+                    'name' => 'Payout Expenses',
+                    'debit' => $totalExpenses,
+                    'credit' => 0,
+                    'balance' => $totalExpenses,
                 ],
             ],
             'totals' => [
-                'debit' => $transactions->sum('amount'),
-                'credit' => $transactions->sum('amount'),
+                'debit' => $totalRevenue + $totalExpenses,
+                'credit' => $totalRevenue + $totalExpenses,
             ]
         ];
         
@@ -160,33 +214,39 @@ class ReportController extends Controller
     {
         $asOfDate = $request->get('as_of_date', now()->format('Y-m-d'));
         
-        $transactions = Transaction::where('type', 'payment')
+        $payments = Transaction::where('type', 'payment')
+            ->whereIn('status', ['SETTLED', 'SUCCESS'])
             ->whereDate('created_at', '<=', $asOfDate)
             ->get();
         
-        $totalAssets = $transactions->sum('amount');
-        $totalEquity = $totalAssets;
+        $payouts = Payout::whereIn('status', ['SUCCESS', 'SETTLED'])
+            ->whereDate('created_at', '<=', $asOfDate)
+            ->get();
+            
+        $totalRevenue = $payments->sum('amount');
+        $totalExpenses = $payouts->sum('amount');
+        $netAssets = $totalRevenue - $totalExpenses;
         
         $balanceSheet = [
             'as_of_date' => $asOfDate,
             'assets' => [
                 [
                     'name' => 'Cash',
-                    'value' => $totalAssets,
+                    'value' => $netAssets,
                 ],
             ],
             'liabilities' => [],
             'equity' => [
                 [
                     'name' => 'Retained Earnings',
-                    'value' => $totalEquity,
+                    'value' => $netAssets,
                 ],
             ],
             'totals' => [
-                'assets' => $totalAssets,
+                'assets' => $netAssets,
                 'liabilities' => 0,
-                'equity' => $totalEquity,
-                'total_liabilities_equity' => $totalEquity,
+                'equity' => $netAssets,
+                'total_liabilities_equity' => $netAssets,
             ],
         ];
         
@@ -202,12 +262,21 @@ class ReportController extends Controller
         $startDate = $request->get('start_date', now()->subMonth()->format('Y-m-01'));
         $endDate = $request->get('end_date', now()->format('Y-m-d'));
         
-        $query = Transaction::where('type', 'payment');
+        $paymentsQuery = Transaction::where('type', 'payment')->whereIn('status', ['SETTLED', 'SUCCESS']);
+        $payoutsQuery = Payout::whereIn('status', ['SUCCESS', 'SETTLED']);
         
-        if ($startDate) $query->whereDate('created_at', '>=', $startDate);
-        if ($endDate) $query->whereDate('created_at', '<=', $endDate);
+        if ($startDate) {
+            $paymentsQuery->whereDate('created_at', '>=', $startDate);
+            $payoutsQuery->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $paymentsQuery->whereDate('created_at', '<=', $endDate);
+            $payoutsQuery->whereDate('created_at', '<=', $endDate);
+        }
         
-        $revenue = $query->sum('amount');
+        $revenue = $paymentsQuery->sum('amount');
+        $expenses = $payoutsQuery->sum('amount');
+        $netProfit = $revenue - $expenses;
         
         $profitLoss = [
             'start_date' => $startDate,
@@ -218,12 +287,17 @@ class ReportController extends Controller
                     'amount' => $revenue,
                 ],
             ],
-            'expenses' => [],
-            'net_profit' => $revenue,
+            'expenses' => [
+                [
+                    'name' => 'Payouts',
+                    'amount' => $expenses,
+                ],
+            ],
+            'net_profit' => $netProfit,
             'totals' => [
                 'total_revenue' => $revenue,
-                'total_expenses' => 0,
-                'net_profit' => $revenue,
+                'total_expenses' => $expenses,
+                'net_profit' => $netProfit,
             ],
         ];
         

@@ -76,7 +76,7 @@ class TransactionFieldResolver
         ];
     }
 
-    public static function description(?string $local, ?string $remote = null, ?string $default = null, ?array $callbackData = null): ?string
+    public static function description(?string $local, ?string $remote = null, ?string $default = 'Malipo ya FEEDTAN', ?array $callbackData = null): ?string
     {
         $formPurpose = self::formPurposeFromCallback($callbackData);
 
@@ -102,6 +102,7 @@ class TransactionFieldResolver
             return trim((string) $remote);
         }
 
+        // Ensure we never return N/A, use the default
         return $default;
     }
 

@@ -542,7 +542,15 @@ class PaymentController extends Controller
                 $query->whereDate('created_at', '<=', $request->end_date);
             }
 
-            $payments = $query->orderBy('created_at', 'desc')->get()->toArray();
+            $payments = $query->orderBy('created_at', 'desc')->get();
+            
+            // Process each payment to use resolved description and other fields
+            $processedPayments = [];
+            foreach ($payments as $payment) {
+                $paymentArray = $payment->toArray();
+                $paymentArray['description'] = $payment->resolved_description;
+                $processedPayments[] = $paymentArray;
+            }
             
             // Selected columns
             $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'sms_sent', 'sms_sent_at', 'created_at', 'updated_at'];
@@ -552,7 +560,7 @@ class PaymentController extends Controller
             }
 
             $pdf = Pdf::loadView('payments.exports.pdf', [
-                'payments' => $payments,
+                'payments' => $processedPayments,
                 'columns' => $columns
             ])
                 ->setPaper('a4', 'landscape')
@@ -598,7 +606,15 @@ class PaymentController extends Controller
                 $query->whereDate('created_at', '<=', $request->end_date);
             }
 
-            $payments = $query->orderBy('created_at', 'desc')->get()->toArray();
+            $payments = $query->orderBy('created_at', 'desc')->get();
+            
+            // Process each payment to use resolved description and other fields
+            $processedPayments = [];
+            foreach ($payments as $payment) {
+                $paymentArray = $payment->toArray();
+                $paymentArray['description'] = $payment->resolved_description;
+                $processedPayments[] = $paymentArray;
+            }
             
             // Selected columns
             $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'sms_sent', 'sms_sent_at', 'created_at', 'updated_at'];
@@ -607,7 +623,7 @@ class PaymentController extends Controller
                 $columns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'created_at', 'updated_at'];
             }
 
-            return Excel::download(new \App\Exports\PaymentHistoryExport($payments, $columns), 'payment-history-' . date('Y-m-d') . '.xlsx');
+            return Excel::download(new \App\Exports\PaymentHistoryExport($processedPayments, $columns), 'payment-history-' . date('Y-m-d') . '.xlsx');
         } catch (Exception $e) {
             Log::error('Excel export failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to export Excel: ' . $e->getMessage());

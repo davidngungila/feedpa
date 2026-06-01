@@ -67,13 +67,16 @@ class TransactionObserver
     {
         $subject = "🔔 New Payment Notification - {$transaction->order_reference}";
         
-        $customerName = $transaction->customer_name ?? $transaction->payer_name ?? 'Unknown';
-        $customerPhone = $transaction->phone ?? 'N/A';
-        $amount = $transaction->collected_amount ?? $transaction->amount ?? 0;
+        $memberName = $transaction->customer_name ?? 'Unknown';
+        $actualPayer = $transaction->payer_name ?? $memberName;
+        $phone = $transaction->phone ?? 'N/A';
+        $amount = number_format($transaction->collected_amount ?? $transaction->amount ?? 0, 2);
         $currency = $transaction->currency ?? 'TZS';
         $status = $transaction->status ?? 'UNKNOWN';
         $reference = $transaction->order_reference ?? 'N/A';
-        $date = $transaction->created_at ? $transaction->created_at->toDateTimeString() : now()->toDateTimeString();
+        $transactionId = $transaction->transaction_id ?? 'N/A';
+        $paymentMethod = $transaction->payment_method ?? 'Unknown';
+        $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
         $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment received';
         
         $html = <<<HTML
@@ -90,89 +93,108 @@ class TransactionObserver
             color: #333;
             margin: 0;
             padding: 0;
+            background: #f3f4f6;
         }
         .container {
-            max-width: 600px;
-            margin: 20px auto;
-            padding: 20px;
+            max-width: 650px;
+            margin: 30px auto;
+            padding: 0;
             background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
         }
         .header {
             text-align: center;
-            padding: 20px 0;
-            border-bottom: 2px solid #10b981;
-            margin-bottom: 20px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-radius: 16px 16px 0 0;
         }
         .header h1 {
-            color: #10b981;
-            margin: 0;
-            font-size: 24px;
+            margin: 0 0 10px 0;
+            font-size: 28px;
         }
         .status-badge {
             display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 12px;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 14px;
             font-weight: bold;
-            margin: 10px 0;
+            text-transform: uppercase;
         }
-        .status-completed {
-            background-color: #d1fae5;
-            color: #059669;
+        .status-settled, .status-completed {
+            background-color: rgba(255,255,255,0.2);
+            border: 2px solid white;
         }
-        .status-pending {
-            background-color: #fef3c7;
-            color: #d97706;
+        .content {
+            padding: 30px;
         }
-        .status-failed {
-            background-color: #fee2e2;
-            color: #dc2626;
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #10b981;
         }
-        .details {
-            background: #f9fafb;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px 0;
+        .section-title:first-child {
+            margin-top: 0;
+        }
+        .details-grid {
+            display: grid;
+            gap: 15px;
         }
         .detail-row {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e5e7eb;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-radius: 10px;
         }
         .detail-label {
             font-weight: 600;
             color: #4b5563;
+            font-size: 14px;
         }
         .detail-value {
             color: #1f2937;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 14px;
         }
         .alert {
             background: #fef3c7;
-            border-left: 4px solid #f59e0b;
-            padding: 15px;
-            border-radius: 0 8px 8px 0;
-            margin: 20px 0;
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 25px 0;
+        }
+        .alert strong {
+            color: #92400e;
         }
         .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background: #10b981;
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 16px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white !important;
             text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            margin: 20px 0;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            margin: 25px 0;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
         }
         .footer {
             text-align: center;
-            padding: 20px;
+            padding: 25px;
+            background: #f9fafb;
             color: #6b7280;
-            font-size: 12px;
-            border-top: 1px solid #e5e7eb;
+            font-size: 13px;
+            border-radius: 0 0 16px 16px;
         }
     </style>
 </head>
@@ -183,46 +205,67 @@ class TransactionObserver
             <div class="status-badge status-{$this->getCssStatus($status)}">{$status}</div>
         </div>
         
-        <p>Hi Officer,</p>
-        <p>A new payment has been successfully made. Please login to record this transaction in the system.</p>
-        
-        <div class="details">
-            <div class="detail-row">
-                <span class="detail-label">Order Reference:</span>
-                <span class="detail-value">{$reference}</span>
+        <div class="content">
+            <p style="font-size: 16px; color: #374151;">Hi Officer,</p>
+            <p style="font-size: 16px; color: #374151;">A new payment has been successfully made. Please login to record this transaction in the system.</p>
+            
+            <div class="section-title">📊 Payment Details</div>
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Reference</span>
+                    <span class="detail-value">{$reference}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Amount</span>
+                    <span class="detail-value">{$currency} {$amount}</span>
+                </div>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Customer Name:</span>
-                <span class="detail-value">{$customerName}</span>
+            
+            <div class="section-title">👤 Member Information</div>
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Member Name</span>
+                    <span class="detail-value">{$memberName}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Actual Payer</span>
+                    <span class="detail-value">{$actualPayer}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Phone</span>
+                    <span class="detail-value">{$phone}</span>
+                </div>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Phone Number:</span>
-                <span class="detail-value">{$customerPhone}</span>
+            
+            <div class="section-title">📝 Transaction Details</div>
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Transaction ID</span>
+                    <span class="detail-value">{$transactionId}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Method</span>
+                    <span class="detail-value">{$paymentMethod}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date & Time</span>
+                    <span class="detail-value">{$date}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Purpose / Description</span>
+                    <span class="detail-value">{$description}</span>
+                </div>
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Amount Paid:</span>
-                <span class="detail-value">{$amount} {$currency}</span>
+            
+            <div class="alert">
+                <strong>⚠️ Action Required:</strong> Please login to the system to record this payment transaction in our records.
             </div>
-            <div class="detail-row">
-                <span class="detail-label">Date & Time:</span>
-                <span class="detail-value">{$date}</span>
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Description:</span>
-                <span class="detail-value">{$description}</span>
-            </div>
-        </div>
-        
-        <div class="alert">
-            <strong>⚠️ Action Required:</strong> Please login to the system to record this payment transaction in our records.
-        </div>
-        
-        <p style="text-align: center;">
+            
             <a href="{$this->getLoginUrl()}" class="button">🔑 Login to System</a>
-        </p>
+        </div>
         
         <div class="footer">
-            <p>FeedTan Community Microfinance Group<br>
+            <p><strong>FeedTan Community Microfinance Group</strong><br>
             "Let's Grow Together"</p>
         </div>
     </div>
@@ -243,6 +286,6 @@ HTML;
 
     private function getLoginUrl(): string
     {
-        return config('app.url') . '/login';
+        return 'https://pay.feedtancmg.org/login';
     }
 }

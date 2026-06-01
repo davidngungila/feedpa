@@ -143,18 +143,18 @@
   </div>
 
   <!-- ============================================================
-       SPLASH SCREEN
+       LOADING SCREEN
        ============================================================ -->
   <div x-show="showSplash" x-transition class="fixed inset-0 z-[60] flex items-center justify-center"
        :class="darkMode ? 'bg-[#0a140e]' : 'bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700'">
     <div class="text-center">
-      <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center mb-4 shadow-xl mx-auto">
-        <i class="fa-solid fa-leaf text-white text-3xl"></i>
+      <!-- Spinner -->
+      <div class="mb-6">
+        <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div>
       </div>
-      <h2 class="text-2xl font-bold mb-1" :class="darkMode?'text-white':'text-white'">FEEDTAN DIGITAL</h2>
-      <p class="text-sm mb-6" :class="darkMode?'text-primary-300':'text-primary-100'">Payment System</p>
-      <div class="text-5xl font-black text-primary-300 mb-2" x-text="counter"></div>
-      <p class="text-xs font-bold uppercase tracking-widest" :class="darkMode?'text-primary-400':'text-primary-200'">Authenticating...</p>
+      <!-- Success message -->
+      <p class="text-lg font-bold text-white mb-2">Login Successful!</p>
+      <p class="text-sm text-primary-200">Redirecting to dashboard...</p>
     </div>
   </div>
 
@@ -163,21 +163,14 @@
       return {
         darkMode: localStorage.getItem('darkMode') === 'true',
         showSplash: false,
-        counter: 0,
         submitLogin() {
           const form = document.getElementById('loginForm');
           this.showSplash = true;
-
-          // Animate counter
-          this.counter = 0;
-          const interval = setInterval(() => {
-            if (this.counter < 100) {
-              this.counter += 2;
-            } else {
-              clearInterval(interval);
-              form.submit();
-            }
-          }, 30);
+          
+          // Submit immediately
+          setTimeout(() => {
+            form.submit();
+          }, 500);
         }
       }
     }

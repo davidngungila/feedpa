@@ -119,28 +119,28 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Site Name</div>
-                        <input type="text" name="site_name" value="{{ old('site_name', SystemSetting::get('site_name', 'FEEDTAN DIGITAL')) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="FEEDTAN DIGITAL">
+                        <input type="text" name="site_name" value="{{ old('site_name', $siteName) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="FEEDTAN DIGITAL">
                     </div>
                     <div>
                         <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Session Timeout (minutes)</div>
-                        <input type="number" name="session_timeout" value="{{ old('session_timeout', SystemSetting::get('session_timeout', 120)) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="120" min="5" max="1440">
+                        <input type="number" name="session_timeout" value="{{ old('session_timeout', $sessionTimeout) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="120" min="5" max="1440">
                     </div>
                     <div>
                         <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">API Timeout (seconds)</div>
-                        <input type="number" name="api_timeout" value="{{ old('api_timeout', SystemSetting::get('api_timeout', 30)) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="30" min="5" max="300">
+                        <input type="number" name="api_timeout" value="{{ old('api_timeout', $apiTimeout) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="30" min="5" max="300">
                     </div>
                     <div class="md:col-span-2">
                         <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Site Description</div>
-                        <textarea name="site_description" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" rows="2" placeholder="Short description of your site">{{ old('site_description', SystemSetting::get('site_description', '')) }}</textarea>
+                        <textarea name="site_description" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" rows="2" placeholder="Short description of your site">{{ old('site_description', $siteDescription) }}</textarea>
                     </div>
                     
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" name="payment_notifications_enabled" id="payment_notifications_enabled" {{ SystemSetting::get('payment_notifications_enabled', true) ? 'checked' : '' }} class="w-4 h-4 rounded">
+                        <input type="checkbox" name="payment_notifications_enabled" id="payment_notifications_enabled" {{ $paymentNotificationsEnabled ? 'checked' : '' }} class="w-4 h-4 rounded">
                         <label for="payment_notifications_enabled" class="text-sm font-bold text-primary-700 dark:text-primary-300">Enable Payment Notifications</label>
                     </div>
                     
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" name="payout_notifications_enabled" id="payout_notifications_enabled" {{ SystemSetting::get('payout_notifications_enabled', true) ? 'checked' : '' }} class="w-4 h-4 rounded">
+                        <input type="checkbox" name="payout_notifications_enabled" id="payout_notifications_enabled" {{ $payoutNotificationsEnabled ? 'checked' : '' }} class="w-4 h-4 rounded">
                         <label for="payout_notifications_enabled" class="text-sm font-bold text-primary-700 dark:text-primary-300">Enable Payout Notifications</label>
                     </div>
                 </div>

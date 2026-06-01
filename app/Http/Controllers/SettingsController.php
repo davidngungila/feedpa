@@ -27,7 +27,22 @@ class SettingsController extends Controller
     {
         $this->checkAdmin();
         $settings = SystemSetting::where('group', 'sms')->get()->keyBy('key');
-        return view('settings.sms', compact('settings'));
+        $smsProvider = SystemSetting::get('sms_provider', '');
+        $smsApiKey = SystemSetting::get('sms_api_key', '');
+        $smsApiSecret = SystemSetting::get('sms_api_secret', '');
+        $smsSenderId = SystemSetting::get('sms_sender_id', '');
+        $smsEnabled = SystemSetting::get('sms_enabled', false);
+        $smsTemplatePayment = SystemSetting::get('sms_template_payment', '');
+        
+        return view('settings.sms', compact(
+            'settings',
+            'smsProvider',
+            'smsApiKey',
+            'smsApiSecret',
+            'smsSenderId',
+            'smsEnabled',
+            'smsTemplatePayment'
+        ));
     }
 
     public function updateSms(Request $request)
@@ -97,7 +112,25 @@ class SettingsController extends Controller
         $activeUsers = User::whereNotNull('email')->count();
         $systemHealth = $this->checkSystemHealth();
         $settings = SystemSetting::where('group', 'general')->get()->keyBy('key');
-        return view('settings.general', compact('activeUsers', 'systemHealth', 'settings'));
+        
+        $siteName = SystemSetting::get('site_name', 'FEEDTAN DIGITAL');
+        $sessionTimeout = SystemSetting::get('session_timeout', 120);
+        $apiTimeout = SystemSetting::get('api_timeout', 30);
+        $siteDescription = SystemSetting::get('site_description', '');
+        $paymentNotificationsEnabled = SystemSetting::get('payment_notifications_enabled', true);
+        $payoutNotificationsEnabled = SystemSetting::get('payout_notifications_enabled', true);
+        
+        return view('settings.general', compact(
+            'activeUsers',
+            'systemHealth',
+            'settings',
+            'siteName',
+            'sessionTimeout',
+            'apiTimeout',
+            'siteDescription',
+            'paymentNotificationsEnabled',
+            'payoutNotificationsEnabled'
+        ));
     }
 
     public function updateGeneral(Request $request)

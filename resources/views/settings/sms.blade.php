@@ -50,28 +50,28 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div class="md:col-span-2">
                             <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">SMS Provider</div>
-                            <input type="text" name="sms_provider" value="{{ old('sms_provider', $settings['sms_provider']->value ?? '') }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g., Twilio, Nexmo">
+                            <input type="text" name="sms_provider" value="{{ old('sms_provider', $smsProvider) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g., Twilio, Nexmo">
                         </div>
                         <div>
                             <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">API Key</div>
-                            <input type="text" name="sms_api_key" value="{{ old('sms_api_key', $settings['sms_api_key']->value ?? '') }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Your API Key">
+                            <input type="text" name="sms_api_key" value="{{ old('sms_api_key', $smsApiKey) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Your API Key">
                         </div>
                         <div>
                             <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">API Secret</div>
-                            <input type="password" name="sms_api_secret" value="{{ old('sms_api_secret', $settings['sms_api_secret']->value ?? '') }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Your API Secret">
+                            <input type="password" name="sms_api_secret" value="{{ old('sms_api_secret', $smsApiSecret) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Your API Secret">
                         </div>
                         <div>
                             <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Sender ID</div>
-                            <input type="text" name="sms_sender_id" value="{{ old('sms_sender_id', $settings['sms_sender_id']->value ?? '') }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="FEEDTANCMG">
+                            <input type="text" name="sms_sender_id" value="{{ old('sms_sender_id', $smsSenderId) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="FEEDTANCMG">
                         </div>
                         <div class="flex items-center gap-2">
-                            <input type="checkbox" name="sms_enabled" id="sms_enabled" {{ (isset($settings['sms_enabled']) && SystemSetting::get('sms_enabled', false)) ? 'checked' : '' }} class="w-4 h-4 rounded">
+                            <input type="checkbox" name="sms_enabled" id="sms_enabled" {{ $smsEnabled ? 'checked' : '' }} class="w-4 h-4 rounded">
                             <label for="sms_enabled" class="text-sm font-bold text-primary-700 dark:text-primary-300">Enable SMS Notifications</label>
                         </div>
                     </div>
                     <div>
                         <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Payment SMS Template</div>
-                        <textarea name="sms_template_payment" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" rows="3" placeholder="Hello {customer_name}, your payment of {amount} TZS has been received. Reference: {reference}">{{ old('sms_template_payment', $settings['sms_template_payment']->value ?? '') }}</textarea>
+                        <textarea name="sms_template_payment" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" rows="3" placeholder="Hello {customer_name}, your payment of {amount} TZS has been received. Reference: {reference}">{{ old('sms_template_payment', $smsTemplatePayment) }}</textarea>
                     </div>
                 </div>
                 <div class="mt-6">

@@ -118,9 +118,11 @@ Route::middleware(['auth'])->group(function () {
     // Settings Routes (Admin Only)
     Route::prefix('settings')->name('settings.')->group(function () {
         Route::get('/sms', [SettingsController::class, 'sms'])->name('sms');
+        Route::post('/sms/update', [SettingsController::class, 'updateSms'])->name('sms.update');
         Route::get('/email', [SettingsController::class, 'email'])->name('email');
-        Route::get('/general', [SettingsController::class, 'general'])->name('general');
         Route::post('/email/update', [SettingsController::class, 'updateEmail'])->name('email.update');
+        Route::get('/general', [SettingsController::class, 'general'])->name('general');
+        Route::post('/general/update', [SettingsController::class, 'updateGeneral'])->name('general.update');
     });
     
     // Sync Trigger Routes

@@ -3,6 +3,7 @@
 namespace App\Observers;
 
 use App\Models\Transaction;
+use App\Models\SystemSetting;
 use App\Services\EmailConfigService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -11,8 +12,11 @@ class TransactionObserver
 {
     public function created(Transaction $transaction)
     {
-        // Only send email if transaction is completed (or any status you want)
-        // Or send for all new transactions
+        // Check if notifications are enabled
+        if (!SystemSetting::get('payment_notifications_enabled', true)) {
+            return;
+        }
+
         try {
             $this->sendTransactionAlertToOfficers($transaction);
         } catch (\Exception $e) {

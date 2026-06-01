@@ -50,6 +50,10 @@
                     <span class="text-xs text-gray-400 uppercase font-bold">Email Address</span>
                     <span class="text-xs font-bold text-primary-900 dark:text-white">{{ $user->email }}</span>
                 </div>
+                <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
+                    <span class="text-xs text-gray-400 uppercase font-bold">Phone Number</span>
+                    <span class="text-xs font-bold text-primary-900 dark:text-white">{{ $user->phone ?? 'N/A' }}</span>
+                </div>
                 <div class="flex justify-between">
                     <span class="text-xs text-gray-400 uppercase font-bold">Member Since</span>
                     <span class="text-xs font-bold text-primary-900 dark:text-white">

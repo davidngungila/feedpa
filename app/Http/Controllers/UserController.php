@@ -48,6 +48,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:6|confirmed',
+            'phone' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'is_admin' => 'nullable|boolean',
@@ -57,6 +58,7 @@ class UserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'phone' => $request->phone,
             'position' => $request->position,
             'is_admin' => $request->is_admin ?? false,
         ];
@@ -114,6 +116,7 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,'.$id,
             'password' => 'nullable|string|min:6|confirmed',
+            'phone' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'is_admin' => 'nullable|boolean',
@@ -122,6 +125,7 @@ class UserController extends Controller
         $userData = [
             'name' => $request->name,
             'email' => $request->email,
+            'phone' => $request->phone,
             'position' => $request->position,
             'is_admin' => $request->is_admin ?? false,
         ];
@@ -220,6 +224,7 @@ class UserController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
+            'phone' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ]);
@@ -227,6 +232,7 @@ class UserController extends Controller
         $userData = [
             'name' => $request->name,
             'email' => $request->email,
+            'phone' => $request->phone,
             'position' => $request->position,
         ];
 

@@ -87,6 +87,15 @@
                             <p class="mt-1 text-[10px] text-red-500 font-bold">{{ $message }}</p>
                         @enderror
                     </div>
+                    <div>
+                        <label for="phone" class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Phone Number</label>
+                        <input id="phone" type="text" name="phone" value="{{ old('phone', auth()->user()->phone) }}"
+                               class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500"
+                               placeholder="e.g. 0712345678">
+                        @error('phone')
+                            <p class="mt-1 text-[10px] text-red-500 font-bold">{{ $message }}</p>
+                        @enderror
+                    </div>
                 </div>
             </div>
 

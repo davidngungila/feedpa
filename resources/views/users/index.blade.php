@@ -38,6 +38,7 @@
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">User</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Position</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Email</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Phone</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Role</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider text-right">Actions</th>
                     </tr>
@@ -67,6 +68,9 @@
                             </td>
                             <td class="px-6 py-4">
                                 <p class="text-xs text-primary-700 dark:text-primary-300">{{ $user->email }}</p>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-xs text-primary-700 dark:text-primary-300">{{ $user->phone ?? 'N/A' }}</p>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1.5 rounded-full text-[10px] font-bold {{ $user->is_admin ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300' }}">

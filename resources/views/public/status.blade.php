@@ -264,7 +264,7 @@
 
                                 <a href="{{ route('public.payment') }}"
                                    class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white border border-primary-100 text-primary-600 text-xs font-bold hover:bg-primary-50 transition-all">
-                                    <i class="fas fa-plus"></i> Fanya Malipo Mwingine
+                                    <i class="fas fa-plus"></i> Fanya malipo Mengine
                                 </a>
                             </div>
                         @endif

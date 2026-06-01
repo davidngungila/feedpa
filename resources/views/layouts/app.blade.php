@@ -453,6 +453,71 @@
         </div>
     </div>
 
+    <!-- Session Timeout Script -->
+    <script>
+        @if(auth()->check())
+            let sessionTimeout = {{ \App\Models\SystemSetting::get('session_timeout', 120) * 60 * 1000 }}; // convert to ms
+            let warningTime = sessionTimeout / 3; // 1/3 of time
+            let lastActivity = Date.now();
+
+            function resetTimer() {
+                lastActivity = Date.now();
+            }
+
+            function autoLogout() {
+                // Create form and submit POST request for logout
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ route('logout') }}';
+                
+                const csrfToken = document.createElement('input');
+                csrfToken.type = 'hidden';
+                csrfToken.name = '_token';
+                csrfToken.value = '{{ csrf_token() }}';
+                
+                form.appendChild(csrfToken);
+                document.body.appendChild(form);
+                form.submit();
+            }
+
+            // Listen for user activity to reset timer
+            document.addEventListener('mousemove', resetTimer);
+            document.addEventListener('keypress', resetTimer);
+            document.addEventListener('click', resetTimer);
+            document.addEventListener('scroll', resetTimer);
+
+            // Check every second
+            setInterval(() => {
+                const now = Date.now();
+                const timeSinceActivity = now - lastActivity;
+                
+                if (timeSinceActivity >= sessionTimeout) {
+                    // Auto logout
+                    autoLogout();
+                } else if (timeSinceActivity >= warningTime && timeSinceActivity < warningTime + 1000) {
+                    // Show warning
+                    const warning = document.createElement('div');
+                    warning.className = 'fixed top-4 right-4 z-50 bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded-xl shadow-lg animate-pulse';
+                    warning.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-exclamation-triangle text-2xl"></i>
+                            <div>
+                                <p class="font-bold">Session Warning!</p>
+                                <p class="text-sm">Your session will expire soon. Move your mouse or press any key to stay logged in.</p>
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(warning);
+                    
+                    // Remove warning after 5 seconds or on activity
+                    setTimeout(() => warning.remove(), 5000);
+                    document.addEventListener('mousemove', () => warning.remove(), { once: true });
+                    document.addEventListener('keypress', () => warning.remove(), { once: true });
+                }
+            }, 1000);
+        @endif
+    </script>
+
     <script>
         // Show loading when page starts loading (from cache or navigation)
         window.addEventListener('beforeunload', function() {

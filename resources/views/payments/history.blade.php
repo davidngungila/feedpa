@@ -7,14 +7,6 @@
     <!-- Status Tabs -->
     <div class="card p-1">
         <div class="flex gap-1">
-            <a href="{{ request()->fullUrlWithQuery(['status' => 'ALL', 'page' => 1]) }}"
-               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status', 'ALL')) === 'ALL' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
-                <i class="fas fa-list"></i>
-                ALL
-                <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status', 'ALL')) === 'ALL' ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/40' }}">
-                    {{ number_format($allCount ?? 0) }}
-                </span>
-            </a>
             <a href="{{ request()->fullUrlWithQuery(['status' => 'SETTLED', 'page' => 1]) }}"
                class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'SETTLED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
                 <i class="fas fa-check-circle"></i>
@@ -35,7 +27,7 @@
     </div>
 
     <!-- Filters Card -->
-    <div x-data="{ showFilters: false }" class="card p-5">
+    <div x-data="{ showFilters: true }" class="card p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-sm text-primary-900 dark:text-white flex items-center gap-2">
                 <i class="fas fa-filter text-primary-500"></i> Advanced Filters
@@ -45,19 +37,19 @@
             </button>
         </div>
         
-        <form x-show="showFilters" x-transition method="GET" action="{{ route('payments.history') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <form x-show="showFilters" x-transition method="GET" action="{{ route('payments.history') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="filterForm">
             <input type="hidden" name="status" value="{{ $activeStatus ?? request('status', 'SETTLED') }}">
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Search</label>
-                <input type="text" name="search" value="{{ request('search') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Reference, name, phone...">
+                <input type="text" name="search" id="searchInput" value="{{ request('search') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Reference, name, phone...">
             </div>
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Start Date</label>
-                <input type="date" name="start_date" value="{{ request('start_date') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                <input type="date" name="start_date" id="startDate" value="{{ request('start_date') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
             </div>
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">End Date</label>
-                <input type="date" name="end_date" value="{{ request('end_date') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                <input type="date" name="end_date" id="endDate" value="{{ request('end_date') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
             </div>
             <div class="flex items-end gap-2">
                 <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-500 text-white py-2 rounded-lg text-xs font-bold transition-all">
@@ -274,9 +266,7 @@
                                     </div>
                                     <h4 class="font-bold text-primary-900 dark:text-white">No Transactions Found</h4>
                                     <p class="text-xs text-primary-500">
-                                        @if(($activeStatus ?? 'ALL') === 'ALL')
-                                            No payments match your filters.
-                                        @elseif(($activeStatus ?? 'ALL') === 'FAILED')
+                                        @if(($activeStatus ?? 'SETTLED') === 'FAILED')
                                             No failed payments match your filters.
                                         @else
                                             No settled payments match your filters.
@@ -449,11 +439,36 @@
 @push('scripts')
 <script>
 function paymentHistoryDetails() {
+    let debounceTimer = null;
     return {
         open: false,
         selected: null,
         copiedField: null,
         copyTimeout: null,
+        init() {
+            // Add real-time search
+            const searchInput = document.getElementById('searchInput');
+            const startDate = document.getElementById('startDate');
+            const endDate = document.getElementById('endDate');
+            const filterForm = document.getElementById('filterForm');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        filterForm.submit();
+                    }, 500);
+                });
+            }
+
+            if (startDate) {
+                startDate.addEventListener('change', () => filterForm.submit());
+            }
+
+            if (endDate) {
+                endDate.addEventListener('change', () => filterForm.submit());
+            }
+        },
         openDetails(payload) {
             this.selected = payload;
             this.open = true;

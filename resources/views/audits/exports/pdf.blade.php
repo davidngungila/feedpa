@@ -153,34 +153,34 @@
          <div class="summary-section">
             <div class="report-info">
                 <div class="label">Report Generated On:</div>
-                <div class="value">{{ date('l, d F Y H:i:s') }}</div>
+                <div class="value"><?php echo date('l, d F Y H:i:s'); ?></div>
                 
                 <div class="label" style="margin-top: 8px;">Total Records:</div>
-                <div class="value">{{ count($audits) }} log entries</div>
+                <div class="value"><?php echo count($audits); ?> log entries</div>
                 
-                @if(request()->filled('start_date') || request()->filled('end_date'))
+                <?php if (!empty($startDate) || !empty($endDate)): ?>
                     <div class="label" style="margin-top: 8px;">Date Range:</div>
                     <div class="value">
-                        @if(request()->filled('start_date')) {{ request('start_date') }} @endif
-                        @if(request()->filled('start_date') && request()->filled('end_date')) to @endif
-                        @if(request()->filled('end_date')) {{ request('end_date') }} @endif
+                        <?php if (!empty($startDate)) { echo htmlspecialchars($startDate); } ?>
+                        <?php if (!empty($startDate) && !empty($endDate)) { echo ' to '; } ?>
+                        <?php if (!empty($endDate)) { echo htmlspecialchars($endDate); } ?>
                     </div>
-                @endif
+                <?php endif; ?>
             </div>
             
             <div class="summary-stats">
                 <div class="label" style="color: #16a34a;">Log Type Summary</div>
                 <div class="value" style="margin-top: 5px;">
-                    <span style="color: #166534;">Login:</span> {{ collect($audits)->filter(fn($a) => $a['action'] === 'login')->count() }}
+                    <span style="color: #166534;">Login:</span> <?php echo $loginCount; ?>
                 </div>
                 <div class="value">
-                    <span style="color: #4b5563;">Logout:</span> {{ collect($audits)->filter(fn($a) => $a['action'] === 'logout')->count() }}
+                    <span style="color: #4b5563;">Logout:</span> <?php echo $logoutCount; ?>
                 </div>
                 <div class="value">
-                    <span style="color: #991b1b;">Failed Login:</span> {{ collect($audits)->filter(fn($a) => $a['action'] === 'login_failed')->count() }}
+                    <span style="color: #991b1b;">Failed Login:</span> <?php echo $failedLoginCount; ?>
                 </div>
                 <div class="value">
-                    <span style="color: #1e40af;">Other:</span> {{ collect($audits)->filter(fn($a) => !in_array($a['action'], ['login', 'logout', 'login_failed']))->count() }}
+                    <span style="color: #1e40af;">Other:</span> <?php echo $otherCount; ?>
                 </div>
             </div>
         </div>
@@ -198,31 +198,60 @@
             </tr>
         </thead>
         <tbody>
-            @foreach($audits as $audit)
+            <?php foreach ($audits as $audit): ?>
+                <?php
+                    // Determine action class without match()
+                    $actionClass = 'action-other';
+                    if ($audit['action'] === 'login') $actionClass = 'action-login';
+                    elseif ($audit['action'] === 'logout') $actionClass = 'action-logout';
+                    elseif ($audit['action'] === 'login_failed') $actionClass = 'action-login-failed';
+                    
+                    // Format date
+                    $formattedDate = 'N/A';
+                    if (isset($audit['created_at'])) {
+                        $formattedDate = \Carbon\Carbon::parse($audit['created_at'])->format('Y-m-d H:i:s');
+                    }
+                    
+                    // Format location
+                    $locationParts = [];
+                    if (!empty($audit['city'])) $locationParts[] = $audit['city'];
+                    if (!empty($audit['country'])) $locationParts[] = $audit['country'];
+                    $location = !empty($locationParts) ? implode(', ', $locationParts) : 'N/A';
+                    
+                    // Format device
+                    $deviceParts = [];
+                    if (!empty($audit['device_type'])) $deviceParts[] = $audit['device_type'];
+                    $deviceLine1 = !empty($deviceParts) ? implode(', ', $deviceParts) : 'N/A';
+                    
+                    $deviceLine2Parts = [];
+                    if (!empty($audit['device_browser'])) $deviceLine2Parts[] = $audit['device_browser'];
+                    if (!empty($audit['device_platform'])) $deviceLine2Parts[] = $audit['device_platform'];
+                    $deviceLine2 = !empty($deviceLine2Parts) ? implode(' / ', $deviceLine2Parts) : '';
+                ?>
                 <tr>
-                    <td>{{ isset($audit['created_at']) ? \Carbon\Carbon::parse($audit['created_at'])->format('Y-m-d H:i:s') : 'N/A' }}</td>
-                    <td>{{ $audit['user_name'] }}<br><span style="color: #6b7280; font-size:9px;">{{ $audit['user_email'] }}</span></td>
+                    <td><?php echo htmlspecialchars($formattedDate); ?></td>
                     <td>
-                        @php
-                            $actionClass = match(true) {
-                                $audit['action'] === 'login' => 'action-login',
-                                $audit['action'] === 'logout' => 'action-logout',
-                                $audit['action'] === 'login_failed' => 'action-login-failed',
-                                default => 'action-other'
-                            };
-                        @endphp
-                        <span class="{{ $actionClass }}">{{ ucwords(str_replace('_', ' ', $audit['action'])) }}</span>
+                        <?php echo htmlspecialchars($audit['user_name']); ?><br>
+                        <span style="color: #6b7280; font-size:9px;"><?php echo htmlspecialchars($audit['user_email']); ?></span>
                     </td>
-                    <td>{{ $audit['details'] ?? 'N/A' }}</td>
-                    <td>{{ $audit['ip_address'] ?? 'N/A' }}</td>
-                    <td>{{ ($audit['city'] ? $audit['city'] . ', ' : '') . ($audit['country'] ?? 'N/A') }}</td>
-                    <td>{{ $audit['device_type'] ?? 'N/A' }}<br><span style="color: #6b7280; font-size:9px;">{{ $audit['device_browser'] ?? '' }} / {{ $audit['device_platform'] ?? '' }}</span></td>
+                    <td>
+                        <span class="<?php echo $actionClass; ?>"><?php echo ucwords(str_replace('_', ' ', htmlspecialchars($audit['action']))); ?></span>
+                    </td>
+                    <td><?php echo htmlspecialchars($audit['details'] ?? 'N/A'); ?></td>
+                    <td><?php echo htmlspecialchars($audit['ip_address'] ?? 'N/A'); ?></td>
+                    <td><?php echo htmlspecialchars($location); ?></td>
+                    <td>
+                        <?php echo htmlspecialchars($deviceLine1); ?><br>
+                        <?php if (!empty($deviceLine2)): ?>
+                            <span style="color: #6b7280; font-size:9px;"><?php echo htmlspecialchars($deviceLine2); ?></span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
-            @endforeach
+            <?php endforeach; ?>
         </tbody>
     </table>
 
-    @if(!empty($audits))
+    <?php if (!empty($audits)): ?>
         <div class="footer">
             <strong>FEEDTAN DIGITAL PAYMENT SYSTEM</strong><br>
             Powered by FeedTan Team<br>
@@ -231,7 +260,7 @@
                 This document is electronically generated and verified by FEEDTAN DIGITAL PAYMENT SYSTEM.
             </div>
         </div>
-    @endif
+    <?php endif; ?>
      </div> 
 </body>
 </html>

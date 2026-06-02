@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Audit;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Log;
 
 class AuditController extends Controller
 {
@@ -63,51 +64,77 @@ class AuditController extends Controller
 
     public function exportPdf(Request $request)
     {
-        if (!auth()->user()->is_admin) {
-            abort(403, 'Unauthorized');
-        }
-        
-        $query = Audit::with('user')->latest();
-        
-        if ($request->filled('start_date')) {
-            $query->whereDate('created_at', '>=', $request->start_date);
-        }
-        if ($request->filled('end_date')) {
-            $query->whereDate('created_at', '<=', $request->end_date);
-        }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('action', 'like', "%{$search}%")
-                  ->orWhere('details', 'like', "%{$search}%")
-                  ->orWhere('ip_address', 'like', "%{$search}%")
-                  ->orWhereHas('user', function ($q2) use ($search) {
-                      $q2->where('name', 'like', "%{$search}%")
-                         ->orWhere('email', 'like', "%{$search}%");
-                  });
+        try {
+            if (!auth()->user()->is_admin) {
+                abort(403, 'Unauthorized');
+            }
+            
+            $query = Audit::with('user')->latest();
+            
+            if ($request->filled('start_date')) {
+                $query->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->filled('end_date')) {
+                $query->whereDate('created_at', '<=', $request->end_date);
+            }
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function ($q) use ($search) {
+                    $q->where('action', 'like', "%{$search}%")
+                      ->orWhere('details', 'like', "%{$search}%")
+                      ->orWhere('ip_address', 'like', "%{$search}%")
+                      ->orWhereHas('user', function ($q2) use ($search) {
+                          $q2->where('name', 'like', "%{$search}%")
+                             ->orWhere('email', 'like', "%{$search}%");
+                      });
+                });
+            }
+            
+            $audits = $query->get()->map(function ($audit) {
+                return [
+                    'id' => $audit->id,
+                    'created_at' => $audit->created_at,
+                    'user_name' => $audit->user?->name ?? 'Guest / System',
+                    'user_email' => $audit->user?->email ?? '-',
+                    'action' => $audit->action,
+                    'details' => $audit->details,
+                    'ip_address' => $audit->ip_address,
+                    'country' => $audit->country,
+                    'city' => $audit->city,
+                    'device_type' => $audit->device_type,
+                    'device_browser' => $audit->device_browser,
+                    'device_platform' => $audit->device_platform,
+                    'url' => $audit->url
+                ];
             });
+            
+            // Calculate summary counts here so PDF view doesn't have to
+            $loginCount = 0;
+            $logoutCount = 0;
+            $failedLoginCount = 0;
+            $otherCount = 0;
+            foreach ($audits as $audit) {
+                if ($audit['action'] === 'login') $loginCount++;
+                elseif ($audit['action'] === 'logout') $logoutCount++;
+                elseif ($audit['action'] === 'login_failed') $failedLoginCount++;
+                else $otherCount++;
+            }
+            
+            $pdf = Pdf::loadView('audits.exports.pdf', [
+                'audits' => $audits,
+                'loginCount' => $loginCount,
+                'logoutCount' => $logoutCount,
+                'failedLoginCount' => $failedLoginCount,
+                'otherCount' => $otherCount,
+                'startDate' => $request->start_date,
+                'endDate' => $request->end_date
+            ])->setPaper('a4', 'landscape');
+            
+            return $pdf->download('audit-logs-' . date('Y-m-d') . '.pdf');
+        } catch (\Exception $e) {
+            Log::error('Audit PDF export failed: ' . $e->getMessage() . ' | File: ' . $e->getFile() . ' | Line: ' . $e->getLine());
+            return back()->with('error', 'Failed to export PDF: ' . $e->getMessage());
         }
-        
-        $audits = $query->get()->map(function ($audit) {
-            return [
-                'id' => $audit->id,
-                'created_at' => $audit->created_at,
-                'user_name' => $audit->user?->name ?? 'Guest / System',
-                'user_email' => $audit->user?->email ?? '-',
-                'action' => $audit->action,
-                'details' => $audit->details,
-                'ip_address' => $audit->ip_address,
-                'country' => $audit->country,
-                'city' => $audit->city,
-                'device_type' => $audit->device_type,
-                'device_browser' => $audit->device_browser,
-                'device_platform' => $audit->device_platform,
-                'url' => $audit->url
-            ];
-        });
-        
-        $pdf = Pdf::loadView('audits.exports.pdf', compact('audits'))->setPaper('a4', 'landscape');
-        return $pdf->download('audit-logs-' . date('Y-m-d') . '.pdf');
     }
 
     public function destroy($id)

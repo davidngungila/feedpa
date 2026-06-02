@@ -81,6 +81,17 @@
     </div>
   </div>
 
+  <!-- Error Toast Notification -->
+  <div id="error-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700">
+    <div class="flex-shrink-0">
+      <i class="fas fa-exclamation-circle text-2xl text-red-600 dark:text-red-400"></i>
+    </div>
+    <div class="flex-1">
+      <p class="font-bold text-base text-red-800 dark:text-red-200" id="error-toast-title">Error</p>
+      <p class="text-sm text-red-700 dark:text-red-300" id="error-toast-message"></p>
+    </div>
+  </div>
+
   <!-- ============================================================
        LOGIN SCREEN
        ============================================================ -->
@@ -171,9 +182,11 @@
       <div class="mb-6">
         <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div>
       </div>
-      <!-- Success message -->
-      <p class="text-lg font-bold text-white mb-2">Login Successful!</p>
-      <p class="text-sm text-primary-200">Redirecting to dashboard...</p>
+      <!-- Step messages -->
+      <div class="space-y-1">
+        <p class="text-lg font-bold text-white" x-text="currentStep"></p>
+        <p class="text-sm text-primary-200" x-text="currentStepDescription"></p>
+      </div>
     </div>
   </div>
 
@@ -182,25 +195,42 @@
       return {
         darkMode: localStorage.getItem('darkMode') === 'true',
         showSplash: false,
-        submitLogin() {
+        currentStep: 'Validating...',
+        currentStepDescription: 'Checking your credentials',
+        steps: [
+          { title: 'Validating...', description: 'Checking your credentials', delay: 400 },
+          { title: 'Authorizing...', description: 'Verifying your account', delay: 400 },
+          { title: 'Login Successful!', description: 'Redirecting to dashboard...', delay: 500 }
+        ],
+        async submitLogin() {
           const form = document.getElementById('loginForm');
-          this.showSplash = true;
           
           // Clear the auto logout cookie when logging in
           document.cookie = "auto_logout=; path=/; max-age=-1";
-          // Hide the toast
+          // Hide toasts
           document.getElementById('auto-logout-toast').classList.add('hidden');
+          document.getElementById('error-toast').classList.add('hidden');
           
-          // Submit immediately
-          setTimeout(() => {
-            form.submit();
-          }, 500);
+          this.showSplash = true;
+          
+          // Run through each step
+          for (let i = 0; i < this.steps.length; i++) {
+            this.currentStep = this.steps[i].title;
+            this.currentStepDescription = this.steps[i].description;
+            
+            // Wait for the step delay
+            await new Promise(resolve => setTimeout(resolve, this.steps[i].delay));
+          }
+          
+          // Finally submit the form
+          form.submit();
         }
       }
     }
     
-    // Check for auto logout cookie on page load
+    // Check for auto logout cookie and validation errors on page load
     document.addEventListener('DOMContentLoaded', function() {
+      // Check for auto logout cookie
       const cookies = document.cookie.split(';');
       let autoLogout = false;
       
@@ -222,6 +252,26 @@
           toast.classList.add('bg-yellow-100', 'border', 'border-yellow-400');
         }
       }
+      
+      // Check for Laravel validation errors
+      @if($errors->any())
+        const errorToast = document.getElementById('error-toast');
+        const errorTitle = document.getElementById('error-toast-title');
+        const errorMessage = document.getElementById('error-toast-message');
+        
+        errorTitle.textContent = 'Login Failed';
+        // Get first error message
+        @php
+          $firstError = $errors->first();
+        @endphp
+        errorMessage.textContent = '{{ addslashes($firstError) }}';
+        errorToast.classList.remove('hidden');
+        
+        // Hide toast after 5 seconds
+        setTimeout(() => {
+          errorToast.classList.add('hidden');
+        }, 5000);
+      @endif
     });
   </script>
 </body>

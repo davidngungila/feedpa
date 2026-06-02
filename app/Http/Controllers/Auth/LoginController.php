@@ -33,6 +33,16 @@ class LoginController extends Controller
             'password' => ['required'],
         ]);
 
+        // Check if user exists
+        $user = \App\Models\User::where('email', $request->email)->first();
+        
+        if ($user && $user->is_locked) {
+            Audit::log('login_failed', "Locked user login attempt for email: {$request->email}");
+            return back()->withErrors([
+                'email' => 'Your account has been locked. Please contact the administrator for assistance.',
+            ])->onlyInput('email');
+        }
+
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
             

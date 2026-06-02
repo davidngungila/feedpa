@@ -209,7 +209,7 @@
                                         Malipo Kwaajili Ya <span class="text-red-500">*</span>
                                     </label>
                                     <div class="flex flex-wrap gap-2 mb-2.5" id="purposeChips">
-                                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama,Hisa'] as $purpose)
+                                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa'] as $purpose)
                                             <button type="button" data-purpose="{{ $purpose }}"
                                                     class="purpose-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
                                                 {{ $purpose }}

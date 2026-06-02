@@ -96,6 +96,14 @@
 
                 <div>
                     <label for="description" class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Description</label>
+                    <div class="flex flex-wrap gap-2 mb-2.5" id="purposeChips">
+                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa'] as $purpose)
+                            <button type="button" data-purpose="{{ $purpose }}"
+                                    class="purpose-chip px-3 py-1.5 rounded-lg border border-primary-200 bg-white dark:bg-dark-900 dark:border-dark-border text-xs font-semibold text-primary-700 dark:text-primary-300 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors">
+                                {{ $purpose }}
+                            </button>
+                        @endforeach
+                    </div>
                     <textarea id="description" name="description" rows="4" maxlength="500" required
                               class="w-full bg-primary-50 dark:bg-dark-900 border {{ $errors->has('description') ? 'border-red-400' : 'border-primary-100 dark:border-dark-border' }} rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500"
                               placeholder="Example: Monthly contribution for May">{{ old('description') }}</textarea>
@@ -216,6 +224,16 @@ document.addEventListener('DOMContentLoaded', function () {
         charCount.classList.toggle('text-primary-500', remaining >= 30);
     });
 
+    // Purpose chips functionality
+    document.querySelectorAll('.purpose-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            description.value = this.dataset.purpose;
+            description.dispatchEvent(new Event('input'));
+            document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+            this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200');
+        });
+    });
+
     [payerName, amount, paymentMethod].forEach((el) => {
         el.addEventListener('input', syncPreview);
         el.addEventListener('change', syncPreview);
@@ -226,6 +244,7 @@ document.addEventListener('DOMContentLoaded', function () {
         charCount.textContent = '500';
         charCount.classList.remove('text-red-500');
         charCount.classList.add('text-primary-500');
+        document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
         syncPreview();
     });
 

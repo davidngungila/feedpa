@@ -204,12 +204,31 @@
         ],
         async submitLogin() {
           const form = document.getElementById('loginForm');
+          const emailInput = document.getElementById('email');
+          const passwordInput = document.getElementById('password');
           
           // Clear the auto logout cookie when logging in
           document.cookie = "auto_logout=; path=/; max-age=-1";
           // Hide toasts
           document.getElementById('auto-logout-toast').classList.add('hidden');
           document.getElementById('error-toast').classList.add('hidden');
+          
+          // Validate inputs
+          if (!emailInput.value.trim() || !passwordInput.value.trim()) {
+            const errorToast = document.getElementById('error-toast');
+            const errorTitle = document.getElementById('error-toast-title');
+            const errorMessage = document.getElementById('error-toast-message');
+            
+            errorTitle.textContent = 'Validation Error';
+            errorMessage.textContent = 'Please enter both email and password.';
+            errorToast.classList.remove('hidden');
+            
+            setTimeout(() => {
+              errorToast.classList.add('hidden');
+            }, 5000);
+            
+            return;
+          }
           
           this.showSplash = true;
           

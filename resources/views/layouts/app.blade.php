@@ -465,10 +465,16 @@
             }
 
             function autoLogout() {
+                // Show loading screen immediately
+                const bodyEl = document.body;
+                if (bodyEl.__x) {
+                    bodyEl.__x.$data.isLoading = true;
+                }
+                
                 // Set a cookie to remember we logged out due to inactivity
                 document.cookie = "auto_logout=true; path=/; max-age=" + (60 * 5) + "; SameSite=Lax";
                 
-                // Create form and submit POST request for logout
+                // Create form and submit POST request for logout immediately
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = '{{ route('logout') }}';

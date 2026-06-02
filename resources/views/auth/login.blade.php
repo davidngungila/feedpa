@@ -60,9 +60,26 @@
       from { opacity:0; transform: translateY(10px); }
       to { opacity:1; transform: translateY(0); }
     }
+    
+    /* Moving toast animation */
+    @keyframes moveRightLeft {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(-20px); }
+    }
   </style>
 </head>
 <body class="h-full" :class="darkMode ? 'dark bg-[#0a140e]' : 'bg-white'">
+
+  <!-- Auto Logout Toast Notification -->
+  <div id="auto-logout-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl" style="animation: moveRightLeft 4s ease-in-out infinite;">
+    <div class="flex-shrink-0">
+      <i class="fas fa-clock text-2xl text-yellow-600 dark:text-yellow-400"></i>
+    </div>
+    <div class="flex-1">
+      <p class="font-bold text-base text-yellow-800 dark:text-yellow-200">Session Expired</p>
+      <p class="text-sm text-yellow-700 dark:text-yellow-300">You were logged out automatically due to inactivity. Please login to continue.</p>
+    </div>
+  </div>
 
   <!-- ============================================================
        LOGIN SCREEN
@@ -169,6 +186,11 @@
           const form = document.getElementById('loginForm');
           this.showSplash = true;
           
+          // Clear the auto logout cookie when logging in
+          document.cookie = "auto_logout=; path=/; max-age=-1";
+          // Hide the toast
+          document.getElementById('auto-logout-toast').classList.add('hidden');
+          
           // Submit immediately
           setTimeout(() => {
             form.submit();
@@ -176,6 +198,31 @@
         }
       }
     }
+    
+    // Check for auto logout cookie on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const cookies = document.cookie.split(';');
+      let autoLogout = false;
+      
+      cookies.forEach(cookie => {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'auto_logout' && value === 'true') {
+          autoLogout = true;
+        }
+      });
+      
+      if (autoLogout) {
+        const toast = document.getElementById('auto-logout-toast');
+        toast.classList.remove('hidden');
+        // Add background colors
+        const isDark = document.documentElement.classList.contains('dark');
+        if (isDark) {
+          toast.classList.add('bg-yellow-900/30', 'border', 'border-yellow-700');
+        } else {
+          toast.classList.add('bg-yellow-100', 'border', 'border-yellow-400');
+        }
+      }
+    });
   </script>
 </body>
 </html>

@@ -465,6 +465,9 @@
             }
 
             function autoLogout() {
+                // Set a cookie to remember we logged out due to inactivity
+                document.cookie = "auto_logout=true; path=/; max-age=" + (60 * 5) + "; SameSite=Lax";
+                
                 // Create form and submit POST request for logout
                 const form = document.createElement('form');
                 form.method = 'POST';

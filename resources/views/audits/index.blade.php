@@ -12,6 +12,85 @@
             </h2>
             <p class="text-xs text-primary-500 mt-1">Track all user activity and system events</p>
         </div>
+        <form id="bulk-delete-form" action="{{ route('audits.bulk-destroy') }}" method="POST" style="display: none;">
+            @csrf
+            @method('DELETE')
+            <input type="hidden" name="ids" id="bulk-delete-ids">
+        </form>
+    </div>
+
+    @if(session('success'))
+        <div class="card p-4 border-l-4 border-l-green-500 bg-green-50/60 dark:bg-green-900/10">
+            <p class="text-xs font-bold text-green-700 dark:text-green-300">
+                <i class="fas fa-circle-check me-1"></i> {{ session('success') }}
+            </p>
+        </div>
+    @endif
+
+    <!-- Filters Card -->
+    <div x-data="{ showFilters: false }" class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="font-bold text-sm text-primary-900 dark:text-white flex items-center gap-2">
+                <i class="fas fa-filter text-primary-500"></i> Advanced Filters
+            </h3>
+            <button @click="showFilters = !showFilters" class="text-xs text-primary-600 font-bold hover:underline">
+                <span x-text="showFilters ? 'Hide Filters' : 'Show Filters'"></span>
+            </button>
+        </div>
+        
+        <form x-show="showFilters" x-transition method="GET" action="{{ route('audits.index') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-primary-500 mb-1">Search</label>
+                <input type="text" name="search" value="{{ request('search') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Search by user, action, IP...">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-primary-500 mb-1">Start Date</label>
+                <input type="date" name="start_date" value="{{ request('start_date') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-widest text-primary-500 mb-1">End Date</label>
+                <input type="date" name="end_date" value="{{ request('end_date') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+            </div>
+            <div class="flex items-end gap-2">
+                <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-500 text-white py-2 rounded-lg text-xs font-bold transition-all">
+                    Apply Filter
+                </button>
+                <a href="{{ route('audits.index') }}" class="px-3 py-2 bg-gray-100 dark:bg-dark-border rounded-lg text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition-all">
+                    <i class="fas fa-undo"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Export & Bulk Actions Card -->
+    <div x-data="{ showExport: false }" class="card p-5">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-4">
+                <h3 class="font-bold text-sm text-primary-900 dark:text-white flex items-center gap-2">
+                    <i class="fas fa-file-export text-primary-500"></i> Actions
+                </h3>
+                
+                <button type="button" id="bulk-delete-btn" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled @click="confirmBulkDelete()">
+                    <i class="fas fa-trash-alt me-1"></i> Delete Selected
+                </button>
+            </div>
+            
+            <button @click="showExport = !showExport" class="text-xs text-primary-600 font-bold hover:underline">
+                <span x-text="showExport ? 'Hide Export Options' : 'Show Export Options'"></span>
+            </button>
+        </div>
+
+        <form x-show="showExport" x-transition method="GET" action="{{ route('audits.export.pdf') }}" class="mt-4 space-y-4">
+            <input type="hidden" name="search" value="{{ request('search') }}">
+            <input type="hidden" name="start_date" value="{{ request('start_date') }}">
+            <input type="hidden" name="end_date" value="{{ request('end_date') }}">
+
+            <div class="flex flex-wrap gap-2">
+                <button type="submit" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold transition-all">
+                    <i class="fas fa-file-pdf me-1"></i> Export PDF
+                </button>
+            </div>
+        </form>
     </div>
 
     <!-- Audit Logs Table -->
@@ -23,6 +102,9 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th class="w-10">
+                            <input type="checkbox" id="select-all" class="rounded border-primary-200 text-primary-600 focus:ring-primary-500" @click="toggleSelectAll()">
+                        </th>
                         <th>Date & Time</th>
                         <th>User</th>
                         <th>Action</th>
@@ -31,7 +113,7 @@
                         <th class="text-center">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
+                <tbody class="divide-y divide-primary-50 dark:border-dark-border">
                     @forelse($audits as $audit)
                         @php
                             $createdAt = $audit->created_at ? \Illuminate\Support\Carbon::parse($audit->created_at) : null;
@@ -57,6 +139,9 @@
                             ];
                         @endphp
                         <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
+                            <td>
+                                <input type="checkbox" class="audit-checkbox rounded border-primary-200 text-primary-600 focus:ring-primary-500" data-id="{{ $audit->id }}" @click="updateBulkDeleteBtn()">
+                            </td>
                             <td class="whitespace-nowrap">
                                 <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
                                 <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
@@ -106,12 +191,21 @@
                                             title="View full details">
                                         <i class="fas fa-eye text-xs"></i>
                                     </button>
+                                    <form action="{{ route('audits.destroy', $audit->id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete this audit log?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit"
+                                                class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                                title="Delete">
+                                            <i class="fas fa-trash-alt text-xs"></i>
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center py-20">
+                            <td colspan="7" class="text-center py-20">
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
                                         <i class="fas fa-folder-open text-2xl text-primary-200"></i>
@@ -292,6 +386,30 @@ function auditLogDetails() {
             if (['POST', 'PUT', 'PATCH'].includes(m)) return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
             if (['DELETE'].includes(m)) return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
             return 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300';
+        },
+        toggleSelectAll() {
+            const selectAllCheckbox = document.getElementById('select-all');
+            const checkboxes = document.querySelectorAll('.audit-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = selectAllCheckbox.checked;
+            });
+            this.updateBulkDeleteBtn();
+        },
+        updateBulkDeleteBtn() {
+            const checkboxes = document.querySelectorAll('.audit-checkbox:checked');
+            const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+            const bulkDeleteIdsInput = document.getElementById('bulk-delete-ids');
+            
+            const ids = Array.from(checkboxes).map(cb => cb.getAttribute('data-id'));
+            bulkDeleteIdsInput.value = JSON.stringify(ids);
+            
+            bulkDeleteBtn.disabled = ids.length === 0;
+        },
+        confirmBulkDelete() {
+            if (confirm('Are you sure you want to delete the selected audit logs?')) {
+                const form = document.getElementById('bulk-delete-form');
+                form.submit();
+            }
         }
     };
 }

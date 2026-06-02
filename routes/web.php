@@ -96,6 +96,9 @@ Route::middleware(['auth'])->group(function () {
     
     // Audit Log Routes
     Route::get('audits', [AuditController::class, 'index'])->name('audits.index');
+    Route::get('audits/export/pdf', [AuditController::class, 'exportPdf'])->name('audits.export.pdf');
+    Route::delete('audits/{audit}', [AuditController::class, 'destroy'])->name('audits.destroy');
+    Route::delete('audits/bulk/destroy', [AuditController::class, 'bulkDestroy'])->name('audits.bulk-destroy');
     
     // Financial Reports Routes
     Route::prefix('reports')->name('reports.')->group(function () {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="loginApp()" class="h-full">
+<html lang="en" x-data="loginApp()" :class="{'dark': darkMode}" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -35,11 +35,6 @@
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
 
-    /* Light/Dark styles */
-    .card { border-radius: 16px; }
-    .light-mode .card { background: white; border: 1px solid #d1fae5; box-shadow: 0 2px 24px rgba(6,78,59,0.15); }
-    .dark .card { background: #0d1f16; border: 1px solid #1a3328; box-shadow: 0 2px 24px rgba(0,0,0,0.4); }
-
     .form-input {
       width: 100%;
       padding: 10px 14px;
@@ -49,31 +44,27 @@
       transition: border-color 0.2s, box-shadow 0.2s;
       font-family: 'Plus Jakarta Sans', sans-serif;
     }
-    .light-mode .form-input { background: #f9fafb; border: 1px solid #d1fae5; color: #064e3b; }
-    .dark .form-input { background: #0a140e; border: 1px solid #1a3328; color: white; }
     .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
 
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
 
-    /* Splash counter animation */
     @keyframes countUp {
       from { opacity:0; transform: translateY(10px); }
       to { opacity:1; transform: translateY(0); }
     }
     
-    /* Moving toast animation */
     @keyframes moveRightLeft {
       0%, 100% { transform: translateX(0); }
       50% { transform: translateX(-20px); }
     }
   </style>
 </head>
-<body class="h-full" :class="darkMode ? 'dark bg-[#0a140e]' : 'bg-white'">
+<body class="h-full" :class="darkMode ? 'dark bg-[#0a140e]' : 'bg-[#f0fdf4]'">
 
   <!-- Auto Logout Toast Notification -->
   <div id="auto-logout-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl" style="animation: moveRightLeft 4s ease-in-out infinite;">
     <div class="flex-shrink-0">
-      <i class="fas fa-clock text-2xl text-yellow-600 dark:text-yellow-400"></i>
+      <i class="fa-solid fa-clock text-2xl text-yellow-600 dark:text-yellow-400"></i>
     </div>
     <div class="flex-1">
       <p class="font-bold text-base text-yellow-800 dark:text-yellow-200">Session Expired</p>
@@ -84,7 +75,7 @@
   <!-- Error Toast Notification -->
   <div id="error-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700">
     <div class="flex-shrink-0">
-      <i class="fas fa-exclamation-circle text-2xl text-red-600 dark:text-red-400"></i>
+      <i class="fa-solid fa-exclamation-circle text-2xl text-red-600 dark:text-red-400"></i>
     </div>
     <div class="flex-1">
       <p class="font-bold text-base text-red-800 dark:text-red-200" id="error-toast-title">Error</p>
@@ -95,7 +86,8 @@
   <!-- ============================================================
        LOGIN SCREEN
        ============================================================ -->
-  <div x-show="!showSplash" x-transition class="fixed inset-0 z-50 flex items-center justify-center">
+  <div x-show="!showSplash" x-transition class="fixed inset-0 z-50 flex items-center justify-center"
+       :class="darkMode ? 'bg-[#0a140e]' : 'bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700'">
     <!-- Background decorations -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
       <div class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10" :class="darkMode ? 'bg-primary-400' : 'bg-white'"></div>
@@ -104,10 +96,10 @@
     </div>
 
     <div class="relative w-full max-w-md mx-4">
-      <div class="card p-8 shadow-2xl">
+      <div class="card rounded-2xl p-8 shadow-2xl" :class="darkMode ? 'bg-[#0d1f16] border border-[#1a3328]' : 'bg-white'">
         <!-- Logo -->
         <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 mb-4 shadow-lg">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 mb-4 shadow-lg">
             <i class="fa-solid fa-leaf text-white text-2xl"></i>
           </div>
           <h1 class="text-2xl font-bold" :class="darkMode?'text-white':'text-primary-900'">FEEDTAN DIGITAL</h1>
@@ -124,6 +116,7 @@
               <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
               <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="you@example.com"
                      class="form-input pl-9"
+                     :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'"
                      @keypress.enter="submitLogin()"/>
             </div>
             @error('email')
@@ -138,6 +131,7 @@
               <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
               <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="••••••••"
                      class="form-input pl-9"
+                     :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'"
                      @keypress.enter="submitLogin()"/>
             </div>
             @error('password')
@@ -154,12 +148,10 @@
           </div>
 
           <!-- Login Button -->
-          <button type="button" @click="submitLogin()" class="w-full py-3 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
+          <button type="button" @click="submitLogin()" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
             <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
           </button>
         </form>
-
-
 
         <!-- Dark mode toggle -->
         <div class="mt-4 flex justify-center">
@@ -207,13 +199,10 @@
           const emailInput = document.getElementById('email');
           const passwordInput = document.getElementById('password');
           
-          // Clear the auto logout cookie when logging in
           document.cookie = "auto_logout=; path=/; max-age=-1";
-          // Hide toasts
           document.getElementById('auto-logout-toast').classList.add('hidden');
           document.getElementById('error-toast').classList.add('hidden');
           
-          // Validate inputs
           if (!emailInput.value.trim() || !passwordInput.value.trim()) {
             const errorToast = document.getElementById('error-toast');
             const errorTitle = document.getElementById('error-toast-title');
@@ -232,24 +221,18 @@
           
           this.showSplash = true;
           
-          // Run through each step
           for (let i = 0; i < this.steps.length; i++) {
             this.currentStep = this.steps[i].title;
             this.currentStepDescription = this.steps[i].description;
-            
-            // Wait for the step delay
             await new Promise(resolve => setTimeout(resolve, this.steps[i].delay));
           }
           
-          // Finally submit the form
           form.submit();
         }
       }
     }
     
-    // Check for auto logout cookie and validation errors on page load
     document.addEventListener('DOMContentLoaded', function() {
-      // Check for auto logout cookie
       const cookies = document.cookie.split(';');
       let autoLogout = false;
       
@@ -263,7 +246,6 @@
       if (autoLogout) {
         const toast = document.getElementById('auto-logout-toast');
         toast.classList.remove('hidden');
-        // Add background colors
         const isDark = document.documentElement.classList.contains('dark');
         if (isDark) {
           toast.classList.add('bg-yellow-900/30', 'border', 'border-yellow-700');
@@ -272,21 +254,18 @@
         }
       }
       
-      // Check for Laravel validation errors
       @if($errors->any())
         const errorToast = document.getElementById('error-toast');
         const errorTitle = document.getElementById('error-toast-title');
         const errorMessage = document.getElementById('error-toast-message');
         
         errorTitle.textContent = 'Login Failed';
-        // Get first error message
         @php
           $firstError = $errors->first();
         @endphp
         errorMessage.textContent = '{{ addslashes($firstError) }}';
         errorToast.classList.remove('hidden');
         
-        // Hide toast after 5 seconds
         setTimeout(() => {
           errorToast.classList.add('hidden');
         }, 5000);

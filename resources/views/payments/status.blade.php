@@ -222,16 +222,22 @@
                                 @endif
 
                                 @if(auth()->check())
-                                    @if(($payment['sms_sent'] ?? false) === false)
-                                        <form action="{{ route('payments.send-sms', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
-                                            @csrf
-                                            <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                                                <i class="fas fa-sms"></i> Send SMS
+                                    @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
+                                        @if(($payment['sms_sent'] ?? false) === false)
+                                            <form action="{{ route('payments.send-sms', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                                                @csrf
+                                                <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                                                    <i class="fas fa-sms"></i> Send SMS
+                                                </button>
+                                            </form>
+                                        @else
+                                            <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
+                                                <i class="fas fa-check"></i> SMS Sent
                                             </button>
-                                        </form>
+                                        @endif
                                     @else
                                         <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
-                                            <i class="fas fa-check"></i> SMS Sent
+                                            <i class="fas fa-sms"></i> Send SMS
                                         </button>
                                     @endif
                                 @else
@@ -241,16 +247,22 @@
                                 @endif
                                 
                                 @if(auth()->check())
-                                    @if(($payment['email_sent'] ?? false) === false)
-                                        <form action="{{ route('payments.send-email', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
-                                            @csrf
-                                            <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                                                <i class="fas fa-envelope"></i> Send Email
+                                    @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
+                                        @if(($payment['email_sent'] ?? false) === false)
+                                            <form action="{{ route('payments.send-email', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                                                @csrf
+                                                <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                                                    <i class="fas fa-envelope"></i> Send Email
+                                                </button>
+                                            </form>
+                                        @else
+                                            <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
+                                                <i class="fas fa-check"></i> Email Sent
                                             </button>
-                                        </form>
+                                        @endif
                                     @else
                                         <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
-                                            <i class="fas fa-check"></i> Email Sent
+                                            <i class="fas fa-envelope"></i> Send Email
                                         </button>
                                     @endif
                                 @else

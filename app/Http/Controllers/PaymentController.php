@@ -46,6 +46,11 @@ class PaymentController extends Controller
         $transaction = Transaction::where('order_reference', $orderReference)->firstOrFail();
 
         try {
+            // Check if transaction status is SUCCESS or SETTLED
+            if (!in_array($transaction->status, ['SUCCESS', 'SETTLED'])) {
+                return back()->with('error', 'SMS can only be sent for successful/settled transactions.');
+            }
+
             if ($transaction->sms_sent) {
                 return back()->with('info', 'SMS has already been sent for this transaction.');
             }
@@ -99,6 +104,11 @@ class PaymentController extends Controller
         $transaction = Transaction::where('order_reference', $orderReference)->firstOrFail();
 
         try {
+            // Check if transaction status is SUCCESS or SETTLED
+            if (!in_array($transaction->status, ['SUCCESS', 'SETTLED'])) {
+                return back()->with('error', 'Email can only be sent for successful/settled transactions.');
+            }
+
             if ($transaction->email_sent) {
                 return back()->with('info', 'Email has already been sent for this transaction.');
             }

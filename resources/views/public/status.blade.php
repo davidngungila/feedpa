@@ -255,6 +255,13 @@
                                        class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white text-xs font-bold shadow-glow transition-all">
                                         <i class="fas fa-download"></i> Pakua Risiti
                                     </a>
+                                @elseif(in_array($payment['status'] ?? '', ['FAILED', 'CANCELLED', 'DECLINED']))
+                                    <form action="{{ route('payments.retry', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                                        @csrf
+                                        <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-xs font-bold shadow-glow transition-all">
+                                            <i class="fas fa-redo"></i> Jaribu Tena
+                                        </button>
+                                    </form>
                                 @else
                                     <button onclick="window.location.reload()"
                                             class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-500 hover:to-primary-600 text-white text-xs font-bold shadow-glow transition-all">

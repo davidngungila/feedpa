@@ -201,57 +201,64 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
-                <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" target="_blank"
-                   class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
-                    <i class="fas fa-download"></i> Receipt
-                </a>
-            @else
-                <button onclick="window.location.reload()"
-                        class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
-                    <i class="fas fa-sync-alt"></i> Refresh
-                </button>
-            @endif
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
+                                    <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" target="_blank"
+                                       class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
+                                        <i class="fas fa-download"></i> Receipt
+                                    </a>
+                                @elseif(in_array($payment['status'] ?? '', ['FAILED', 'CANCELLED', 'DECLINED']))
+                                    <form action="{{ route('payments.retry', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                                        @csrf
+                                        <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg transition-all">
+                                            <i class="fas fa-redo"></i> Retry Payment
+                                        </button>
+                                    </form>
+                                @else
+                                    <button onclick="window.location.reload()"
+                                            class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
+                                        <i class="fas fa-sync-alt"></i> Refresh
+                                    </button>
+                                @endif
 
-            @if(auth()->check())
-                @if(($payment['sms_sent'] ?? false) === false)
-                    <form action="{{ route('payments.send-sms', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
-                        @csrf
-                        <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                            <i class="fas fa-sms"></i> Send SMS
-                        </button>
-                    </form>
-                @else
-                    <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
-                        <i class="fas fa-check"></i> SMS Sent
-                    </button>
-                @endif
-            @else
-                <button onclick="alert('Sending SMS...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                    <i class="fas fa-sms"></i> SMS
-                </button>
-            @endif
-            
-            @if(auth()->check())
-                @if(($payment['email_sent'] ?? false) === false)
-                    <form action="{{ route('payments.send-email', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
-                        @csrf
-                        <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                            <i class="fas fa-envelope"></i> Send Email
-                        </button>
-                    </form>
-                @else
-                    <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
-                        <i class="fas fa-check"></i> Email Sent
-                    </button>
-                @endif
-            @else
-                <button onclick="alert('Sending Email...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                    <i class="fas fa-envelope"></i> Email
-                </button>
-            @endif
-        </div>
+                                @if(auth()->check())
+                                    @if(($payment['sms_sent'] ?? false) === false)
+                                        <form action="{{ route('payments.send-sms', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                                            @csrf
+                                            <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                                                <i class="fas fa-sms"></i> Send SMS
+                                            </button>
+                                        </form>
+                                    @else
+                                        <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
+                                            <i class="fas fa-check"></i> SMS Sent
+                                        </button>
+                                    @endif
+                                @else
+                                    <button onclick="alert('Sending SMS...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                                        <i class="fas fa-sms"></i> SMS
+                                    </button>
+                                @endif
+                                
+                                @if(auth()->check())
+                                    @if(($payment['email_sent'] ?? false) === false)
+                                        <form action="{{ route('payments.send-email', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                                            @csrf
+                                            <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                                                <i class="fas fa-envelope"></i> Send Email
+                                            </button>
+                                        </form>
+                                    @else
+                                        <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
+                                            <i class="fas fa-check"></i> Email Sent
+                                        </button>
+                                    @endif
+                                @else
+                                    <button onclick="alert('Sending Email...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                                        <i class="fas fa-envelope"></i> Email
+                                    </button>
+                                @endif
+                            </div>
 
         <!-- SMS & Email Status -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

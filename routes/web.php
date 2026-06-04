@@ -52,6 +52,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReference}/notes', [PaymentController::class, 'addNote'])->name('notes.add');
         Route::post('/{orderReference}/send-sms', [PaymentController::class, 'sendManualSMS'])->name('send-sms');
         Route::post('/{orderReference}/send-email', [PaymentController::class, 'sendManualEmail'])->name('send-email');
+        Route::post('/{orderReference}/retry', [PaymentController::class, 'retryPayment'])->name('retry');
     });
 
     // Payout Routes (Authenticated)
@@ -160,6 +161,7 @@ Route::prefix('payments')->name('payments.')->group(function () {
     Route::get('/status', [PaymentController::class, 'status'])->name('status');
     Route::get('/receipt/{orderReference}', [PaymentController::class, 'receipt'])->name('receipt');
     Route::post('/api/status', [PaymentController::class, 'apiStatus'])->name('api.status');
+    Route::post('/{orderReference}/retry', [PaymentController::class, 'retryPayment'])->name('retry');
 });
 
 // Callback/Webhook Routes

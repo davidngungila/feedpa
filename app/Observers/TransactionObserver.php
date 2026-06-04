@@ -55,9 +55,11 @@ class TransactionObserver
         // Prepare admin email and CC list
         $adminEmail = 'feedtan15@gmail.com';
         $ccEmails = [];
+        $recipients = [$adminEmail];
         foreach ($officers as $officer) {
             if (strtolower($officer->email) !== strtolower($adminEmail)) {
                 $ccEmails[] = $officer->email;
+                $recipients[] = $officer->email;
             }
         }
         
@@ -79,7 +81,7 @@ class TransactionObserver
             // Update transaction email tracking
             $transaction->update([
                 'email_sent' => true,
-                'email_message' => $emailTemplate['html'],
+                'email_message' => implode(', ', $recipients),
                 'email_sent_at' => now(),
                 'email_error' => null,
             ]);

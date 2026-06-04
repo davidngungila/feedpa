@@ -324,11 +324,8 @@
                         </div>
                     @endif
                     @if(($payment['email_message'] ?? false))
-                        <div class="p-3 bg-primary-50 dark:bg-dark-900 rounded-lg border border-primary-100 dark:border-dark-border">
-                            <h4 class="text-[10px] text-primary-500 uppercase font-bold mb-2">Email Content:</h4>
-                            <div class="max-h-96 overflow-y-auto text-xs">
-                                {!! $payment['email_message'] !!}
-                            </div>
+                        <div class="p-3 bg-primary-50 dark:bg-dark-900 rounded-lg border border-primary-100 dark:border-dark-border text-xs text-primary-700 dark:text-primary-300">
+                            <strong>Recipients:</strong> {{ $payment['email_message'] }}
                         </div>
                     @endif
                 </div>

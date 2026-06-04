@@ -164,81 +164,106 @@ class PaymentController extends Controller
 
     public function retryPayment(Request $request, $orderReference)
     {
-        $originalTransaction = Transaction::where('order_reference', $orderReference)->firstOrFail();
+        try {
+            $originalTransaction = Transaction::where('order_reference', $orderReference)->firstOrFail();
 
-        $validated = [
-            'amount' => $originalTransaction->amount,
-            'phone_number' => $originalTransaction->phone,
-            'payer_name' => $originalTransaction->payer_name,
-            'description' => $originalTransaction->description,
-        ];
+            $validated = [
+                'amount' => $originalTransaction->amount,
+                'phone_number' => $originalTransaction->phone,
+                'payer_name' => $originalTransaction->payer_name,
+                'description' => $originalTransaction->description,
+            ];
 
-        $amount = $this->api->formatAmount($validated['amount']);
-        $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);
-        $memberName = trim($validated['payer_name']);
-        $newOrderReference = $this->api->generateOrderReference();
+            $amount = $this->api->formatAmount($validated['amount']);
+            $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);
+            $memberName = trim($validated['payer_name']);
+            $newOrderReference = $this->api->generateOrderReference();
 
-        if (!$phoneNumber) {
-            return back()->with('error', 'Invalid phone number. Please use format: 255712345678');
-        }
+            if (!$phoneNumber) {
+                return back()->with('error', 'Invalid phone number. Please use format: 255712345678');
+            }
 
-        // Preview the payment first
-        $preview = $this->api->previewUSSDPush($amount, $newOrderReference, $phoneNumber, true);
+            // Preview the payment first
+            $preview = $this->api->previewUSSDPush($amount, $newOrderReference, $phoneNumber, true);
 
-        if (empty($preview['activeMethods'])) {
-            return back()->with('error', 'No active payment methods available for this phone number');
-        }
+            if (empty($preview['activeMethods'])) {
+                return back()->with('error', 'No active payment methods available for this phone number');
+            }
 
-        // Save new transaction to database
-        $transaction = Transaction::create([
-            'id' => (string) \Illuminate\Support\Str::uuid(),
-            'order_reference' => $newOrderReference,
-            'status' => 'PROCESSING',
-            'amount' => $validated['amount'],
-            'currency' => 'TZS',
-            'phone' => $phoneNumber,
-            'customer_name' => $originalTransaction->customer_name,
-            'payer_name' => $memberName,
-            'description' => $validated['description'],
-            'type' => 'payment',
-            'callback_data' => TransactionFieldResolver::initialCallbackSnapshot(
-                $validated['description'],
-                $request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest'
-                    ? 'retry_payment'
-                    : 'retry_payment'
-            ),
-        ]);
-
-        // Initiate the payment
-        $customerDetails = [
-            'customerName' => $memberName,
-            'description' => $validated['description'],
-        ];
-        $payment = $this->api->initiateUSSDPush($amount, $newOrderReference, $phoneNumber, null, $customerDetails);
-
-        // Update transaction with API response
-        if (isset($payment['transactionId'])) {
-            $transaction->update([
-                'transaction_id' => $payment['transactionId'],
-                'status' => 'PENDING',
-            ]);
-        }
-
-        // Check if this is an Ajax request or not
-        if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return response()->json([
-                'success' => true,
-                'message' => "Malipo umekamilika! USSD umetumwa kwa {$phoneNumber}",
+            // Save new transaction to database
+            $transaction = Transaction::create([
+                'id' => (string) \Illuminate\Support\Str::uuid(),
                 'order_reference' => $newOrderReference,
-                'amount' => $amount,
-                'phone_number' => $phoneNumber,
+                'status' => 'PROCESSING',
+                'amount' => $validated['amount'],
+                'currency' => 'TZS',
+                'phone' => $phoneNumber,
+                'customer_name' => $originalTransaction->customer_name,
                 'payer_name' => $memberName,
                 'description' => $validated['description'],
+                'type' => 'payment',
+                'callback_data' => TransactionFieldResolver::initialCallbackSnapshot(
+                    $validated['description'],
+                    $request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest'
+                        ? 'retry_payment'
+                        : 'retry_payment'
+                ),
             ]);
-        }
 
-        return redirect()->route('payments.status', ['reference' => $newOrderReference])
-            ->with('success', "Payment initiated successfully! USSD Push sent to {$phoneNumber}");
+            // Initiate the payment
+            $customerDetails = [
+                'customerName' => $memberName,
+                'description' => $validated['description'],
+            ];
+            $payment = $this->api->initiateUSSDPush($amount, $newOrderReference, $phoneNumber, null, $customerDetails);
+
+            // Update transaction with API response
+            if (isset($payment['transactionId'])) {
+                $transaction->update([
+                    'transaction_id' => $payment['transactionId'],
+                    'status' => 'PENDING',
+                ]);
+            }
+
+            // Check if this is an Ajax request or not
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Malipo umekamilika! USSD umetumwa kwa {$phoneNumber}",
+                    'order_reference' => $newOrderReference,
+                    'amount' => $amount,
+                    'phone_number' => $phoneNumber,
+                    'payer_name' => $memberName,
+                    'description' => $validated['description'],
+                ]);
+            }
+
+            return redirect()->route('payments.status', ['reference' => $newOrderReference])
+                ->with('success', "Payment initiated successfully! USSD Push sent to {$phoneNumber}");
+        } catch (Exception $e) {
+            // Check if error is insufficient funds
+            $errorMessage = $e->getMessage();
+            if (stripos($errorMessage, 'Insufficient Funds') !== false || stripos($errorMessage, 'Hakuna Haki') !== false) {
+                if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $errorMessage,
+                        'warning_type' => 'insufficient_funds'
+                    ], 422);
+                }
+                
+                return back()->with('error', $errorMessage)->with('warning_type', 'insufficient_funds')->withInput();
+            }
+
+            if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage
+                ], 422);
+            }
+            
+            return back()->with('error', $errorMessage)->withInput();
+        }
     }
 
     private function buildTransactionEmailTemplate($transaction): array

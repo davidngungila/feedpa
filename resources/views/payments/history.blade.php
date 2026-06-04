@@ -480,7 +480,13 @@
                         <template x-if="selected.email_error">
                             <p class="text-xs text-red-600 dark:text-red-400 font-bold" x-text="'Error: ' + selected.email_error"></p>
                         </template>
-                        <template x-if="!selected.email_error && !selected.email_sent">
+                        <template x-if="selected.email_message">
+                            <div>
+                                <h4 class="text-[10px] text-primary-500 uppercase font-bold mb-1">Email Content:</h4>
+                                <div class="p-3 bg-white dark:bg-dark-900 rounded-lg border border-primary-100 dark:border-dark-border max-h-96 overflow-y-auto" x-html="selected.email_message"></div>
+                            </div>
+                        </template>
+                        <template x-if="!selected.email_message && !selected.email_error && !selected.email_sent">
                             <p class="text-xs text-primary-500 italic">No email has been sent for this payment yet.</p>
                         </template>
                     </div>

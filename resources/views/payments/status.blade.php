@@ -277,7 +277,7 @@
                     </div>
                     @if(($payment['sms_sent_at'] ?? false))
                         <div class="text-xs text-primary-600">
-                            Sent at: {{ \Carbon\Carbon::parse($payment['sms_sent_at'])->format('M d, Y H:i') }}
+                            Sent at: {{ \Carbon\Carbon::parse($payment['sms_sent_at'])->format('d M, Y H:i:s') }}
                         </div>
                     @endif
                     @if(($payment['sms_error'] ?? false))
@@ -315,12 +315,20 @@
                     </div>
                     @if(($payment['email_sent_at'] ?? false))
                         <div class="text-xs text-primary-600">
-                            Sent at: {{ \Carbon\Carbon::parse($payment['email_sent_at'])->format('M d, Y H:i') }}
+                            Sent at: {{ \Carbon\Carbon::parse($payment['email_sent_at'])->format('d M, Y H:i:s') }}
                         </div>
                     @endif
                     @if(($payment['email_error'] ?? false))
                         <div class="text-xs text-red-600 font-bold">
                             Error: {{ $payment['email_error'] }}
+                        </div>
+                    @endif
+                    @if(($payment['email_message'] ?? false))
+                        <div class="p-3 bg-primary-50 dark:bg-dark-900 rounded-lg border border-primary-100 dark:border-dark-border">
+                            <h4 class="text-[10px] text-primary-500 uppercase font-bold mb-2">Email Content:</h4>
+                            <div class="max-h-96 overflow-y-auto text-xs">
+                                {!! $payment['email_message'] !!}
+                            </div>
                         </div>
                     @endif
                 </div>

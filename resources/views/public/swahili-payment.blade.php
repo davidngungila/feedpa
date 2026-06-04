@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <title>Malipo ya Wanachama — FeedTan CMG</title>
+    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     <meta name="description" content="Fanya malipo ya wanachama wa FeedTan Community Microfinance Group kwa urahisi kupitia Tigo Pesa, M-Pesa, Airtel Money na Halopesa.">
     <meta property="og:title" content="FeedTan CMG — Malipo ya Wanachama">
     <meta property="og:description" content="Malipo salama na ya haraka kwa wanachama wa FeedTan kupitia mobile money.">

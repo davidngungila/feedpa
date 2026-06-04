@@ -564,16 +564,11 @@
                                 <span class="text-xs text-slate-500 font-medium">Reference</span>
                                 <span class="text-sm font-mono font-bold text-slate-800">${orderReference}</span>
                             </div>
-                            <div class="grid grid-cols-2 gap-3">
+                            <div class="grid grid-cols-1 gap-3">
                                 <a href="/payments/receipt/${orderReference}" target="_blank"
                                    class="flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold transition-colors">
                                     <i class="fas fa-download"></i>
                                     Pakua Rcpt
-                                </a>
-                                <a href="/payments/status?reference=${orderReference}"
-                                   class="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-bold transition-colors">
-                                    <i class="fas fa-eye"></i>
-                                    Angalia
                                 </a>
                             </div>
                             <button type="button" onclick="closeSuccessModal()"

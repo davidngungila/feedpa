@@ -12,8 +12,23 @@ class TransactionObserver
 {
     public function created(Transaction $transaction)
     {
+        $this->trySendEmail($transaction);
+    }
+
+    public function updated(Transaction $transaction)
+    {
+        $this->trySendEmail($transaction);
+    }
+
+    private function trySendEmail(Transaction $transaction)
+    {
         // Check if notifications are enabled
         if (!SystemSetting::get('payment_notifications_enabled', true)) {
+            return;
+        }
+
+        // Check if email already sent
+        if ($transaction->email_sent) {
             return;
         }
 

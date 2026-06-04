@@ -47,6 +47,8 @@ class Transaction extends Model
                 $transaction->id = (string) Str::uuid();
             }
         });
+
+        static::observe(\App\Observers\TransactionObserver::class);
     }
 
     protected $casts = [

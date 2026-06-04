@@ -199,18 +199,18 @@ class MessagingServiceAPI
      */
     private function formatInsufficientFundsMessage(array $paymentData): string
     {
-        $amount = number_format($paymentData['amount'] ?? 0, 2);
+        $amount = number_format($paymentData['amount'] ?? 0, 0);
         $currency = $paymentData['currency'] ?? 'TZS';
         $reference = $paymentData['reference'] ?? 'N/A';
         $phoneNumber = $paymentData['phone_number'] ?? 'N/A';
 
-        return "FEEDTAN: Payment Failed\n" .
-               "Reference: {$reference}\n" .
-               "Amount: {$amount} {$currency}\n" .
-               "Phone: {$phoneNumber}\n" .
-               "Status: INSUFFICIENT FUNDS\n" .
-               "Please top up your account and try again.\n" .
-               "Contact support if you need assistance.";
+        return "FEEDTAN: Malipo hayajafanikiwa\n" .
+               "Rejea: {$reference}\n" .
+               "Kiasi: {$amount} {$currency}\n" .
+               "Namba ya Simu: {$phoneNumber}\n" .
+               "Hali: HAKUNA HAKI YA KUTOA (INSUFFICIENT FUNDS)\n" .
+               "Tafadhali ongeza pesa kwenye akaunti yako na ujaribu tena.\n" .
+               "Wasiliana na msaada ikiwa unahitaji msaada.";
     }
 
     /**

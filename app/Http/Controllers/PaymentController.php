@@ -164,23 +164,23 @@ class PaymentController extends Controller
 
     private function buildTransactionEmailTemplate($transaction): array
     {
-        $subject = "🔔 New Payment Notification - {$transaction->order_reference}";
+        $subject = "🔔 Arifa ya Malipo Mapya - {$transaction->order_reference}";
         
-        $memberName = $transaction->customer_name ?? 'Unknown';
+        $memberName = $transaction->customer_name ?? 'Haujulikani';
         $actualPayer = $transaction->payer_name ?? $memberName;
-        $phone = $transaction->phone ?? 'N/A';
-        $amount = number_format($transaction->collected_amount ?? $transaction->amount ?? 0, 2);
+        $phone = $transaction->phone ?? 'Haiyupo';
+        $amount = number_format($transaction->collected_amount ?? $transaction->amount ?? 0, 0);
         $currency = $transaction->currency ?? 'TZS';
-        $status = $transaction->status ?? 'UNKNOWN';
-        $reference = $transaction->order_reference ?? 'N/A';
-        $transactionId = $transaction->transaction_id ?? 'N/A';
-        $paymentMethod = $transaction->payment_method ?? 'Unknown';
+        $status = $transaction->status ?? 'HAIJUIKANI';
+        $reference = $transaction->order_reference ?? 'Haiyupo';
+        $transactionId = $transaction->transaction_id ?? 'Haiyupo';
+        $paymentMethod = $transaction->payment_method ?? 'Haujulikani';
         $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
-        $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment received';
+        $description = $transaction->description ?? $transaction->resolved_description ?? 'Malipo yamepokelewa';
         
         $html = <<<HTML
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sw">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -300,72 +300,72 @@ class PaymentController extends Controller
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔔 New Payment Received!</h1>
+            <h1>🔔 Malipo Mapya Yamepokelewa!</h1>
             <div class="status-badge status-completed">{$status}</div>
         </div>
         
         <div class="content">
-            <p style="font-size: 16px; color: #374151;">Hi Officer,</p>
-            <p style="font-size: 16px; color: #374151;">A new payment has been successfully made. Please login to record this transaction in the system.</p>
+            <p style="font-size: 16px; color: #374151;">Mambo vema Afisa,</p>
+            <p style="font-size: 16px; color: #374151;">Malipo mapya yamefanikiwa. Tafadhali ingia kwenye mfumo ili kurekodi muamala huu kwenye rekodi zetu.</p>
             
-            <div class="section-title">📊 Payment Details</div>
+            <div class="section-title">📊 Maelezo ya Malipo</div>
             <div class="details-grid">
                 <div class="detail-row">
-                    <span class="detail-label">Reference</span>
+                    <span class="detail-label">Rejea</span>
                     <span class="detail-value">{$reference}</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Amount</span>
+                    <span class="detail-label">Kiasi</span>
                     <span class="detail-value">{$currency} {$amount}</span>
                 </div>
             </div>
             
-            <div class="section-title">👤 Member Information</div>
+            <div class="section-title">👤 Maelezo ya Mwanachama</div>
             <div class="details-grid">
                 <div class="detail-row">
-                    <span class="detail-label">Member Name</span>
+                    <span class="detail-label">Jina la Mwanachama</span>
                     <span class="detail-value">{$memberName}</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Actual Payer</span>
+                    <span class="detail-label">Mwenyeji wa Malipo</span>
                     <span class="detail-value">{$actualPayer}</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Phone</span>
+                    <span class="detail-label">Simu</span>
                     <span class="detail-value">{$phone}</span>
                 </div>
             </div>
             
-            <div class="section-title">📝 Transaction Details</div>
+            <div class="section-title">📝 Maelezo ya Muamala</div>
             <div class="details-grid">
                 <div class="detail-row">
-                    <span class="detail-label">Transaction ID</span>
+                    <span class="detail-label">ID ya Muamala</span>
                     <span class="detail-value">{$transactionId}</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Payment Method</span>
+                    <span class="detail-label">Njia ya Malipo</span>
                     <span class="detail-value">{$paymentMethod}</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Date & Time</span>
+                    <span class="detail-label">Tarehe & Muda</span>
                     <span class="detail-value">{$date}</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Purpose / Description</span>
+                    <span class="detail-label">Nia / Maelezo</span>
                     <span class="detail-value">{$description}</span>
                 </div>
             </div>
             
             <div class="alert">
-                <strong>⚠️ Action Required:</strong> Please login to the system to record this payment transaction in our records.
+                <strong>⚠️ Hatua Inahitajika:</strong> Tafadhali ingia kwenye mfumo ili kurekodi muamala huu wa malipo kwenye rekodi zetu.
             </div>
             
-            <a href="https://pay.feedtancmg.org/login" class="button">🔑 Login to System</a>
+            <a href="https://pay.feedtancmg.org/login" class="button">🔑 Ingia kwenye Mfumo</a>
         </div>
         
         <div class="footer">
             <p><strong>FeedTan Community Microfinance Group</strong><br>
-            "Let's Grow Together"</p>
+            "Tufanye Kazi Pamoja"</p>
         </div>
     </div>
 </body>

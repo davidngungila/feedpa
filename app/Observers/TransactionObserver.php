@@ -52,32 +52,58 @@ class TransactionObserver
         $emailConfigService = new EmailConfigService();
         $emailConfigService->configureMail();
         
-        // Send emails to all officers
+        // Prepare admin email and CC list
+        $adminEmail = 'feedtan15@gmail.com';
+        $ccEmails = [];
         foreach ($officers as $officer) {
-            try {
-                $emailTemplate = $this->buildTransactionEmailTemplate($transaction, $officer);
-                
-                Mail::html($emailTemplate['html'], function ($message) use ($emailTemplate, $officer, $emailConfigService) {
-                    $config = $emailConfigService->getEmailConfig();
-                    $message->to($officer->email, $officer->name)
-                            ->subject($emailTemplate['subject'])
-                            ->from($config['from_address'], $config['from_name']);
-                });
-                
-                Log::info('Transaction alert sent to officer', [
-                    'officer_email' => $officer->email,
-                    'transaction_id' => $transaction->id
-                ]);
-            } catch (\Exception $e) {
-                Log::error('Failed to send alert to officer', [
-                    'officer_email' => $officer->email,
-                    'error' => $e->getMessage()
-                ]);
+            if (strtolower($officer->email) !== strtolower($adminEmail)) {
+                $ccEmails[] = $officer->email;
             }
+        }
+        
+        // Build email template
+        $emailTemplate = $this->buildTransactionEmailTemplate($transaction, (object)['name' => 'Officer']);
+        
+        try {
+            Mail::html($emailTemplate['html'], function ($message) use ($emailTemplate, $adminEmail, $ccEmails, $emailConfigService) {
+                $config = $emailConfigService->getEmailConfig();
+                $message->to($adminEmail, 'FeedTan Admin')
+                        ->subject($emailTemplate['subject'])
+                        ->from($config['from_address'], $config['from_name']);
+                
+                if (!empty($ccEmails)) {
+                    $message->cc($ccEmails);
+                }
+            });
+            
+            // Update transaction email tracking
+            $transaction->update([
+                'email_sent' => true,
+                'email_message' => $emailTemplate['html'],
+                'email_sent_at' => now(),
+                'email_error' => null,
+            ]);
+            
+            Log::info('Transaction alert sent', [
+                'to' => $adminEmail,
+                'cc' => $ccEmails,
+                'transaction_id' => $transaction->id
+            ]);
+        } catch (\Exception $e) {
+            // Update transaction email tracking with error
+            $transaction->update([
+                'email_sent' => false,
+                'email_error' => $e->getMessage(),
+            ]);
+            
+            Log::error('Failed to send transaction alert', [
+                'error' => $e->getMessage(),
+                'transaction_id' => $transaction->id
+            ]);
         }
     }
 
-    private function buildTransactionEmailTemplate(Transaction $transaction, \App\Models\User $officer): array
+    private function buildTransactionEmailTemplate(Transaction $transaction, $officer): array
     {
         $subject = "🔔 New Payment Notification - {$transaction->order_reference}";
         
@@ -92,7 +118,6 @@ class TransactionObserver
         $paymentMethod = $transaction->payment_method ?? 'Unknown';
         $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
         $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment received';
-        $officerName = $officer->name ?? 'Officer';
         
         $html = <<<HTML
 <!DOCTYPE html>
@@ -221,7 +246,7 @@ class TransactionObserver
         </div>
         
         <div class="content">
-            <p style="font-size: 16px; color: #374151;">Hi {$officerName},</p>
+            <p style="font-size: 16px; color: #374151;">Hi Officer,</p>
             <p style="font-size: 16px; color: #374151;">A new payment has been successfully made. Please login to record this transaction in the system.</p>
             
             <div class="section-title">📊 Payment Details</div>

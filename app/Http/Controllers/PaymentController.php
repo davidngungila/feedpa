@@ -41,6 +41,338 @@ class PaymentController extends Controller
         return back()->with('success', 'Note added successfully!');
     }
 
+    public function sendManualSMS(Request $request, $orderReference)
+    {
+        $transaction = Transaction::where('order_reference', $orderReference)->firstOrFail();
+
+        try {
+            if ($transaction->sms_sent) {
+                return back()->with('info', 'SMS has already been sent for this transaction.');
+            }
+
+            $phoneNumber = $transaction->phone;
+            if (!$phoneNumber) {
+                return back()->with('error', 'No phone number available for this transaction.');
+            }
+
+            $paymentData = [
+                'orderReference' => $transaction->order_reference,
+                'id' => $transaction->transaction_id,
+                'collectedAmount' => $transaction->amount,
+                'collectedCurrency' => $transaction->currency,
+                'paymentPhoneNumber' => $phoneNumber,
+                'customer' => [
+                    'customerName' => $transaction->customer_name ?? $transaction->payer_name,
+                ],
+                'customer_name' => $transaction->customer_name ?? $transaction->payer_name,
+                'payer_name' => $transaction->payer_name,
+                'createdAt' => $transaction->created_at,
+            ];
+
+            $result = $this->messaging->sendPaymentConfirmation($phoneNumber, $paymentData);
+
+            $transaction->update([
+                'sms_sent' => true,
+                'sms_message' => $this->messaging->buildPaymentConfirmationMessage($paymentData),
+                'sms_sent_at' => now(),
+                'sms_error' => null,
+            ]);
+
+            return back()->with('success', 'SMS sent successfully!');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send manual SMS: ' . $e->getMessage(), [
+                'transaction_id' => $transaction->id,
+                'error' => $e,
+            ]);
+
+            $transaction->update([
+                'sms_sent' => false,
+                'sms_error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Failed to send SMS: ' . $e->getMessage());
+        }
+    }
+
+    public function sendManualEmail(Request $request, $orderReference)
+    {
+        $transaction = Transaction::where('order_reference', $orderReference)->firstOrFail();
+
+        try {
+            if ($transaction->email_sent) {
+                return back()->with('info', 'Email has already been sent for this transaction.');
+            }
+
+            // Get officer users
+            $officers = \App\Models\User::whereNotNull('email')->get();
+            
+            if ($officers->isEmpty()) {
+                return back()->with('error', 'No officer users found to send transaction alerts.');
+            }
+
+            // Configure email from database
+            $emailConfigService = new \App\Services\EmailConfigService();
+            $emailConfigService->configureMail();
+
+            // Prepare admin email and CC list
+            $adminEmail = 'feedtan15@gmail.com';
+            $ccEmails = [];
+            foreach ($officers as $officer) {
+                if (strtolower($officer->email) !== strtolower($adminEmail)) {
+                    $ccEmails[] = $officer->email;
+                }
+            }
+
+            // Build email template
+            $emailTemplate = $this->buildTransactionEmailTemplate($transaction);
+
+            \Illuminate\Support\Facades\Mail::html($emailTemplate['html'], function ($message) use ($emailTemplate, $adminEmail, $ccEmails, $emailConfigService) {
+                $config = $emailConfigService->getEmailConfig();
+                $message->to($adminEmail, 'FeedTan Admin')
+                        ->subject($emailTemplate['subject'])
+                        ->from($config['from_address'], $config['from_name']);
+                
+                if (!empty($ccEmails)) {
+                    $message->cc($ccEmails);
+                }
+            });
+
+            $transaction->update([
+                'email_sent' => true,
+                'email_message' => $emailTemplate['html'],
+                'email_sent_at' => now(),
+                'email_error' => null,
+            ]);
+
+            return back()->with('success', 'Email sent successfully!');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send manual email: ' . $e->getMessage(), [
+                'transaction_id' => $transaction->id,
+                'error' => $e,
+            ]);
+
+            $transaction->update([
+                'email_sent' => false,
+                'email_error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Failed to send email: ' . $e->getMessage());
+        }
+    }
+
+    private function buildTransactionEmailTemplate($transaction): array
+    {
+        $subject = "🔔 New Payment Notification - {$transaction->order_reference}";
+        
+        $memberName = $transaction->customer_name ?? 'Unknown';
+        $actualPayer = $transaction->payer_name ?? $memberName;
+        $phone = $transaction->phone ?? 'N/A';
+        $amount = number_format($transaction->collected_amount ?? $transaction->amount ?? 0, 2);
+        $currency = $transaction->currency ?? 'TZS';
+        $status = $transaction->status ?? 'UNKNOWN';
+        $reference = $transaction->order_reference ?? 'N/A';
+        $transactionId = $transaction->transaction_id ?? 'N/A';
+        $paymentMethod = $transaction->payment_method ?? 'Unknown';
+        $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
+        $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment received';
+        
+        $html = <<<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{$subject}</title>
+    <style>
+        body {
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background: #f3f4f6;
+        }
+        .container {
+            max-width: 650px;
+            margin: 30px auto;
+            padding: 0;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border-radius: 16px 16px 0 0;
+        }
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-settled, .status-completed {
+            background-color: rgba(255,255,255,0.2);
+            border: 2px solid white;
+        }
+        .content {
+            padding: 30px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 25px 0 15px 0;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #10b981;
+        }
+        .section-title:first-child {
+            margin-top: 0;
+        }
+        .details-grid {
+            display: grid;
+            gap: 15px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-radius: 10px;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #4b5563;
+            font-size: 14px;
+        }
+        .detail-value {
+            color: #1f2937;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        .alert {
+            background: #fef3c7;
+            border-left: 5px solid #f59e0b;
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin: 25px 0;
+        }
+        .alert strong {
+            color: #92400e;
+        }
+        .button {
+            display: block;
+            width: 100%;
+            text-align: center;
+            padding: 16px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white !important;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px;
+            margin: 25px 0;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .footer {
+            text-align: center;
+            padding: 25px;
+            background: #f9fafb;
+            color: #6b7280;
+            font-size: 13px;
+            border-radius: 0 0 16px 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔔 New Payment Received!</h1>
+            <div class="status-badge status-completed">{$status}</div>
+        </div>
+        
+        <div class="content">
+            <p style="font-size: 16px; color: #374151;">Hi Officer,</p>
+            <p style="font-size: 16px; color: #374151;">A new payment has been successfully made. Please login to record this transaction in the system.</p>
+            
+            <div class="section-title">📊 Payment Details</div>
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Reference</span>
+                    <span class="detail-value">{$reference}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Amount</span>
+                    <span class="detail-value">{$currency} {$amount}</span>
+                </div>
+            </div>
+            
+            <div class="section-title">👤 Member Information</div>
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Member Name</span>
+                    <span class="detail-value">{$memberName}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Actual Payer</span>
+                    <span class="detail-value">{$actualPayer}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Phone</span>
+                    <span class="detail-value">{$phone}</span>
+                </div>
+            </div>
+            
+            <div class="section-title">📝 Transaction Details</div>
+            <div class="details-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Transaction ID</span>
+                    <span class="detail-value">{$transactionId}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Payment Method</span>
+                    <span class="detail-value">{$paymentMethod}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Date & Time</span>
+                    <span class="detail-value">{$date}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Purpose / Description</span>
+                    <span class="detail-value">{$description}</span>
+                </div>
+            </div>
+            
+            <div class="alert">
+                <strong>⚠️ Action Required:</strong> Please login to the system to record this payment transaction in our records.
+            </div>
+            
+            <a href="https://pay.feedtancmg.org/login" class="button">🔑 Login to System</a>
+        </div>
+        
+        <div class="footer">
+            <p><strong>FeedTan Community Microfinance Group</strong><br>
+            "Let's Grow Together"</p>
+        </div>
+    </div>
+</body>
+</html>
+HTML;
+
+        return ['html' => $html, 'subject' => $subject];
+    }
+
     /**
      * Show initiate payment form
      */
@@ -225,6 +557,10 @@ class PaymentController extends Controller
                         'sms_message' => $transaction->sms_message,
                         'sms_sent_at' => $transaction->sms_sent_at,
                         'sms_error' => $transaction->sms_error,
+                        'email_sent' => $transaction->email_sent,
+                        'email_message' => $transaction->email_message,
+                        'email_sent_at' => $transaction->email_sent_at,
+                        'email_error' => $transaction->email_error,
                         'created_at' => $transaction->created_at,
                         'updated_at' => $transaction->updated_at,
                         'customer' => [
@@ -310,6 +646,10 @@ class PaymentController extends Controller
                                 'sms_message' => $transaction->sms_message,
                                 'sms_sent_at' => $transaction->sms_sent_at,
                                 'sms_error' => $transaction->sms_error,
+                                'email_sent' => $transaction->email_sent,
+                                'email_message' => $transaction->email_message,
+                                'email_sent_at' => $transaction->email_sent_at,
+                                'email_error' => $transaction->email_error,
                                 'created_at' => $transaction->created_at,
                                 'updated_at' => $transaction->updated_at,
                                 'customer' => [
@@ -455,6 +795,8 @@ class PaymentController extends Controller
             'payment_method' => 'Payment Method',
             'sms_sent' => 'SMS Sent',
             'sms_sent_at' => 'SMS Sent At',
+            'email_sent' => 'Email Sent',
+            'email_sent_at' => 'Email Sent At',
             'created_at' => 'Created At',
             'updated_at' => 'Updated At',
         ];
@@ -488,6 +830,53 @@ class PaymentController extends Controller
         }
         if ($request->filled('end_date')) {
             $query->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        // Automatic SMS sending for unsent transactions within 1 minute
+        $unsentTransactions = Transaction::where('type', 'payment')
+            ->whereIn('status', ['SUCCESS', 'SETTLED'])
+            ->where('sms_sent', false)
+            ->where('created_at', '>=', now()->subMinutes(1))
+            ->get();
+
+        foreach ($unsentTransactions as $transaction) {
+            try {
+                if (!$transaction->phone) {
+                    continue;
+                }
+
+                $paymentData = [
+                    'orderReference' => $transaction->order_reference,
+                    'id' => $transaction->transaction_id,
+                    'collectedAmount' => $transaction->amount,
+                    'collectedCurrency' => $transaction->currency,
+                    'paymentPhoneNumber' => $transaction->phone,
+                    'customer' => [
+                        'customerName' => $transaction->customer_name ?? $transaction->payer_name,
+                    ],
+                    'customer_name' => $transaction->customer_name ?? $transaction->payer_name,
+                    'payer_name' => $transaction->payer_name,
+                    'createdAt' => $transaction->created_at,
+                ];
+
+                $this->messaging->sendPaymentConfirmation($transaction->phone, $paymentData);
+
+                $transaction->update([
+                    'sms_sent' => true,
+                    'sms_message' => $this->messaging->buildPaymentConfirmationMessage($paymentData),
+                    'sms_sent_at' => now(),
+                    'sms_error' => null,
+                ]);
+
+                Log::info('Automatic SMS sent for transaction: ' . $transaction->order_reference);
+            } catch (\Exception $e) {
+                Log::error('Failed to send automatic SMS for transaction: ' . $transaction->order_reference, [
+                    'error' => $e->getMessage(),
+                ]);
+                $transaction->update([
+                    'sms_error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $totalCount = $query->count();

@@ -213,13 +213,118 @@
                     <i class="fas fa-sync-alt"></i> Refresh
                 </button>
             @endif
+
+            @if(auth()->check())
+                @if(($payment['sms_sent'] ?? false) === false)
+                    <form action="{{ route('payments.send-sms', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                        @csrf
+                        <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                            <i class="fas fa-sms"></i> Send SMS
+                        </button>
+                    </form>
+                @else
+                    <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
+                        <i class="fas fa-check"></i> SMS Sent
+                    </button>
+                @endif
+            @else
+                <button onclick="alert('Sending SMS...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                    <i class="fas fa-sms"></i> SMS
+                </button>
+            @endif
             
-            <button onclick="alert('Sending SMS...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                <i class="fas fa-sms"></i> SMS
-            </button>
-            <button onclick="alert('Sending Email...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
-                <i class="fas fa-envelope"></i> Email
-            </button>
+            @if(auth()->check())
+                @if(($payment['email_sent'] ?? false) === false)
+                    <form action="{{ route('payments.send-email', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                        @csrf
+                        <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                            <i class="fas fa-envelope"></i> Send Email
+                        </button>
+                    </form>
+                @else
+                    <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
+                        <i class="fas fa-check"></i> Email Sent
+                    </button>
+                @endif
+            @else
+                <button onclick="alert('Sending Email...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+                    <i class="fas fa-envelope"></i> Email
+                </button>
+            @endif
+        </div>
+
+        <!-- SMS & Email Status -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="card p-6 space-y-4">
+                <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                    <i class="fas fa-sms"></i> SMS Status
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        @if($payment['sms_sent'] ?? false)
+                            <span class="badge badge-green text-xs">
+                                <i class="fas fa-check me-1"></i> Sent
+                            </span>
+                        @elseif($payment['sms_error'] ?? false)
+                            <span class="badge badge-red text-xs">
+                                <i class="fas fa-times me-1"></i> Failed
+                            </span>
+                        @else
+                            <span class="badge badge-yellow text-xs">
+                                <i class="fas fa-clock me-1"></i> Not Sent
+                            </span>
+                        @endif
+                    </div>
+                    @if(($payment['sms_sent_at'] ?? false))
+                        <div class="text-xs text-primary-600">
+                            Sent at: {{ \Carbon\Carbon::parse($payment['sms_sent_at'])->format('M d, Y H:i') }}
+                        </div>
+                    @endif
+                    @if(($payment['sms_error'] ?? false))
+                        <div class="text-xs text-red-600 font-bold">
+                            Error: {{ $payment['sms_error'] }}
+                        </div>
+                    @endif
+                    @if(($payment['sms_message'] ?? false))
+                        <div class="p-3 bg-primary-50 dark:bg-dark-900 rounded-lg border border-primary-100 dark:border-dark-border text-xs text-primary-700 dark:text-primary-300">
+                            <strong>Message:</strong> {{ $payment['sms_message'] }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="card p-6 space-y-4">
+                <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                    <i class="fas fa-envelope"></i> Email Status
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        @if($payment['email_sent'] ?? false)
+                            <span class="badge badge-green text-xs">
+                                <i class="fas fa-check me-1"></i> Sent
+                            </span>
+                        @elseif($payment['email_error'] ?? false)
+                            <span class="badge badge-red text-xs">
+                                <i class="fas fa-times me-1"></i> Failed
+                            </span>
+                        @else
+                            <span class="badge badge-yellow text-xs">
+                                <i class="fas fa-clock me-1"></i> Not Sent
+                            </span>
+                        @endif
+                    </div>
+                    @if(($payment['email_sent_at'] ?? false))
+                        <div class="text-xs text-primary-600">
+                            Sent at: {{ \Carbon\Carbon::parse($payment['email_sent_at'])->format('M d, Y H:i') }}
+                        </div>
+                    @endif
+                    @if(($payment['email_error'] ?? false))
+                        <div class="text-xs text-red-600 font-bold">
+                            Error: {{ $payment['email_error'] }}
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
     @endif
 </div>

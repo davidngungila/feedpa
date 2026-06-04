@@ -50,6 +50,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/export/excel', [PaymentController::class, 'exportExcel'])->name('export.excel');
         Route::post('/resend-ussd', [PaymentController::class, 'resendUssd'])->name('resend-ussd');
         Route::post('/{orderReference}/notes', [PaymentController::class, 'addNote'])->name('notes.add');
+        Route::post('/{orderReference}/send-sms', [PaymentController::class, 'sendManualSMS'])->name('send-sms');
+        Route::post('/{orderReference}/send-email', [PaymentController::class, 'sendManualEmail'])->name('send-email');
     });
 
     // Payout Routes (Authenticated)

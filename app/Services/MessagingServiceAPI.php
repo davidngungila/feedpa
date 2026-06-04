@@ -19,7 +19,7 @@ class MessagingServiceAPI
     {
         $this->baseUrl = SystemSetting::get('sms_base_url', 'https://messaging-service.co.tz');
         $this->token = SystemSetting::get('sms_token', 'f9a89f439206e27169ead766463ca92c');
-        $this->senderId = SystemSetting::get('sms_sender_id', 'FEEDTAN');
+        $this->senderId = SystemSetting::get('sms_sender_id', 'FEEDTAN CMG');
         $this->timeout = SystemSetting::get('sms_timeout', 30);
         $this->testMode = SystemSetting::get('sms_test_mode', false);
     }
@@ -191,9 +191,8 @@ class MessagingServiceAPI
         ));
         $date = \Carbon\Carbon::parse($paymentData['createdAt'] ?? $paymentData['updatedAt'] ?? now())->format('d M Y, H:i');
         $reference = $paymentData['orderReference'] ?? $paymentData['reference'] ?? 'N/A';
-
-        return "Malipo yamefanikiwa. TZS {$amount} zimepokelewa kutoka {$customerName} tarehe {$date}. Rejea: {$reference}.";
-    }
+        return "Malipo yamefanikiwa! Tumepokea TZS {$amount} kutoka kwa {$customerName}. Rejea: {$reference}. Asante";
+       }
 
     /**
      * Format insufficient funds message

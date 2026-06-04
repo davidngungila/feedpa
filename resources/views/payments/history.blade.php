@@ -120,6 +120,7 @@
                         <th>Purpose / Description</th>
                         <th>Amount</th>
                         <th>SMS Status</th>
+                        <th>Email Status</th>
                         <th class="text-center">Actions</th>
                     </tr>
                 </thead>
@@ -153,6 +154,7 @@
                             $createdAt = $payment->created_at ? \Illuminate\Support\Carbon::parse($payment->created_at) : null;
                             $updatedAt = $payment->updated_at ? \Illuminate\Support\Carbon::parse($payment->updated_at) : null;
                             $smsSentAt = $payment->sms_sent_at ? \Illuminate\Support\Carbon::parse($payment->sms_sent_at) : null;
+                            $emailSentAt = $payment->email_sent_at ? \Illuminate\Support\Carbon::parse($payment->email_sent_at) : null;
 
                             $detailPayload = [
                                 'reference' => $payment->order_reference,
@@ -174,6 +176,9 @@
                                 'sms_sent_at' => $smsSentAt?->format('d M, Y H:i:s'),
                                 'sms_message' => $payment->sms_message,
                                 'sms_error' => $payment->sms_error,
+                                'email_sent' => (bool) $payment->email_sent,
+                                'email_sent_at' => $emailSentAt?->format('d M, Y H:i:s'),
+                                'email_error' => $payment->email_error,
                                 'status_url' => route('payments.status', ['reference' => $payment->order_reference]),
                                 'receipt_url' => route('payments.receipt', $payment->order_reference),
                             ];
@@ -241,6 +246,24 @@
                                     <span class="text-[10px] text-primary-400">—</span>
                                 @endif
                             </td>
+                            <td class="whitespace-nowrap">
+                                @if($payment->email_sent)
+                                    <span class="badge badge-green text-[10px]">
+                                        <i class="fas fa-check me-1"></i> Sent
+                                    </span>
+                                    @if($emailSentAt)
+                                        <div class="text-[9px] text-primary-500 mt-1">{{ $emailSentAt->format('d M, H:i') }}</div>
+                                    @endif
+                                @elseif($payment->email_error)
+                                    <span class="badge badge-red text-[10px]">
+                                        <i class="fas fa-times me-1"></i> Failed
+                                    </span>
+                                @elseif($isSettled)
+                                    <span class="badge badge-yellow text-[10px]">Not Sent</span>
+                                @else
+                                    <span class="text-[10px] text-primary-400">—</span>
+                                @endif
+                            </td>
                             <td>
                                 <div class="flex gap-2 justify-center">
                                     <button type="button"
@@ -254,12 +277,32 @@
                                        title="Download receipt">
                                         <i class="fas fa-file-invoice text-xs"></i>
                                     </a>
+                                    @if($isSettled && !$payment->sms_sent)
+                                        <form action="{{ route('payments.send-sms', $payment->order_reference) }}" method="POST" class="m-0">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
+                                                    title="Send SMS">
+                                                <i class="fas fa-sms text-xs"></i>
+                                            </button>
+                                        </form>
+                                    @endif
+                                    @if($isSettled && !$payment->email_sent)
+                                        <form action="{{ route('payments.send-email', $payment->order_reference) }}" method="POST" class="m-0">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
+                                                    title="Send Email">
+                                                <i class="fas fa-envelope text-xs"></i>
+                                            </button>
+                                        </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-20">
+                            <td colspan="8" class="text-center py-20">
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
                                         <i class="fas fa-folder-open text-2xl text-primary-200"></i>
@@ -413,6 +456,32 @@
                         </template>
                         <template x-if="!selected.sms_message && !selected.sms_error && !selected.sms_sent">
                             <p class="text-xs text-primary-500 italic">No SMS has been sent for this payment yet.</p>
+                        </template>
+                    </div>
+
+                    <div class="p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 space-y-3">
+                        <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                            <i class="fas fa-envelope"></i> Email Notification
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <template x-if="selected.email_sent">
+                                <span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> Email Sent</span>
+                            </template>
+                            <template x-if="!selected.email_sent && selected.email_error">
+                                <span class="badge badge-red text-[10px]"><i class="fas fa-times me-1"></i> Email Failed</span>
+                            </template>
+                            <template x-if="!selected.email_sent && !selected.email_error">
+                                <span class="badge badge-yellow text-[10px]">Not Sent</span>
+                            </template>
+                            <template x-if="selected.email_sent_at">
+                                <span class="text-[10px] text-primary-500" x-text="'at ' + selected.email_sent_at"></span>
+                            </template>
+                        </div>
+                        <template x-if="selected.email_error">
+                            <p class="text-xs text-red-600 dark:text-red-400 font-bold" x-text="'Error: ' + selected.email_error"></p>
+                        </template>
+                        <template x-if="!selected.email_error && !selected.email_sent">
+                            <p class="text-xs text-primary-500 italic">No email has been sent for this payment yet.</p>
                         </template>
                     </div>
 

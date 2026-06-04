@@ -30,6 +30,10 @@ class Transaction extends Model
         'sms_message',
         'sms_sent_at',
         'sms_error',
+        'email_sent',
+        'email_message',
+        'email_sent_at',
+        'email_error',
         'callback_data',
         'callback_received_at'
     ];
@@ -52,6 +56,8 @@ class Transaction extends Model
         'callback_received_at' => 'datetime',
         'sms_sent' => 'boolean',
         'sms_sent_at' => 'datetime',
+        'email_sent' => 'boolean',
+        'email_sent_at' => 'datetime',
     ];
 
     public function resolvedDescription($fallbackDescription = null)

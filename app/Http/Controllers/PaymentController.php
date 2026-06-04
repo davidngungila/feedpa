@@ -241,28 +241,33 @@ class PaymentController extends Controller
             return redirect()->route('payments.status', ['reference' => $newOrderReference])
                 ->with('success', "Payment initiated successfully! USSD Push sent to {$phoneNumber}");
         } catch (Exception $e) {
-            // Check if error is insufficient funds
-            $errorMessage = $e->getMessage();
-            if (stripos($errorMessage, 'Insufficient Funds') !== false || stripos($errorMessage, 'Hakuna Haki') !== false) {
+            Log::error('Payment retry failed: ' . $e->getMessage());
+            
+            // Handle insufficient funds error specifically
+            if (stripos($e->getMessage(), 'Insufficient Funds') !== false) {
+                // Check if this is an Ajax request
                 if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                     return response()->json([
                         'success' => false,
-                        'message' => $errorMessage,
+                        'message' => $e->getMessage(),
                         'warning_type' => 'insufficient_funds'
-                    ], 422);
+                    ]);
                 }
                 
-                return back()->with('error', $errorMessage)->with('warning_type', 'insufficient_funds')->withInput();
+                return back()
+                    ->with('error', $e->getMessage())
+                    ->with('warning_type', 'insufficient_funds');
             }
-
+            
+            // Check if this is an Ajax request
             if ($request->expectsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => false,
-                    'message' => $errorMessage
-                ], 422);
+                    'message' => $e->getMessage()
+                ]);
             }
             
-            return back()->with('error', $errorMessage)->withInput();
+            return back()->with('error', $e->getMessage());
         }
     }
 

@@ -9,7 +9,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -282,104 +281,5 @@
         </main>
     </div>
 
-    <script>
-        // SweetAlert Notification System
-        window.showNotification = function(type, title, message, options = {}) {
-            const defaultOptions = {
-                timer: 5000,
-                showConfirmButton: type === 'error' || type === 'warning',
-                confirmButtonText: 'OK',
-                confirmButtonColor: '#10b981',
-                backdrop: type === 'error' || type === 'warning',
-                allowOutsideClick: type !== 'error' && type !== 'warning'
-            };
-
-            const swalOptions = {
-                ...defaultOptions,
-                ...options,
-                title: title,
-                html: message,
-                icon: type,
-                position: 'center',
-                toast: type === 'success' || type === 'info',
-                customClass: {
-                    popup: 'sweet-alert-popup',
-                    title: 'sweet-alert-title',
-                    content: 'sweet-alert-content',
-                    actions: 'sweet-alert-actions',
-                    confirmButton: 'sweet-alert-confirm',
-                    cancelButton: 'sweet-alert-cancel',
-                    container: 'sweet-alert-container'
-                }
-            };
-
-            // Special handling for insufficient funds
-            if (type === 'warning' && (message.includes('Insufficient') || message.includes('Hakuna'))) {
-                swalOptions.html = `
-                    <div class="insufficient-funds-alert">
-                        <div class="alert-icon">
-                            <i class="fas fa-exclamation-triangle fa-3x text-yellow-500 mb-3"></i>
-                        </div>
-                        <h5 class="alert-title text-yellow-800 font-bold">${title}</h5>
-                        <p class="alert-message text-yellow-700">${message}</p>
-                        <div class="alert-actions bg-yellow-50 p-3 rounded mb-3">
-                            <h6 class="text-yellow-800 font-bold mb-2">Nini cha kufanya?</h6>
-                            <ul class="text-left mb-0 text-sm text-yellow-700">
-                                <li class="mb-2"><strong>Tafuta msaada</strong> - Jitolee pesa kwenye akaunti yako ya Halopesa</li>
-                                <li class="mb-2"><strong>Angalia salio</strong> - Hakikisha una salio la kutosha</li>
-                                <li class="mb-2"><strong>Jaribu tena</strong> - Baada ya kujisafisha, jaribu tena</li>
-                            </ul>
-                        </div>
-                    </div>
-                `;
-                swalOptions.showCancelButton = true;
-                swalOptions.cancelButtonText = 'Cancel';
-                swalOptions.cancelButtonColor = '#6b7280';
-                swalOptions.confirmButtonText = 'Sawa, nitajaribu tena';
-                swalOptions.timer = null;
-                swalOptions.backdrop = true;
-                swalOptions.allowOutsideClick = false;
-            }
-
-            Swal.fire(swalOptions);
-        };
-
-        // Auto-show notifications from session data
-        document.addEventListener('DOMContentLoaded', function() {
-            @if(session('error'))
-                @if(session('warning_type') == 'insufficient_funds')
-                    showNotification('warning', 'Hakuna Salio Kutosha!', `{{ session('error') }}`, {
-                        showCancelButton: true,
-                        cancelButtonText: 'Cancel',
-                        confirmButtonText: 'Sawa, nitajaribu tena',
-                        confirmButtonColor: '#10b981',
-                        cancelButtonColor: '#6b7280'
-                    });
-                @else
-                    showNotification('error', 'Kosa', `{{ session('error') }}`);
-                @endif
-            @endif
-
-            @if(session('success'))
-                showNotification('success', 'Fanikiwa!', `{{ session('success') }}`, {
-                    position: 'center',
-                    showConfirmButton: true,
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#10b981',
-                    timer: 5000,
-                    backdrop: true,
-                    allowOutsideClick: false
-                });
-            @endif
-
-            @if(session('info'))
-                showNotification('info', 'Maelezo', `{{ session('info') }}`);
-            @endif
-
-            @if(session('warning'))
-                showNotification('warning', 'Onyo', `{{ session('warning') }}`);
-            @endif
-        });
-    </script>
 </body>
 </html>

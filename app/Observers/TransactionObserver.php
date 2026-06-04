@@ -5,19 +5,29 @@ namespace App\Observers;
 use App\Models\Transaction;
 use App\Models\SystemSetting;
 use App\Services\EmailConfigService;
+use App\Services\MessagingServiceAPI;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class TransactionObserver
 {
+    protected $messagingService;
+
+    public function __construct(MessagingServiceAPI $messagingService)
+    {
+        $this->messagingService = $messagingService;
+    }
+
     public function created(Transaction $transaction)
     {
         $this->trySendEmail($transaction);
+        $this->trySendSMS($transaction);
     }
 
     public function updated(Transaction $transaction)
     {
         $this->trySendEmail($transaction);
+        $this->trySendSMS($transaction);
     }
 
     private function trySendEmail(Transaction $transaction)
@@ -49,6 +59,72 @@ class TransactionObserver
             Log::error('Failed to send transaction alert: ' . $e->getMessage(), [
                 'transaction_id' => $transaction->id,
                 'exception' => $e
+            ]);
+        }
+    }
+
+    private function trySendSMS(Transaction $transaction)
+    {
+        // Check if SMS already sent
+        if ($transaction->sms_sent) {
+            return;
+        }
+
+        // Check if transaction is settled (or completed)
+        $status = strtolower($transaction->status ?? '');
+        $allowedStatuses = ['settled', 'completed', 'success', 'successful'];
+        if (!in_array($status, $allowedStatuses)) {
+            Log::info('Transaction status not eligible for SMS alert', [
+                'transaction_id' => $transaction->id,
+                'status' => $status
+            ]);
+            return;
+        }
+
+        // Check if phone number exists
+        if (!$transaction->phone) {
+            Log::info('No phone number for transaction', [
+                'transaction_id' => $transaction->id
+            ]);
+            return;
+        }
+
+        try {
+            $paymentData = [
+                'orderReference' => $transaction->order_reference,
+                'id' => $transaction->transaction_id,
+                'collectedAmount' => $transaction->collected_amount ?? $transaction->amount,
+                'collectedCurrency' => $transaction->currency,
+                'paymentPhoneNumber' => $transaction->phone,
+                'customer' => [
+                    'customerName' => $transaction->customer_name ?? $transaction->payer_name,
+                ],
+                'customer_name' => $transaction->customer_name ?? $transaction->payer_name,
+                'payer_name' => $transaction->payer_name,
+                'createdAt' => $transaction->created_at,
+            ];
+
+            $this->messagingService->sendPaymentConfirmation($transaction->phone, $paymentData);
+
+            $transaction->update([
+                'sms_sent' => true,
+                'sms_message' => $this->messagingService->buildPaymentConfirmationMessage($paymentData),
+                'sms_sent_at' => now(),
+                'sms_error' => null,
+            ]);
+
+            Log::info('SMS confirmation sent', [
+                'transaction_id' => $transaction->id
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send SMS confirmation: ' . $e->getMessage(), [
+                'transaction_id' => $transaction->id,
+                'exception' => $e
+            ]);
+
+            $transaction->update([
+                'sms_sent' => false,
+                'sms_error' => $e->getMessage(),
             ]);
         }
     }

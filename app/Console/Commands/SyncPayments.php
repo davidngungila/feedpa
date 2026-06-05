@@ -135,14 +135,8 @@ class SyncPayments extends Command
                  ];
 
                 $isNew = false;
-                $statusChanged = false;
                 
                 if ($transaction) {
-                    // Check if status changed to a successful one
-                    if (!in_array($transaction->status, ['SUCCESS', 'SETTLED']) && in_array($paymentData['status'] ?? '', ['SUCCESS', 'SETTLED'])) {
-                        $statusChanged = true;
-                    }
-                    
                     $transaction->update($data);
                     $synced++;
                 } else {
@@ -153,25 +147,6 @@ class SyncPayments extends Command
                     $transaction = Transaction::create($data);
                     $created++;
                     $isNew = true;
-                }
-
-                // Send SMS if:
-                // 1. It's a new transaction AND status is SUCCESS/SETTLED
-                // 2. OR status just changed to SUCCESS/SETTLED AND SMS hasn't been sent yet
-                // 3. OR force-sms is enabled
-                $shouldSendSms = false;
-                if ($forceSms) {
-                    $shouldSendSms = true;
-                } elseif (in_array($transaction->status, ['SUCCESS', 'SETTLED']) && !$transaction->sms_sent) {
-                    if ($isNew || $statusChanged) {
-                        $shouldSendSms = true;
-                    }
-                }
-
-                if ($shouldSendSms && in_array($transaction->status, ['SUCCESS', 'SETTLED'])) {
-                    if ($this->sendPaymentSms($transaction, $paymentData)) {
-                        $smsSent++;
-                    }
                 }
             }
 

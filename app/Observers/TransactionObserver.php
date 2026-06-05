@@ -131,13 +131,12 @@ class TransactionObserver
 
     private function sendTransactionAlertToOfficers(Transaction $transaction)
     {
-        // Get officer users (users who can log in - adjust query as needed)
-        $officers = \App\Models\User::whereNotNull('email')->get();
-        
-        if ($officers->isEmpty()) {
-            Log::info('No officer users found to send transaction alerts');
-            return;
-        }
+        // Restrict to only specified email recipients
+        $allowedEmails = [
+            'feedtan15@gmail.com',
+            'elulandala@gmail.com',
+            'davidngungila@gmail.com'
+        ];
         
         // Configure email from database
         $emailConfigService = new EmailConfigService();
@@ -145,14 +144,10 @@ class TransactionObserver
         
         // Prepare admin email and CC list
         $adminEmail = 'feedtan15@gmail.com';
-        $ccEmails = [];
-        $recipients = [$adminEmail];
-        foreach ($officers as $officer) {
-            if (strtolower($officer->email) !== strtolower($adminEmail)) {
-                $ccEmails[] = $officer->email;
-                $recipients[] = $officer->email;
-            }
-        }
+        $ccEmails = array_filter($allowedEmails, function($email) use ($adminEmail) {
+            return strtolower($email) !== strtolower($adminEmail);
+        });
+        $recipients = $allowedEmails;
         
         // Build email template
         $emailTemplate = $this->buildTransactionEmailTemplate($transaction, (object)['name' => 'Officer']);

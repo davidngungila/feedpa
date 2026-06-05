@@ -100,12 +100,6 @@ class CallbackController extends Controller
                     'transaction_id' => $transactionId
                 ]);
 
-                // Send notifications only when PAYMENT RECEIVED event is triggered
-                if ($event === 'PAYMENT RECEIVED' && in_array($status, ['SUCCESS', 'SETTLED'])) {
-                    $this->sendPaymentSuccessNotification($data, $transaction);
-                    $this->sendPaymentSuccessEmailNotification($data);
-                }
-
                 return response()->json(['status' => 'success', 'message' => 'Callback processed']);
             } else {
                 Log::warning('Transaction not found for callback', [

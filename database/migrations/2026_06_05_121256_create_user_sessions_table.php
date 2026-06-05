@@ -11,17 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_sessions', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('session_id')->unique();
-            $table->string('ip_address')->nullable();
-            $table->string('user_agent')->nullable();
-            $table->timestamp('last_activity')->index();
-            $table->timestamps();
-            
-            $table->unique('user_id'); // Ensure only one active session per user
-        });
+        if (!Schema::hasTable('user_sessions')) {
+            Schema::create('user_sessions', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('user_id')->constrained()->onDelete('cascade');
+                $table->string('session_id')->unique();
+                $table->string('ip_address')->nullable();
+                $table->string('user_agent')->nullable();
+                $table->timestamp('last_activity')->index();
+                $table->timestamps();
+                
+                $table->unique('user_id'); // Ensure only one active session per user
+            });
+        }
     }
 
     /**

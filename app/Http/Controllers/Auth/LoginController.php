@@ -48,7 +48,7 @@ class LoginController extends Controller
             
             Audit::log('login', 'User logged in successfully');
 
-            return redirect()->intended('/dashboard');
+            return redirect()->intended('/dashboard')->with('success', 'Login successful! Welcome back.');
         }
         
         Audit::log('login_failed', "Failed login attempt for email: {$request->email}");

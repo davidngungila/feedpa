@@ -192,8 +192,7 @@
         currentStepDescription: 'Checking your credentials',
         steps: [
           { title: 'Validating...', description: 'Checking your credentials', delay: 400 },
-          { title: 'Authorizing...', description: 'Verifying your account', delay: 400 },
-          { title: 'Login Successful!', description: 'Redirecting to dashboard...', delay: 500 }
+          { title: 'Authorizing...', description: 'Verifying your account', delay: 400 }
         ],
         async submitLogin() {
           const form = document.getElementById('loginForm');

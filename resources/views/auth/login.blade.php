@@ -83,6 +83,17 @@
       <p class="text-sm text-red-700 dark:text-red-300" id="error-toast-message"></p>
     </div>
   </div>
+  
+  <!-- Success Toast Notification -->
+  <div id="success-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700">
+    <div class="flex-shrink-0">
+      <i class="fa-solid fa-check-circle text-2xl text-green-600 dark:text-green-400"></i>
+    </div>
+    <div class="flex-1">
+      <p class="font-bold text-base text-green-800 dark:text-green-200">Success!</p>
+      <p class="text-sm text-green-700 dark:text-green-300" id="success-toast-message"></p>
+    </div>
+  </div>
 
   <!-- ============================================================
        LOGIN SCREEN
@@ -271,6 +282,18 @@
         
         setTimeout(() => {
           errorToast.classList.add('hidden');
+        }, 5000);
+      @endif
+      
+      @if(session('success'))
+        const successToast = document.getElementById('success-toast');
+        const successMessage = document.getElementById('success-toast-message');
+        
+        successMessage.textContent = '{{ addslashes(session('success')) }}';
+        successToast.classList.remove('hidden');
+        
+        setTimeout(() => {
+          successToast.classList.add('hidden');
         }, 5000);
       @endif
     });

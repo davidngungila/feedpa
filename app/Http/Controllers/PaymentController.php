@@ -113,40 +113,23 @@ class PaymentController extends Controller
                 return back()->with('info', 'Email has already been sent for this transaction.');
             }
 
-            // Get officer users
-            $officers = \App\Models\User::whereNotNull('email')->get();
-            
-            if ($officers->isEmpty()) {
-                return back()->with('error', 'No officer users found to send transaction alerts.');
-            }
-
             // Configure email from database
             $emailConfigService = new \App\Services\EmailConfigService();
             $emailConfigService->configureMail();
 
-            // Prepare admin email and CC list
-            $adminEmail = 'feedtan15@gmail.com';
-            $ccEmails = [];
-            $recipients = [$adminEmail];
-            foreach ($officers as $officer) {
-                if (strtolower($officer->email) !== strtolower($adminEmail)) {
-                    $ccEmails[] = $officer->email;
-                    $recipients[] = $officer->email;
-                }
-            }
-
             // Build email template
             $emailTemplate = $this->buildTransactionEmailTemplate($transaction);
 
-            \Illuminate\Support\Facades\Mail::html($emailTemplate['html'], function ($message) use ($emailTemplate, $adminEmail, $ccEmails, $emailConfigService) {
+            $toEmail = $transaction->email ?? 'service@feedtancmg.org';
+            $ccEmails = ['elulandala@gmail.com', 'davidngungila@gmail.com'];
+            $recipients = array_merge([$toEmail], $ccEmails);
+
+            \Illuminate\Support\Facades\Mail::html($emailTemplate['html'], function ($message) use ($emailTemplate, $toEmail, $ccEmails, $emailConfigService) {
                 $config = $emailConfigService->getEmailConfig();
-                $message->to($adminEmail, 'FeedTan Admin')
+                $message->to($toEmail)
+                        ->cc($ccEmails)
                         ->subject($emailTemplate['subject'])
                         ->from($config['from_address'], $config['from_name']);
-                
-                if (!empty($ccEmails)) {
-                    $message->cc($ccEmails);
-                }
             });
 
             $transaction->update([

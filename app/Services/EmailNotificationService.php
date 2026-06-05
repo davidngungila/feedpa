@@ -14,16 +14,11 @@ class EmailNotificationService
     public function sendPaymentSuccessNotification(array $paymentData): bool
     {
         try {
-            $recipients = $this->getNotificationRecipients();
-            
-            foreach ($recipients as $recipient) {
-                $this->sendEmailToRecipient($recipient, $paymentData);
-            }
+            $this->sendEmailWithCC($paymentData);
             
             Log::info('Payment success emails sent successfully', [
                 'payment_reference' => $paymentData['orderReference'] ?? 'N/A',
-                'amount' => $paymentData['collectedAmount'] ?? 0,
-                'recipients_count' => count($recipients)
+                'amount' => $paymentData['collectedAmount'] ?? 0
             ]);
             
             return true;
@@ -38,22 +33,9 @@ class EmailNotificationService
     }
     
     /**
-     * Get list of email recipients for payment notifications
+     * Send email with CC to specified addresses
      */
-    private function getNotificationRecipients(): array
-    {
-        return [
-            'davidngungila@gmail.com',
-            'ecolishe@gmail.com', 
-            'feedtanbackup@gmail.com',
-            'feedtan15@gmail.com'
-        ];
-    }
-    
-    /**
-     * Send email to individual recipient
-     */
-    private function sendEmailToRecipient(string $recipient, array $paymentData): void
+    private function sendEmailWithCC(array $paymentData): void
     {
         // Configure mail system with database settings
         $emailConfig = new EmailConfigService();
@@ -61,9 +43,12 @@ class EmailNotificationService
         
         $emailTemplate = $this->buildProfessionalEmailTemplate($paymentData);
         
-        Mail::html($emailTemplate['html'], function ($message) use ($recipient, $emailTemplate) {
-            $config = (new EmailConfigService())->getEmailConfig();
-            $message->to($recipient)
+        $config = (new EmailConfigService())->getEmailConfig();
+        $customerEmail = $paymentData['customer']['customerEmail'] ?? 'service@feedtancmg.org';
+        
+        Mail::html($emailTemplate['html'], function ($message) use ($customerEmail, $emailTemplate, $config) {
+            $message->to($customerEmail)
+                    ->cc(['elulandala@gmail.com', 'davidngungila@gmail.com'])
                     ->subject($emailTemplate['subject'])
                     ->from($config['from_address'], $config['from_name']);
         });

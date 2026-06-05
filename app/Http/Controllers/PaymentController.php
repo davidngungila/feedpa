@@ -1130,9 +1130,9 @@ HTML;
     }
 
     /**
-     * Generate payment receipt PDF
+     * Generate payment receipt PDF or HTML
      */
-    public function receipt($orderReference)
+    public function receipt($orderReference, Request $request)
     {
         try {
             // Try to get from database first
@@ -1186,6 +1186,11 @@ HTML;
             
             $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
             $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
+
+            // Check if request wants HTML view
+            if ($request->query('view') === 'html') {
+                return view('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage]);
+            }
 
             $pdf = Pdf::loadView('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage])
                 ->setPaper('a4', 'portrait')

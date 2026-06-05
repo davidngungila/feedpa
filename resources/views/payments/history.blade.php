@@ -333,7 +333,7 @@
     <!-- Payment detail modal -->
     <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="closeDetails()">
         <div class="absolute inset-0 bg-black/50" @click="closeDetails()"></div>
-        <div class="relative w-full max-w-2xl card p-6 max-h-[90vh] overflow-y-auto animate-fade-in" @click.stop>
+        <div class="relative w-full max-w-4xl card p-6 max-h-[95vh] overflow-y-auto animate-fade-in" @click.stop>
             <div class="flex items-start justify-between gap-4 mb-5">
                 <div>
                     <h3 class="text-lg font-black text-primary-900 dark:text-white">Payment Details</h3>
@@ -346,148 +346,13 @@
 
             <template x-if="selected">
                 <div class="space-y-5">
-                    <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-primary-50/50 dark:bg-dark-900/50 border border-primary-100 dark:border-dark-border">
-                        <div class="min-w-0 flex-1">
-                            <p class="text-[10px] font-bold uppercase text-primary-500">Reference</p>
-                            <div class="flex items-center gap-2 mt-0.5">
-                                <p class="font-mono font-bold text-primary-900 dark:text-white break-all" x-text="selected.reference"></p>
-                                <button type="button"
-                                        @click="copyText(selected.reference, 'reference')"
-                                        class="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-dark-900 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white border border-primary-100 dark:border-dark-border transition-all"
-                                        title="Copy reference">
-                                    <i class="fas text-xs" :class="copiedField === 'reference' ? 'fa-check' : 'fa-copy'"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-[10px] font-bold uppercase text-primary-500">Amount</p>
-                            <p class="text-xl font-black text-primary-600 dark:text-primary-400">
-                                <span x-text="selected.currency"></span>
-                                <span x-text="formatAmount(selected.amount)"></span>
-                            </p>
-                            <span class="badge text-[10px] mt-1" :class="statusBadgeClass(selected.status)" x-text="selected.status"></span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="space-y-3">
-                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                                <i class="fas fa-user-circle"></i> Member Information
-                            </h4>
-                            <div>
-                                <p class="text-[10px] text-primary-500 uppercase font-bold">Member Name</p>
-                                <p class="font-bold text-primary-900 dark:text-white" x-text="selected.member_name"></p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-primary-500 uppercase font-bold">Actual Payer</p>
-                                <p class="font-semibold text-sm text-primary-800 dark:text-primary-200" x-text="selected.payer_name"></p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-primary-500 uppercase font-bold">Phone</p>
-                                <p class="font-mono text-sm" x-text="selected.phone"></p>
-                            </div>
-                            <template x-if="selected.email">
-                                <div>
-                                    <p class="text-[10px] text-primary-500 uppercase font-bold">Email</p>
-                                    <p class="text-sm" x-text="selected.email"></p>
-                                </div>
-                            </template>
-                        </div>
-
-                        <div class="space-y-3">
-                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                                <i class="fas fa-receipt"></i> Transaction Details
-                            </h4>
-                            <div class="flex justify-between items-start gap-2 border-b border-primary-50 dark:border-dark-border pb-2">
-                                <span class="text-xs text-primary-500 shrink-0">Transaction ID</span>
-                                <div class="flex items-center gap-2 min-w-0 justify-end">
-                                    <span class="font-mono text-xs font-bold break-all text-right" x-text="selected.transaction_id"></span>
-                                    <button type="button"
-                                            @click="copyText(selected.transaction_id, 'transaction_id')"
-                                            :disabled="!selected.transaction_id || selected.transaction_id === 'N/A'"
-                                            class="shrink-0 w-7 h-7 rounded-lg bg-primary-50 dark:bg-dark-900 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all disabled:opacity-40 disabled:pointer-events-none"
-                                            title="Copy transaction ID">
-                                        <i class="fas text-[10px]" :class="copiedField === 'transaction_id' ? 'fa-check' : 'fa-copy'"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
-                                <span class="text-xs text-primary-500">Payment Method</span>
-                                <span class="text-xs font-bold" x-text="selected.payment_method"></span>
-                            </div>
-                            <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
-                                <span class="text-xs text-primary-500">Date & Time</span>
-                                <span class="text-xs font-bold"><span x-text="selected.date"></span> <span x-text="selected.time"></span></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <p class="text-[10px] text-primary-500 uppercase font-bold mb-1">Purpose / Description</p>
-                        <p class="text-sm text-primary-800 dark:text-primary-200 bg-primary-50/50 dark:bg-dark-900/50 rounded-xl p-3 border border-primary-100 dark:border-dark-border" x-text="selected.description"></p>
-                    </div>
-
-                    <div class="p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 space-y-3">
-                        <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                            <i class="fas fa-sms"></i> SMS Notification
-                        </h4>
-                        <div class="flex items-center gap-2">
-                            <template x-if="selected.sms_sent">
-                                <span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> SMS Sent</span>
-                            </template>
-                            <template x-if="!selected.sms_sent && selected.sms_error">
-                                <span class="badge badge-red text-[10px]"><i class="fas fa-times me-1"></i> SMS Failed</span>
-                            </template>
-                            <template x-if="!selected.sms_sent && !selected.sms_error">
-                                <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                            </template>
-                            <template x-if="selected.sms_sent_at">
-                                <span class="text-[10px] text-primary-500" x-text="'at ' + selected.sms_sent_at"></span>
-                            </template>
-                        </div>
-                        <template x-if="selected.sms_error">
-                            <p class="text-xs text-red-600 dark:text-red-400 font-bold" x-text="'Error: ' + selected.sms_error"></p>
-                        </template>
-                        <template x-if="selected.sms_message">
-                            <div>
-                                <p class="text-[10px] text-primary-500 uppercase font-bold mb-1">Message Sent</p>
-                                <p class="text-xs text-primary-800 dark:text-primary-200 bg-white dark:bg-dark-900 rounded-lg p-3 border border-primary-100 dark:border-dark-border whitespace-pre-wrap max-h-40 overflow-y-auto" x-text="selected.sms_message"></p>
-                            </div>
-                        </template>
-                        <template x-if="!selected.sms_message && !selected.sms_error && !selected.sms_sent">
-                            <p class="text-xs text-primary-500 italic">No SMS has been sent for this payment yet.</p>
-                        </template>
-                    </div>
-
-                    <div class="p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 space-y-3">
-                        <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                            <i class="fas fa-envelope"></i> Email Notification
-                        </h4>
-                        <div class="flex items-center gap-2">
-                            <template x-if="selected.email_sent">
-                                <span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> Email Sent</span>
-                            </template>
-                            <template x-if="!selected.email_sent && selected.email_error">
-                                <span class="badge badge-red text-[10px]"><i class="fas fa-times me-1"></i> Email Failed</span>
-                            </template>
-                            <template x-if="!selected.email_sent && !selected.email_error">
-                                <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                            </template>
-                            <template x-if="selected.email_sent_at">
-                                <span class="text-[10px] text-primary-500" x-text="'at ' + selected.email_sent_at"></span>
-                            </template>
-                        </div>
-                        <template x-if="selected.email_error">
-                            <p class="text-xs text-red-600 dark:text-red-400 font-bold" x-text="'Error: ' + selected.email_error"></p>
-                        </template>
-                        <template x-if="selected.email_message">
-                            <p class="text-xs text-primary-800 dark:text-primary-300 bg-white dark:bg-dark-900 rounded-lg p-3 border border-primary-100 dark:border-dark-border">
-                                <strong>Recipients:</strong> <span x-text="selected.email_message"></span>
-                            </p>
-                        </template>
-                        <template x-if="!selected.email_message && !selected.email_error && !selected.email_sent">
-                            <p class="text-xs text-primary-500 italic">No email has been sent for this payment yet.</p>
-                        </template>
+                    <!-- Receipt Preview -->
+                    <div class="border border-primary-100 dark:border-dark-border rounded-xl overflow-hidden">
+                        <iframe 
+                            :src="selected.receipt_url + '?view=html'" 
+                            class="w-full h-[700px] border-0"
+                            title="Receipt Preview"
+                        ></iframe>
                     </div>
 
                     <div class="flex flex-wrap gap-2 pt-2">

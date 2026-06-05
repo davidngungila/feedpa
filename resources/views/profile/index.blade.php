@@ -176,7 +176,7 @@
                         </div>
                     </div>
                     <template x-if="!session.is_current">
-                        <form method="POST" x-bind:action="`{{ route('profile.sessions.logout', '') }}/${session.session_id}`" 
+                        <form method="POST" x-bind:action="`{{ url('/profile/sessions/logout') }}/${session.session_id}`" 
                               x-data="{}" 
                               @submit.prevent="
                                 const form = $event.target;

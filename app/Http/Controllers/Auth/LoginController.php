@@ -48,10 +48,7 @@ class LoginController extends Controller
             $request->session()->regenerate();
             $currentSessionId = Session::getId();
             
-            // Invalidate any old sessions for this user
-            UserSession::where('user_id', Auth::id())->delete();
-            
-            // Create new session record
+            // Create new session record - keep old ones!
             UserSession::create([
                 'user_id' => Auth::id(),
                 'session_id' => $currentSessionId,

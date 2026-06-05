@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Audit;
+use App\Models\UserSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Session;
 
 class UserController extends Controller
 {
@@ -270,5 +272,70 @@ class UserController extends Controller
         ]);
 
         return redirect()->route('profile.index')->with('success', 'Password updated successfully');
+    }
+    
+    /**
+     * Get active sessions for the authenticated user (API).
+     */
+    public function getActiveSessions()
+    {
+        $user = auth()->user();
+        $currentSessionId = Session::getId();
+        
+        $sessions = UserSession::where('user_id', $user->id)
+            ->orderBy('last_activity', 'desc')
+            ->get()
+            ->map(function($session) use ($currentSessionId) {
+                return [
+                    'id' => $session->id,
+                    'session_id' => $session->session_id,
+                    'is_current' => $session->session_id === $currentSessionId,
+                    'ip_address' => $session->ip_address,
+                    'user_agent' => $session->user_agent,
+                    'last_activity' => $session->last_activity->diffForHumans(),
+                    'created_at' => $session->created_at->format('M d, Y H:i'),
+                ];
+            });
+        
+        return response()->json(['sessions' => $sessions]);
+    }
+    
+    /**
+     * Logout a specific session.
+     */
+    public function logoutSession($sessionId)
+    {
+        $user = auth()->user();
+        $currentSessionId = Session::getId();
+        
+        if ($sessionId === $currentSessionId) {
+            return response()->json(['error' => 'Cannot logout current session'], 400);
+        }
+        
+        $session = UserSession::where('user_id', $user->id)
+            ->where('session_id', $sessionId)
+            ->first();
+        
+        if ($session) {
+            $session->delete();
+            return response()->json(['success' => true, 'message' => 'Session logged out successfully']);
+        }
+        
+        return response()->json(['error' => 'Session not found'], 404);
+    }
+    
+    /**
+     * Logout all other sessions except current.
+     */
+    public function logoutOtherSessions()
+    {
+        $user = auth()->user();
+        $currentSessionId = Session::getId();
+        
+        UserSession::where('user_id', $user->id)
+            ->where('session_id', '!=', $currentSessionId)
+            ->delete();
+        
+        return back()->with('success', 'All other sessions logged out successfully');
     }
 }

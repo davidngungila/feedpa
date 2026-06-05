@@ -119,6 +119,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/edit', [UserController::class, 'editProfile'])->name('edit');
         Route::put('/update', [UserController::class, 'updateProfile'])->name('update');
         Route::put('/change-password', [UserController::class, 'updatePassword'])->name('password');
+        Route::get('/sessions', [UserController::class, 'getActiveSessions'])->name('sessions');
+        Route::post('/sessions/logout/{sessionId}', [UserController::class, 'logoutSession'])->name('sessions.logout');
+        Route::post('/sessions/logout-others', [UserController::class, 'logoutOtherSessions'])->name('sessions.logout-others');
     });
     
     // Settings Routes (Admin Only)

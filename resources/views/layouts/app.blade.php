@@ -97,7 +97,26 @@
     
     @stack('styles')
 </head>
-<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false, isLoading: true }" :class="{'dark': darkMode}" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300)">
+<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false, isLoading: true, sessionCount: 0, lastSessionCount: 0, showNewSessionToast: false }" :class="{'dark': darkMode}" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300);
+@if(auth()->check())
+// Start session polling
+lastSessionCount = await fetch('{{ route('profile.sessions') }}').then(r => r.json()).then(data => data.sessions.length);
+setInterval(async () => {
+    try {
+        const response = await fetch('{{ route('profile.sessions') }}');
+        const data = await response.json();
+        sessionCount = data.sessions.length;
+        if (sessionCount > lastSessionCount) {
+            showNewSessionToast = true;
+            setTimeout(() => { showNewSessionToast = false; }, 10000);
+        }
+        lastSessionCount = sessionCount;
+    } catch (e) {
+        console.error('Error polling sessions:', e);
+    }
+}, 5000);
+@endif
+">
     
     <!-- Loading Overlay -->
     <div x-show="isLoading"
@@ -118,6 +137,32 @@
                 <div class="w-10 h-10 rounded-full border-4 border-primary-200 dark:border-primary-900 border-t-primary-500 animate-spin-slow"></div>
             </div>
             <p class="text-sm font-semibold text-primary-700 dark:text-primary-300">Loading...</p>
+        </div>
+    </div>
+
+    <!-- New Session Toast -->
+    <div x-show="showNewSessionToast"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 transform translate-x-10"
+         x-transition:enter-end="opacity-100 transform translate-x-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 transform translate-x-0"
+         x-transition:leave-end="opacity-0 transform translate-x-10"
+         class="fixed top-4 right-4 z-[9999] bg-yellow-50 dark:bg-yellow-900/40 border border-yellow-400 dark:border-yellow-700 px-6 py-4 rounded-xl shadow-xl max-w-md">
+        <div class="flex items-start gap-3">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-2xl text-yellow-600 dark:text-yellow-400"></i>
+            </div>
+            <div class="flex-1">
+                <p class="font-bold text-yellow-800 dark:text-yellow-200">New Login Detected!</p>
+                <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                    Someone has logged into your account from another browser/device.
+                    <a href="{{ route('profile.index') }}" class="underline font-semibold">View active sessions</a>
+                </p>
+            </div>
+            <button @click="showNewSessionToast = false" class="text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-200">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     </div>
     

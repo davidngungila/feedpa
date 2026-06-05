@@ -240,6 +240,7 @@
          <table class="signature-grid"> 
              <tr> 
                  <td style="text-align: center; width: 50%;"> 
+                     <img src="{{ public_path('sign.png') }}" style="width: 120px; height: 50px; object-fit: contain; margin-bottom: 5px;">
                      <div class="sig-line"></div> 
                      <div class="sig-text">TREASURER / SECRETARY</div> 
                      <div style="font-size: 8px; color: #9ca3af;">(Digital Seal Applied)</div> 

@@ -48,14 +48,27 @@ class LoginController extends Controller
             $request->session()->regenerate();
             $currentSessionId = Session::getId();
             
-            // Create a new session record for this login
-            UserSession::create([
-                'user_id' => Auth::id(),
-                'session_id' => $currentSessionId,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'last_activity' => now(),
-            ]);
+            // Try to create new session, if fails fall back to updateOrCreate
+            try {
+                UserSession::create([
+                    'user_id' => Auth::id(),
+                    'session_id' => $currentSessionId,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'last_activity' => now(),
+                ]);
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                // If unique constraint still exists, fall back to updateOrCreate
+                UserSession::updateOrCreate(
+                    ['user_id' => Auth::id()],
+                    [
+                        'session_id' => $currentSessionId,
+                        'ip_address' => $request->ip(),
+                        'user_agent' => $request->userAgent(),
+                        'last_activity' => now(),
+                    ]
+                );
+            }
             
             Audit::log('login', 'User logged in successfully');
 

@@ -20,8 +20,6 @@ return new class extends Migration
                 $table->string('user_agent')->nullable();
                 $table->timestamp('last_activity')->index();
                 $table->timestamps();
-                
-                $table->unique('user_id'); // Ensure only one active session per user
             });
         }
     }

@@ -122,6 +122,16 @@
     </div>
     
     <div class="flex h-screen overflow-hidden">
+        <!-- Overlay to close sidebar -->
+        <div x-show="sidebarOpen" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             @click="sidebarOpen = false"
+             class="fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
         <!-- Sidebar -->
         <aside :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'" 
                class="sidebar sidebar-bg fixed lg:relative w-[260px] h-screen z-50 flex flex-col transition-transform duration-300">

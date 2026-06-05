@@ -163,7 +163,7 @@
 
           <!-- Login Button -->
           <button type="submit" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
-            <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
+            <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Sign In
           </button>
         </form>
 

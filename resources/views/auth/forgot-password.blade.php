@@ -56,7 +56,7 @@
                         <i class="fa-solid fa-leaf text-white text-2xl"></i>
                     </div>
                     <h1 class="text-2xl font-bold" :class="darkMode?'text-white':'text-primary-900'">Forgot Password?</h1>
-                    <p class="text-sm mt-1" :class="darkMode?'text-primary-300':'text-primary-600'">Enter your email to receive a new password</p>
+                    <p class="text-sm mt-1" :class="darkMode?'text-primary-300':'text-primary-600'">Enter your email to receive an OTP</p>
                 </div>
 
                 <!-- Session Status -->
@@ -88,7 +88,7 @@
 
                     <!-- Submit Button -->
                     <button type="submit" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
-                        <i class="fas fa-envelope mr-2"></i> Send New Password
+                        <i class="fas fa-envelope mr-2"></i> Send OTP
                     </button>
                 </form>
 

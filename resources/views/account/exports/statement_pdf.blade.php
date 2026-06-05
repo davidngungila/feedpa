@@ -27,7 +27,9 @@
 </head>
 <body>
     <div class="header">
-        <h1>FEEDTAN DIGITAL PAYMENT SYSTEM</h1>
+        <h1>FeedTan Community Microfinance Group</h1>
+        <h2 style="font-size: 10px; margin-top: 2px; margin-bottom: 8px;">P.O.Box 7744, Ushirika Sokoine Road, Moshi, Kilimanjaro, Tanzania</h2>
+        <h2>DIGITAL PAYMENT SYSTEM</h2>
         <h2>Account Statement ({{ strtoupper($tab) }} SOURCE)</h2>
         <p>Generated on: {{ $date }} | Currency: {{ $currency }}</p>
     </div>

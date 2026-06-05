@@ -80,7 +80,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <div class="logo">FEEDTAN</div>
+            <div class="logo" style="font-size: 18px;">FeedTan Community Microfinance Group</div>
+            <div class="sub-header" style="font-size: 10px; margin-top: 4px;">P.O.Box 7744, Ushirika Sokoine Road, Moshi, Kilimanjaro, Tanzania</div>
             <div class="sub-header">DIGITAL PAYMENT SYSTEM</div>
             <div class="report-title">TRIAL BALANCE</div>
             @if($startDate || $endDate)

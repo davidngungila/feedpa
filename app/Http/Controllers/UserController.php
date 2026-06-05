@@ -284,20 +284,37 @@ class UserController extends Controller
         
         $sessions = UserSession::where('user_id', $user->id)
             ->orderBy('last_activity', 'desc')
-            ->get()
-            ->map(function($session) use ($currentSessionId) {
-                return [
-                    'id' => $session->id,
-                    'session_id' => $session->session_id,
-                    'is_current' => $session->session_id === $currentSessionId,
-                    'ip_address' => $session->ip_address,
-                    'user_agent' => $session->user_agent,
-                    'last_activity' => $session->last_activity->diffForHumans(),
-                    'created_at' => $session->created_at->format('M d, Y H:i'),
-                ];
-            });
+            ->get();
         
-        return response()->json(['sessions' => $sessions]);
+        // Check if current session is in the list
+        $hasCurrentSession = $sessions->contains('session_id', $currentSessionId);
+        
+        // If not, add it
+        if (!$hasCurrentSession) {
+            $currentSession = (object)[
+                'id' => 0,
+                'session_id' => $currentSessionId,
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent(),
+                'last_activity' => now(),
+                'created_at' => now(),
+            ];
+            $sessions->prepend($currentSession);
+        }
+        
+        $formattedSessions = $sessions->map(function($session) use ($currentSessionId) {
+            return [
+                'id' => $session->id ?? 0,
+                'session_id' => $session->session_id,
+                'is_current' => $session->session_id === $currentSessionId,
+                'ip_address' => $session->ip_address,
+                'user_agent' => $session->user_agent,
+                'last_activity' => isset($session->last_activity) ? $session->last_activity->diffForHumans() : 'Just now',
+                'created_at' => isset($session->created_at) ? $session->created_at->format('M d, Y H:i') : now()->format('M d, Y H:i'),
+            ];
+        });
+        
+        return response()->json(['sessions' => $formattedSessions]);
     }
     
     /**

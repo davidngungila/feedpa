@@ -33,8 +33,8 @@
   </script>
 
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
+    *, *::before, *::after { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+    body { margin: 0; }
 
     .form-input {
       width: 100%;
@@ -43,7 +43,6 @@
       font-size: 14px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
-      font-family: 'Plus Jakarta Sans', sans-serif;
     }
     .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
 

@@ -48,15 +48,14 @@ class LoginController extends Controller
             $request->session()->regenerate();
             $currentSessionId = Session::getId();
             
-            UserSession::updateOrCreate(
-                ['user_id' => Auth::id()],
-                [
-                    'session_id' => $currentSessionId,
-                    'ip_address' => $request->ip(),
-                    'user_agent' => $request->userAgent(),
-                    'last_activity' => now(),
-                ]
-            );
+            // Create a new session record for this login
+            UserSession::create([
+                'user_id' => Auth::id(),
+                'session_id' => $currentSessionId,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'last_activity' => now(),
+            ]);
             
             Audit::log('login', 'User logged in successfully');
 
@@ -80,8 +79,11 @@ class LoginController extends Controller
     {
         Audit::log('logout', 'User logged out');
         
-        // Delete session record
-        UserSession::where('user_id', Auth::id())->delete();
+        // Delete only the current session record
+        $currentSessionId = Session::getId();
+        UserSession::where('user_id', Auth::id())
+            ->where('session_id', $currentSessionId)
+            ->delete();
         
         Auth::logout();
 

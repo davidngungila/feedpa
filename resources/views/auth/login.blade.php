@@ -108,48 +108,48 @@
         </div>
 
         <form id="loginForm" method="POST" action="{{ route('login') }}" @submit.prevent="submitLogin()">
-            @csrf
+          @csrf
 
-            <!-- Email -->
-            <div class="mb-4">
-                <label class="block text-sm font-semibold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Email Address</label>
-                <div class="relative">
-                    <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
-                    <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="you@example.com"
-                           class="form-input pl-9"
-                           :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'">
-                </div>
-                @error('email')
-                    <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
-                @enderror
+          <!-- Email -->
+          <div class="mb-4">
+            <label class="block text-sm font-semibold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Email Address</label>
+            <div class="relative">
+              <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
+              <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="you@example.com"
+                     class="form-input pl-9"
+                     :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'"/>
             </div>
+            @error('email')
+              <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
+            @enderror
+          </div>
 
-            <!-- Password -->
-            <div class="mb-6">
-                <label class="block text-sm font-semibold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Password</label>
-                <div class="relative">
-                    <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
-                    <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="••••••••"
-                           class="form-input pl-9"
-                           :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'">
-                </div>
-                @error('password')
-                    <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
-                @enderror
+          <!-- Password -->
+          <div class="mb-6">
+            <label class="block text-sm font-semibold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Password</label>
+            <div class="relative">
+              <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
+              <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="••••••••"
+                     class="form-input pl-9"
+                     :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'"/>
             </div>
+            @error('password')
+              <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
+            @enderror
+          </div>
 
-            <!-- Remember Me -->
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-2">
-                    <input id="remember" type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }} class="w-4 h-4 rounded border-primary-200 bg-primary-50 text-primary-600 focus:ring-primary-500">
-                    <label for="remember" class="text-xs text-primary-500 font-medium cursor-pointer" :class="darkMode?'text-primary-300':'text-primary-600'">Remember Me</label>
-                </div>
+          <!-- Remember Me -->
+          <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center gap-2">
+              <input id="remember" type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }} class="w-4 h-4 rounded border-primary-200 bg-primary-50 text-primary-600 focus:ring-primary-500">
+              <label for="remember" class="text-xs text-primary-500 font-medium cursor-pointer" :class="darkMode?'text-primary-300':'text-primary-600'">Remember Me</label>
             </div>
+          </div>
 
-            <!-- Login Button -->
-            <button type="submit" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
-                <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
-            </button>
+          <!-- Login Button -->
+          <button type="submit" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
+            <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
+          </button>
         </form>
 
         <!-- Dark mode toggle -->

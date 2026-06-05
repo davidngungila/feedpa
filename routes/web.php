@@ -179,6 +179,10 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 Route::prefix('password')->name('password.')->group(function () {
     Route::get('/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('request');
     Route::post('/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('email');
+    Route::get('/otp', [ForgotPasswordController::class, 'showOtpForm'])->name('otp');
+    Route::post('/otp', [ForgotPasswordController::class, 'verifyOtp'])->name('verify');
+    Route::get('/reset-password', [ForgotPasswordController::class, 'showResetPasswordForm'])->name('reset');
+    Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'])->name('update');
 });
 
 // Authentication Routes (if needed)

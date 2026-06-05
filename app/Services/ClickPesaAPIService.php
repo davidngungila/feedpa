@@ -481,19 +481,17 @@ class ClickPesaAPIService
     // ==================== UTILITY METHODS ====================
 
     /**
-     * Generate unique order reference (max 20 characters)
+     * Generate unique order reference (exactly 14 characters: FEEDTAN + 7 random alphanumeric characters
      */
     public function generateOrderReference(string $prefix = 'FEEDTAN'): string
     {
-        $uniqueId = strtoupper(uniqid());
-        $timestamp = time();
-        $reference = $prefix . substr($uniqueId, -8) . substr($timestamp, -6);
-        
-        if (strlen($reference) > 20) {
-            $reference = substr($reference, 0, 20);
+        $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $randomPart = '';
+        for ($i = 0; $i < 7; $i++) {
+            $randomPart .= $characters[mt_rand(0, strlen($characters) - 1)];
         }
         
-        return $reference;
+        return $prefix . $randomPart;
     }
 
     /**

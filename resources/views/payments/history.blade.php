@@ -160,6 +160,7 @@
                                 'reference' => $payment->order_reference,
                                 'transaction_id' => $payment->transaction_id ?? 'N/A',
                                 'status' => $status,
+                                'isSettled' => $isSettled,
                                 'amount' => (float) $payment->amount,
                                 'currency' => $payment->currency ?? 'TZS',
                                 'member_name' => $memberName,
@@ -272,11 +273,13 @@
                                             title="Preview details">
                                         <i class="fas fa-eye text-xs"></i>
                                     </button>
-                                    <a href="{{ route('payments.receipt', $payment->order_reference) }}" target="_blank"
-                                       class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                       title="Download receipt">
-                                        <i class="fas fa-file-invoice text-xs"></i>
-                                    </a>
+                                    @if($isSettled)
+                                        <a href="{{ route('payments.receipt', $payment->order_reference) }}" target="_blank"
+                                           class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                           title="Download receipt">
+                                            <i class="fas fa-file-invoice text-xs"></i>
+                                        </a>
+                                    @endif
                                     @if($isSettled && !$payment->sms_sent)
                                         <form action="{{ route('payments.send-sms', $payment->order_reference) }}" method="POST" class="m-0">
                                             @csrf
@@ -494,9 +497,11 @@
                         <a :href="selected.status_url" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
                             <i class="fas fa-external-link-alt me-1"></i> Full Payment Page
                         </a>
-                        <a :href="selected.receipt_url" target="_blank" class="px-4 py-2 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs font-bold border border-primary-100 dark:border-dark-border hover:bg-primary-100 transition-all">
-                            <i class="fas fa-file-pdf me-1"></i> Receipt PDF
-                        </a>
+                        <template x-if="selected.isSettled">
+                            <a :href="selected.receipt_url" target="_blank" class="px-4 py-2 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs font-bold border border-primary-100 dark:border-dark-border hover:bg-primary-100 transition-all">
+                                <i class="fas fa-file-pdf me-1"></i> Receipt PDF
+                            </a>
+                        </template>
                         <button type="button" @click="closeDetails()" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-dark-border text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-200 transition-all">
                             Close
                         </button>

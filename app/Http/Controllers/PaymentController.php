@@ -1130,16 +1130,19 @@ HTML;
     }
 
     /**
-     * Generate payment receipt PDF or HTML
+     * Generate payment receipt PDF
      */
-    public function receipt($orderReference, Request $request)
+    public function receipt($orderReference)
     {
         try {
             // Try to get from database first
             $transaction = Transaction::where('order_reference', $orderReference)->first();
             
             $paymentData = null;
+            $status = null;
+            
             if ($transaction) {
+                $status = strtoupper($transaction->status);
                 $paymentData = [
                     'orderReference' => $transaction->order_reference,
                     'transaction_id' => $transaction->transaction_id,
@@ -1165,11 +1168,17 @@ HTML;
                 if ($apiResponse && is_array($apiResponse)) {
                     $paymentData = isset($apiResponse[0]) ? $apiResponse[0] : $apiResponse;
                     $paymentData['orderReference'] = $paymentData['orderReference'] ?? $orderReference;
+                    $status = strtoupper($paymentData['status'] ?? '');
                 }
             }
             
             if (!$paymentData) {
                 return back()->with('error', 'Payment not found');
+            }
+            
+            // Only allow receipt for SUCCESS or SETTLED transactions
+            if (!in_array($status, ['SUCCESS', 'SETTLED'])) {
+                return back()->with('error', 'Receipt can only be generated for successful or settled transactions');
             }
 
             // Generate QR code with full payment details
@@ -1186,11 +1195,6 @@ HTML;
             
             $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
             $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
-
-            // Check if request wants HTML view
-            if ($request->query('view') === 'html') {
-                return view('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage]);
-            }
 
             $pdf = Pdf::loadView('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage])
                 ->setPaper('a4', 'portrait')

@@ -411,7 +411,7 @@
                                 </div>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-bold text-primary-900 dark:text-white truncate">{{ auth()->user()->name ?? 'Administrator' }}</p>
-                                    <p class="text-xs text-primary-500 truncate">{{ auth()->user()->email ?? 'admin@feedtan.co.tz' }}</p>
+                                    <p class="text-xs text-primary-500 truncate">{{ auth()->user()->email ?? 'admin@feedtancmg.org' }}</p>
                                     <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
                                         {{ auth()->user()->position ?? 'Member' }}
                                     </span>

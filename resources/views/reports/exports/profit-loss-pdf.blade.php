@@ -155,7 +155,7 @@
         <div class="footer">
             <p><strong>FEEDTAN DIGITAL PAYMENT SYSTEM</strong></p>
             <p>Powered by FeedTan Team</p>
-            <p style="color: #16a34a;">www.feedtan.co.tz • info@feedtan.co.tz</p>
+            <p style="color: #16a34a;">www.feedtancmg.org • service@feedtancmg.org</p>
             <p style="font-size: 9px; color: #9ca3af;">
                 Report generated on {{ date('Y-m-d H:i:s') }}
             </p>

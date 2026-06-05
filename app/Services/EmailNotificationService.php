@@ -82,7 +82,7 @@ class EmailNotificationService
         $reference = $paymentData['orderReference'] ?? 'TEST-' . date('YmdHis');
         $date = \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i');
         $period = \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('F Y');
-        $pdfLink = "https://feedtan.com/statements/{$transactionId}.pdf";
+        $pdfLink = "https://www.feedtancmg.org/statements/{$transactionId}.pdf";
         
         $subject = "Malipo Yamefanikiwa - {$name} - {$period}";
         
@@ -198,7 +198,7 @@ class EmailNotificationService
             <div class=\"special-section\">
                 <h4><span class=\"icon\">&#128200;</span>Wekeza Nasi</h4>
                 <p>Je, ungetaka kuwekeza kwenye miradi yetu ya kijamii? Tunatoa fursa za kuwekeza zenye tija kubwa.</p>
-                <a href=\"https://feedtan.com/invest\" class=\"invest-button\" target=\"_blank\">Jifunne Zaidi</a>
+                <a href=\"https://www.feedtancmg.org/invest\" class=\"invest-button\" target=\"_blank\">Jifunne Zaidi</a>
             </div>
             
             <p style=\"font-size: 14px; color: #4a5568;\">Usisite kuwasiliana nasi kwa simu au email endapo utakuwa na swali lolote kuhusu malipo yako.</p>
@@ -252,7 +252,7 @@ Mteja: {$customerName}
 ========================================
 Hii ni taarifa ya otomatiki ya malipo yaliyopokelewa kupitia mfumo wa malipo wa FeedTan Community Microfinance Group.
 
-Kwa maelezo zaidi, tafadhali wasiliana nasi: feedtan15@gmail.com
+Kwa maelezo zaidi, tafadhali wasiliana nasi: service@feedtancmg.org
 
 ========================================
 FeedTan Community Microfinance Group

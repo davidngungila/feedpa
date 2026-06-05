@@ -246,7 +246,7 @@
          <div class="footer">
             <strong>FEEDTAN DIGITAL PAYMENT SYSTEM</strong><br>
             Powered by FeedTan Team<br>
-            <span style="color: #16a34a;">www.feedtan.co.tz • info@feedtan.co.tz</span><br>
+            <span style="color: #16a34a;">www.feedtancmg.org • service@feedtancmg.org</span><br>
             <div style="margin-top: 10px; font-size: 8px; color: #9ca3af;">
                 This document is electronically generated and verified by FEEDTAN DIGITAL PAYMENT SYSTEM.
             </div>

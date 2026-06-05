@@ -11,14 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('password_reset_tokens', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('email');
-            $table->string('otp');
-            $table->timestamp('expires_at');
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('password_reset_tokens')) {
+            Schema::create('password_reset_tokens', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('user_id')->constrained()->onDelete('cascade');
+                $table->string('email');
+                $table->string('otp');
+                $table->timestamp('expires_at');
+                $table->timestamps();
+            });
+        }
     }
 
     /**

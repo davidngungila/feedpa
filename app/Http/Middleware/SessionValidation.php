@@ -32,6 +32,11 @@ class SessionValidation
                 Auth::logout();
                 Session::invalidate();
                 Session::regenerateToken();
+                
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['redirect' => route('login'), 'message' => 'You have been logged out because you signed in from another browser/device'], 401);
+                }
+                
                 return redirect()->route('login')->with('error', 'You have been logged out because you signed in from another browser/device');
             }
             
@@ -43,6 +48,11 @@ class SessionValidation
                 Auth::logout();
                 Session::invalidate();
                 Session::regenerateToken();
+                
+                if ($request->expectsJson() || $request->ajax()) {
+                    return response()->json(['redirect' => route('login'), 'message' => 'Your session has expired due to inactivity'], 401);
+                }
+                
                 return redirect()->route('login')->with('error', 'Your session has expired due to inactivity');
             }
             

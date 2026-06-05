@@ -100,10 +100,27 @@
 <body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false, isLoading: true, sessionCount: 0, lastSessionCount: 0, showNewSessionToast: false }" :class="{'dark': darkMode}" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300);
 @if(auth()->check())
 // Start session polling
-lastSessionCount = await fetch('{{ route('profile.sessions') }}').then(r => r.json()).then(data => data.sessions.length);
+try {
+    const initialResponse = await fetch('{{ route('profile.sessions') }}');
+    if (initialResponse.ok) {
+        const initialData = await initialResponse.json();
+        lastSessionCount = initialData.sessions.length;
+    } else if (initialResponse.status === 401) {
+        window.location.href = '{{ route('login') }}';
+    }
+} catch (e) {
+    console.error('Error initial session fetch:', e);
+}
+
 setInterval(async () => {
     try {
         const response = await fetch('{{ route('profile.sessions') }}');
+        if (!response.ok) {
+            if (response.status === 401) {
+                window.location.href = '{{ route('login') }}';
+            }
+            return;
+        }
         const data = await response.json();
         sessionCount = data.sessions.length;
         if (sessionCount > lastSessionCount) {

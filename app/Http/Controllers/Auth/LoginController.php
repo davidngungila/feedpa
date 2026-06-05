@@ -48,14 +48,15 @@ class LoginController extends Controller
             $request->session()->regenerate();
             $currentSessionId = Session::getId();
             
-            // Create new session record - keep old ones!
-            UserSession::create([
-                'user_id' => Auth::id(),
-                'session_id' => $currentSessionId,
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-                'last_activity' => now(),
-            ]);
+            UserSession::updateOrCreate(
+                ['user_id' => Auth::id()],
+                [
+                    'session_id' => $currentSessionId,
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                    'last_activity' => now(),
+                ]
+            );
             
             Audit::log('login', 'User logged in successfully');
 

@@ -33,8 +33,8 @@
     </script>
 
     <style>
-        *, *::before, *::after { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif !important; }
-        body { margin: 0; }
+        *, *::before, *::after { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
     </style>
 </head>
 <body class="h-full" :class="darkMode ? 'dark bg-[#0a140e]' : 'bg-[#f0fdf4]'">

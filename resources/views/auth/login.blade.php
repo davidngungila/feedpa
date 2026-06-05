@@ -33,8 +33,8 @@
   </script>
 
   <style>
-    *, *::before, *::after { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif !important; }
-    body { margin: 0; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
 
     .form-input {
       width: 100%;
@@ -43,6 +43,7 @@
       font-size: 14px;
       outline: none;
       transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: 'Plus Jakarta Sans', sans-serif;
     }
     .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
 
@@ -163,7 +164,7 @@
 
           <!-- Login Button -->
           <button type="submit" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">
-            <i class="fa-solid fa-arrow-right-to-bracket mr-2"></i> Sign In
+            <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
           </button>
         </form>
 

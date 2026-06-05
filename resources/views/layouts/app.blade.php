@@ -34,9 +34,9 @@
     </script>
 
     <style>
-    *, *::before, *::after { box-sizing: border-box; font-family: 'Plus Jakarta Sans', sans-serif !important; }
+    *, *::before, *::after { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
-    body { margin: 0; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
 
     /* Fix Pagination Styling */
     .pagination { display: flex; list-style: none; padding: 0; gap: 0.5rem; align-items: center; }

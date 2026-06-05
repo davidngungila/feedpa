@@ -170,5 +170,13 @@ Route::prefix('webhooks')->name('webhooks.')->group(function () {
     Route::post('/clickpesa/test', [CallbackController::class, 'test'])->name('clickpesa.test')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 });
 
+use App\Http\Controllers\Auth\ForgotPasswordController;
+
+// Forgot Password Routes
+Route::prefix('password')->name('password.')->group(function () {
+    Route::get('/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('request');
+    Route::post('/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('email');
+});
+
 // Authentication Routes (if needed)
-Auth::routes();
+Auth::routes(['reset' => false, 'confirm' => false, 'verify' => false]);

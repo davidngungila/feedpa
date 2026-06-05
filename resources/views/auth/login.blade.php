@@ -139,12 +139,17 @@
           </div>
 
           <!-- Remember Me -->
-          <div class="flex items-center justify-between mb-6">
-            <div class="flex items-center gap-2">
-              <input id="remember" type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }} class="w-4 h-4 rounded border-primary-200 bg-primary-50 text-primary-600 focus:ring-primary-500">
-              <label for="remember" class="text-xs text-primary-500 font-medium cursor-pointer" :class="darkMode?'text-primary-300':'text-primary-600'">Remember Me</label>
-            </div>
-          </div>
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-2">
+                            <input id="remember" type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }} class="w-4 h-4 rounded border-primary-200 bg-primary-50 text-primary-600 focus:ring-primary-500">
+                            <label for="remember" class="text-xs text-primary-500 font-medium cursor-pointer" :class="darkMode?'text-primary-300':'text-primary-600'">Remember Me</label>
+                        </div>
+                        <div>
+                            <a href="{{ route('password.request') }}" class="text-xs font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
+                                Forgot Password?
+                            </a>
+                        </div>
+                    </div>
 
           <!-- Login Button -->
           <button type="submit" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/30 active:scale-95">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Audit;
+use App\Models\UserSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -45,6 +46,19 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
+            $currentSessionId = Session::getId();
+            
+            // Invalidate any old sessions for this user
+            UserSession::where('user_id', Auth::id())->delete();
+            
+            // Create new session record
+            UserSession::create([
+                'user_id' => Auth::id(),
+                'session_id' => $currentSessionId,
+                'ip_address' => $request->ip(),
+                'user_agent' => $request->userAgent(),
+                'last_activity' => now(),
+            ]);
             
             Audit::log('login', 'User logged in successfully');
 
@@ -67,6 +81,9 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         Audit::log('logout', 'User logged out');
+        
+        // Delete session record
+        UserSession::where('user_id', Auth::id())->delete();
         
         Auth::logout();
 

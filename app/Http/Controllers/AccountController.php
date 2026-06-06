@@ -336,12 +336,31 @@ class AccountController extends Controller
             };
 
             if ($activeTab === 'database') {
-                $displayTransactions = $filterByStatus($dbTransactions);
+                // Sort DB transactions by date ascending (earliest first) and recalc running balance
+                $sortedDbTransactions = $dbTransactions->sortBy(function ($t) {
+                    return $t['date'] ?? $t['created_at'] ?? null;
+                })->values();
+                
+                $dbRunningBalance = 0;
+                $sortedDbTransactions = $sortedDbTransactions->map(function ($t) use (&$dbRunningBalance) {
+                    if ($t['entry'] === 'CREDIT') {
+                        $dbRunningBalance += $t['amount'];
+                    } else {
+                        $dbRunningBalance -= $t['amount'];
+                    }
+                    $t['running_balance'] = $dbRunningBalance;
+                    return $t;
+                });
+                
+                $displayTransactions = $filterByStatus($sortedDbTransactions);
             } else {
-                // Sort API transactions and calculate running balance
-                $sortedApiTransactions = $apiTransactions->sortByDesc('created_at')->values();
+                // Sort API transactions by date ascending (earliest first) and calculate running balance
+                $sortedApiTransactions = $apiTransactions->sortBy(function ($t) {
+                    return $t['date'] ?? $t['created_at'] ?? $t['createdAt'] ?? null;
+                })->values();
+                
                 $apiRunningBalance = 0;
-                $sortedApiTransactions = $sortedApiTransactions->reverse()->map(function ($t) use (&$apiRunningBalance, $dbRefs, $dbTids) {
+                $sortedApiTransactions = $sortedApiTransactions->map(function ($t) use (&$apiRunningBalance, $dbRefs, $dbTids) {
                     $t['is_synced'] = in_array($t['reference'], $dbRefs) || in_array($t['transaction_id'], $dbTids);
                     if ($t['entry'] === 'CREDIT') {
                         $apiRunningBalance += $t['amount'];
@@ -350,7 +369,7 @@ class AccountController extends Controller
                     }
                     $t['running_balance'] = $apiRunningBalance;
                     return $t;
-                })->reverse();
+                });
                 
                 $displayTransactions = $filterByStatus($sortedApiTransactions);
             }
@@ -369,9 +388,9 @@ class AccountController extends Controller
             }
             
             if ($request->has('export')) {
-                $displayBills = $query->orderBy('created_at', 'desc')->get();
+                $displayBills = $query->orderBy('created_at', 'asc')->get();
             } else {
-                $displayBills = $query->orderBy('created_at', 'desc')->paginate(20);
+                $displayBills = $query->orderBy('created_at', 'asc')->paginate(20);
             }
         }
 
@@ -401,9 +420,7 @@ class AccountController extends Controller
         }
 
         return view('account.statement', [
-            'displayTransactions' => $statementType === 'payments' ? $displayTransactions->sortByDesc(function ($transaction) {
-                return $transaction['date'] ?? $transaction['created_at'] ?? $transaction['createdAt'] ?? null;
-            }) : collect(),
+            'displayTransactions' => $statementType === 'payments' ? $displayTransactions : collect(),
             'displayBills' => $displayBills,
             'stats' => $stats,
             'error' => $error,

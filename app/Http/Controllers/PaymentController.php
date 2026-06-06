@@ -1208,6 +1208,141 @@ HTML;
     }
 
     /**
+     * Sync single transaction from API to database
+     */
+    public function syncSingleTransaction(Request $request, string $orderReference)
+    {
+        try {
+            Log::info('Syncing single transaction', ['order_reference' => $orderReference]);
+            $transaction = Transaction::where('order_reference', $orderReference)->first();
+            if ($transaction) {
+                Log::info('Transaction already exists in database, updating...', ['order_reference' => $orderReference]);
+                $this->updateTransactionFromApi($transaction);
+                return back()->with('success', 'Transaction updated successfully!');
+            } else {
+                Log::info('Transaction not found in database, creating...', ['order_reference' => $orderReference]);
+                $this->createTransactionFromApi($orderReference);
+                return back()->with('success', 'Transaction synced successfully!');
+            }
+        } catch (Exception $e) {
+            Log::error('Error syncing transaction: ' . $e->getMessage(), [
+                'order_reference' => $orderReference,
+                'error' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Error syncing transaction: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Sync all transactions from ClickPesa API
+     */
+    public function syncAllTransactions(Request $request)
+    {
+        try {
+            Log::info('Syncing all transactions from API');
+            $apiResponse = $this->api->getAccountStatement('TZS');
+            if (!isset($apiResponse['transactions'])) {
+                return back()->with('success', 'No transactions found in API');
+            }
+            $transactionsData = $apiResponse['transactions'];
+            $createdCount = 0;
+            $updatedCount = 0;
+
+            foreach ($transactionsData as $data) {
+                try {
+                    $reference = $data['orderReference'] ?? $data['reference'] ?? null;
+                    if (!$reference) continue;
+                    $existingTransaction = Transaction::where('order_reference', $reference)->first();
+                    if ($existingTransaction) {
+                        $this->updateTransactionFromApi($existingTransaction, $data);
+                        $updatedCount++;
+                    } else {
+                        $this->createTransactionFromApi($reference, $data);
+                        $createdCount++;
+                    }
+                } catch (Exception $e) {
+                    Log::error('Error syncing individual transaction', ['error' => $e->getMessage(), 'data' => $data]);
+                    continue;
+                }
+            }
+            return back()->with('success', "Sync complete! Created {$createdCount} new, updated {$updatedCount} transactions!");
+        } catch (Exception $e) {
+            Log::error('Error syncing all transactions: ' . $e->getMessage());
+            return back()->with('error', 'Error syncing transactions: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Update transaction from API data
+     */
+    private function updateTransactionFromApi($transaction, $apiData = null)
+    {
+        if ($apiData === null) {
+            $apiData = $this->fetchTransactionFromApi($transaction->order_reference);
+        }
+        if (!$apiData) return;
+        $mergedCallback = TransactionFieldResolver::mergeCallbackData($transaction->callback_data, $apiData);
+        $resolvedDescription = TransactionFieldResolver::description($transaction->description, $apiData['description'] ?? $apiData['narrative'] ?? null, null, $mergedCallback);
+        $transaction->update([
+            'status' => $apiData['status'] ?? $transaction->status,
+            'transaction_id' => $apiData['id'] ?? $apiData['transaction_id'] ?? $transaction->transaction_id,
+            'payment_method' => $apiData['channel'] ?? $apiData['paymentMethod'] ?? $transaction->payment_method,
+            'amount' => $apiData['collectedAmount'] ?? $apiData['amount'] ?? $transaction->amount,
+            'currency' => $apiData['collectedCurrency'] ?? $apiData['currency'] ?? $transaction->currency,
+            'phone' => $apiData['customer']['customerPhoneNumber'] ?? $apiData['paymentPhoneNumber'] ?? $transaction->phone,
+            'customer_name' => TransactionFieldResolver::memberName($transaction->customer_name, $apiData['customer']['customerName'] ?? $apiData['customerName'] ?? null),
+            'payer_name' => TransactionFieldResolver::payerName($transaction->payer_name, $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? null),
+            'email' => $apiData['customer']['customerEmail'] ?? $apiData['email'] ?? $transaction->email,
+            'description' => $resolvedDescription,
+            'callback_data' => $mergedCallback,
+            'updated_at' => now()
+        ]);
+    }
+
+    /**
+     * Fetch transaction from API using ClickPesa API
+     */
+    private function fetchTransactionFromApi(string $orderReference)
+    {
+        $apiResponse = $this->api->queryPaymentStatus($orderReference);
+        if (is_array($apiResponse) && isset($apiResponse[0])) {
+            return $apiResponse[0];
+        }
+        if (is_array($apiResponse)) {
+            return $apiResponse;
+        }
+        return null;
+    }
+
+    /**
+     * Create transaction from API data
+     */
+    private function createTransactionFromApi(string $orderReference, $apiData = null)
+    {
+        if ($apiData === null) {
+            $apiData = $this->fetchTransactionFromApi($orderReference);
+        }
+        if (!$apiData) return null;
+        return Transaction::create([
+            'id' => (string) \Illuminate\Support\Str::uuid(),
+            'order_reference' => $orderReference,
+            'transaction_id' => $apiData['id'] ?? $apiData['transaction_id'] ?? null,
+            'status' => $apiData['status'] ?? 'UNKNOWN',
+            'amount' => $apiData['collectedAmount'] ?? $apiData['amount'] ?? 0,
+            'currency' => $apiData['collectedCurrency'] ?? 'TZS',
+            'phone' => $apiData['customer']['customerPhoneNumber'] ?? $apiData['paymentPhoneNumber'] ?? null,
+            'payer_name' => $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? null,
+            'customer_name' => $apiData['customer']['customerName'] ?? $apiData['payer_name'] ?? null,
+            'description' => $apiData['description'] ?? $apiData['narrative'] ?? null,
+            'payment_method' => $apiData['channel'] ?? $apiData['paymentMethod'] ?? null,
+            'type' => 'payment',
+            'created_at' => isset($apiData['createdAt']) ? \Illuminate\Support\Carbon::parse($apiData['createdAt']) : now(),
+            'updated_at' => isset($apiData['updatedAt']) ? \Illuminate\Support\Carbon::parse($apiData['updatedAt']) : now(),
+            'callback_data' => $apiData,
+        ]);
+    }
+
+    /**
      * API endpoint to get payment status (for AJAX calls)
      */
     public function apiStatus(Request $request)

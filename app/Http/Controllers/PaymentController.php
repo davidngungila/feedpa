@@ -1061,8 +1061,8 @@ HTML;
         }
 
         // Combine filtered payments and payouts for display
-        $payments = $paymentQuery->orderBy('created_at', 'desc')->get();
-        $payouts = $payoutQuery->orderBy('created_at', 'desc')->get();
+        $payments = $paymentQuery->orderBy('created_at', 'asc')->get();
+        $payouts = $payoutQuery->orderBy('created_at', 'asc')->get();
         
         $combined = collect();
         foreach ($payments as $payment) {
@@ -1082,25 +1082,25 @@ HTML;
             ]);
         }
         
-        $combined = $combined->sortByDesc('created_at')->values();
+        $combined = $combined->sortBy('created_at')->values();
 
-        // Calculate running balance for display
-        $runningBalance = $internalDbBalance;
-        $combinedWithBalance = $combined->reverse()->map(function ($item) use (&$runningBalance) {
+        // Calculate running balance for display (oldest to newest)
+        $runningBalance = 0;
+        $combinedWithBalance = $combined->map(function ($item) use (&$runningBalance) {
             if ($item['type'] === 'payment') {
                 $amount = (float) $item['record']->amount;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
-                    $runningBalance -= $amount; // Backwards, subtract first
+                    $runningBalance += $amount;
                 }
             } else {
                 $amount = (float) $item['record']->amount;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
-                    $runningBalance += $amount; // Backwards, add debit
+                    $runningBalance -= $amount;
                 }
             }
             $item['running_balance'] = $runningBalance;
             return $item;
-        })->reverse();
+        });
 
         $settledCount = Transaction::where('type', 'payment')->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
         $failedCount = Transaction::where('type', 'payment')->whereIn('status', ['FAILED', 'ERROR'])->count();
@@ -1179,8 +1179,8 @@ HTML;
                 $payoutQuery->whereDate('created_at', '<=', $request->end_date);
             }
 
-            $payments = $paymentQuery->orderBy('created_at', 'desc')->get();
-            $payouts = $payoutQuery->orderBy('created_at', 'desc')->get();
+            $payments = $paymentQuery->orderBy('created_at', 'asc')->get();
+            $payouts = $payoutQuery->orderBy('created_at', 'asc')->get();
 
             // Combine and process
             $combined = collect();
@@ -1200,7 +1200,7 @@ HTML;
                     'entry' => 'DEBIT',
                 ]);
             }
-            $combined = $combined->sortByDesc('created_at')->values();
+            $combined = $combined->sortBy('created_at')->values();
 
             // Get live API account balance
         $currentBalance = null;
@@ -1211,18 +1211,18 @@ HTML;
             Log::error('Failed to retrieve API live account balance: ' . $e->getMessage());
         }
 
-            // Calculate running balance
-            $runningBalance = $currentBalance ?? 0;
-            $combinedWithBalance = $combined->reverse()->map(function ($item) use (&$runningBalance) {
+            // Calculate running balance (oldest to newest)
+            $runningBalance = 0;
+            $combinedWithBalance = $combined->map(function ($item) use (&$runningBalance) {
                 if ($item['type'] === 'payment') {
                     $amount = (float) $item['record']->amount;
                     if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
-                        $runningBalance -= $amount; // Backwards, subtract first
+                        $runningBalance += $amount;
                     }
                 } else {
                     $amount = (float) $item['record']->amount;
                     if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
-                        $runningBalance += $amount; // Backwards, add debit
+                        $runningBalance -= $amount;
                     }
                 }
 
@@ -1242,7 +1242,7 @@ HTML;
                 }
                 $recordArray['running_balance'] = $runningBalance;
                 return $recordArray;
-            })->reverse();
+            });
 
             // Selected columns
             $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'sms_sent', 'sms_sent_at', 'created_at', 'updated_at', 'running_balance', 'entry', 'type'];

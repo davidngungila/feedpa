@@ -73,7 +73,7 @@ class PayoutController extends Controller
             $query->whereDate('created_at', '<=', $request->end_date);
         }
 
-        $payouts = $query->orderBy('created_at', 'desc')->paginate(20);
+        $payouts = $query->orderBy('created_at', 'asc')->paginate(20);
 
         // Get count stats
         $successCount = Payout::whereIn('status', ['SUCCESS', 'SETTLED'])->count();
@@ -144,7 +144,7 @@ class PayoutController extends Controller
                 $query->whereDate('created_at', '<=', $request->end_date);
             }
 
-            $payouts = $query->orderBy('created_at', 'desc')->get()->toArray();
+            $payouts = $query->orderBy('created_at', 'asc')->get()->toArray();
             
             // Selected columns
             $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'fee', 'recipient_name', 'recipient_phone', 'beneficiary_account_name', 'beneficiary_account_number', 'beneficiary_mobile', 'beneficiary_email', 'payout_type', 'channel', 'channel_provider', 'transfer_type', 'created_at', 'updated_at'];
@@ -197,7 +197,7 @@ class PayoutController extends Controller
                 $query->whereDate('created_at', '<=', $request->end_date);
             }
 
-            $payouts = $query->orderBy('created_at', 'desc')->get()->toArray();
+            $payouts = $query->orderBy('created_at', 'asc')->get()->toArray();
             
             // Selected columns
             $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'fee', 'recipient_name', 'recipient_phone', 'beneficiary_account_name', 'beneficiary_account_number', 'beneficiary_mobile', 'beneficiary_email', 'payout_type', 'channel', 'channel_provider', 'transfer_type', 'created_at', 'updated_at'];

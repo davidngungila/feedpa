@@ -4,6 +4,25 @@
 
 @section('content')
 <div class="space-y-6" x-data="paymentHistoryDetails()">
+    <!-- Current Account Balance -->
+    <div class="card p-5 bg-gradient-to-br from-primary-500 to-primary-700">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-[10px] font-bold uppercase text-white/70 mb-1">Current Account Balance</p>
+                <p class="text-3xl font-black text-white">
+                    @if($currentBalance !== null)
+                        TZS {{ number_format($currentBalance, 2) }}
+                    @else
+                        <span class="text-white/70">Loading...</span>
+                    @endif
+                </p>
+            </div>
+            <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                <i class="fas fa-wallet text-2xl text-white"></i>
+            </div>
+        </div>
+    </div>
+
     <!-- Status Tabs -->
     <div class="card p-1">
         <div class="flex gap-1">
@@ -108,7 +127,7 @@
     <!-- Transactions Table -->
     <div class="card overflow-hidden">
         <div class="p-4 border-b border-primary-50 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30">
-            <p class="text-[10px] text-primary-500">Click <i class="fas fa-eye"></i> on any row to preview full payment details</p>
+            <p class="text-[10px] text-primary-500">Click <i class="fas fa-eye"></i> on any row to preview full details</p>
         </div>
         <div class="overflow-x-auto">
             <table class="data-table">
@@ -119,193 +138,278 @@
                         <th>Member Name</th>
                         <th>Purpose / Description</th>
                         <th>Amount</th>
+                        <th>Running Balance</th>
                         <th>SMS Status</th>
                         <th>Email Status</th>
                         <th class="text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
-                    @forelse($payments as $payment)
-                        @php
-                            $callbackData = is_array($payment->callback_data ?? null) ? $payment->callback_data : [];
-                            $callbackCustomer = is_array($callbackData['customer'] ?? null) ? $callbackData['customer'] : [];
+                    @forelse($combinedWithBalance as $item)
+                        @if($item['type'] === 'payment')
+                            @php
+                                $payment = $item['record'];
+                                $callbackData = is_array($payment->callback_data ?? null) ? $payment->callback_data : [];
+                                $callbackCustomer = is_array($callbackData['customer'] ?? null) ? $callbackData['customer'] : [];
 
-                            $memberName = $payment->customer_name
-                                ?? $callbackCustomer['customerName']
-                                ?? $callbackData['customerName']
-                                ?? $payment->payer_name
-                                ?? 'N/A';
+                                $memberName = $payment->customer_name
+                                    ?? $callbackCustomer['customerName']
+                                    ?? $callbackData['customerName']
+                                    ?? $payment->payer_name
+                                    ?? 'N/A';
 
-                            $actualPayer = $payment->payer_name
-                                ?? $callbackData['payer_name']
-                                ?? $callbackCustomer['customerName']
-                                ?? $memberName;
+                                $actualPayer = $payment->payer_name
+                                    ?? $callbackData['payer_name']
+                                    ?? $callbackCustomer['customerName']
+                                    ?? $memberName;
 
-                            $displayPhone = $payment->phone
-                                ?? $callbackData['paymentPhoneNumber']
-                                ?? $callbackCustomer['customerPhoneNumber']
-                                ?? 'N/A';
+                                $displayPhone = $payment->phone
+                                    ?? $callbackData['paymentPhoneNumber']
+                                    ?? $callbackCustomer['customerPhoneNumber']
+                                    ?? 'N/A';
 
-                            $displayDescription = $payment->resolvedDescription();
+                                $displayDescription = $payment->resolvedDescription();
 
-                            $status = strtoupper($payment->status ?? 'UNKNOWN');
-                            $isSettled = in_array($status, ['SETTLED', 'SUCCESS']);
+                                $status = strtoupper($payment->status ?? 'UNKNOWN');
+                                $isSettled = in_array($status, ['SETTLED', 'SUCCESS']);
 
-                            $createdAt = $payment->created_at ? \Illuminate\Support\Carbon::parse($payment->created_at) : null;
-                            $updatedAt = $payment->updated_at ? \Illuminate\Support\Carbon::parse($payment->updated_at) : null;
-                            $smsSentAt = $payment->sms_sent_at ? \Illuminate\Support\Carbon::parse($payment->sms_sent_at) : null;
-                            $emailSentAt = $payment->email_sent_at ? \Illuminate\Support\Carbon::parse($payment->email_sent_at) : null;
+                                $createdAt = $payment->created_at ? \Illuminate\Support\Carbon::parse($payment->created_at) : null;
+                                $updatedAt = $payment->updated_at ? \Illuminate\Support\Carbon::parse($payment->updated_at) : null;
+                                $smsSentAt = $payment->sms_sent_at ? \Illuminate\Support\Carbon::parse($payment->sms_sent_at) : null;
+                                $emailSentAt = $payment->email_sent_at ? \Illuminate\Support\Carbon::parse($payment->email_sent_at) : null;
 
-                            $detailPayload = [
-                                'reference' => $payment->order_reference,
-                                'transaction_id' => $payment->transaction_id ?? 'N/A',
-                                'status' => $status,
-                                'isSettled' => $isSettled,
-                                'amount' => (float) $payment->amount,
-                                'currency' => $payment->currency ?? 'TZS',
-                                'member_name' => $memberName,
-                                'payer_name' => $actualPayer,
-                                'phone' => $displayPhone,
-                                'email' => $payment->email,
-                                'payment_method' => $payment->payment_method ?? 'N/A',
-                                'description' => $displayDescription,
-                                'date' => $createdAt?->format('d M, Y'),
-                                'time' => $createdAt?->format('H:i:s'),
-                                'created_at' => $createdAt?->toIso8601String(),
-                                'updated_at' => $updatedAt?->toIso8601String(),
-                                'sms_sent' => (bool) $payment->sms_sent,
-                                'sms_sent_at' => $smsSentAt?->format('d M, Y H:i:s'),
-                                'sms_message' => $payment->sms_message,
-                                'sms_error' => $payment->sms_error,
-                                'email_sent' => (bool) $payment->email_sent,
-                                'email_sent_at' => $emailSentAt?->format('d M, Y H:i:s'),
-                                'email_error' => $payment->email_error,
-                                'status_url' => route('payments.status', ['reference' => $payment->order_reference]),
-                                'receipt_url' => route('payments.receipt', $payment->order_reference),
-                            ];
-                        @endphp
-                        <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
-                            <td class="whitespace-nowrap">
-                                <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
-                                <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
-                            </td>
-                            <td>
-                                <div class="flex items-center gap-1.5 max-w-[200px]">
-                                    <span class="font-mono text-[11px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded border border-primary-100 dark:border-dark-border text-primary-700 dark:text-primary-300 truncate" title="{{ $payment->order_reference }}">
-                                        {{ $payment->order_reference }}
-                                    </span>
-                                    <button type="button"
-                                            @click.stop="copyText(@js($payment->order_reference), 'ref-{{ $payment->id }}')"
-                                            class="shrink-0 w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                            title="Copy reference">
-                                        <i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i>
-                                    </button>
-                                </div>
-                                @if($payment->transaction_id)
-                                    <div class="flex items-center gap-1.5 mt-1 max-w-[200px]">
-                                        <span class="font-mono text-[9px] text-primary-500 truncate" title="{{ $payment->transaction_id }}">TX: {{ $payment->transaction_id }}</span>
+                                $detailPayload = [
+                                    'reference' => $payment->order_reference,
+                                    'transaction_id' => $payment->transaction_id ?? 'N/A',
+                                    'status' => $status,
+                                    'isSettled' => $isSettled,
+                                    'amount' => (float) $payment->amount,
+                                    'currency' => $payment->currency ?? 'TZS',
+                                    'member_name' => $memberName,
+                                    'payer_name' => $actualPayer,
+                                    'phone' => $displayPhone,
+                                    'email' => $payment->email,
+                                    'payment_method' => $payment->payment_method ?? 'N/A',
+                                    'description' => $displayDescription,
+                                    'date' => $createdAt?->format('d M, Y'),
+                                    'time' => $createdAt?->format('H:i:s'),
+                                    'created_at' => $createdAt?->toIso8601String(),
+                                    'updated_at' => $updatedAt?->toIso8601String(),
+                                    'sms_sent' => (bool) $payment->sms_sent,
+                                    'sms_sent_at' => $smsSentAt?->format('d M, Y H:i:s'),
+                                    'sms_message' => $payment->sms_message,
+                                    'sms_error' => $payment->sms_error,
+                                    'email_sent' => (bool) $payment->email_sent,
+                                    'email_sent_at' => $emailSentAt?->format('d M, Y H:i:s'),
+                                    'email_error' => $payment->email_error,
+                                    'status_url' => route('payments.status', ['reference' => $payment->order_reference]),
+                                    'receipt_url' => route('payments.receipt', $payment->order_reference),
+                                ];
+                            @endphp
+                            <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
+                                <td class="whitespace-nowrap">
+                                    <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
+                                    <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-1.5 max-w-[200px]">
+                                        <span class="font-mono text-[11px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded border border-primary-100 dark:border-dark-border text-primary-700 dark:text-primary-300 truncate" title="{{ $payment->order_reference }}">
+                                            {{ $payment->order_reference }}
+                                        </span>
                                         <button type="button"
-                                                @click.stop="copyText(@js($payment->transaction_id), 'tx-{{ $payment->id }}')"
-                                                class="shrink-0 w-6 h-6 rounded-md bg-primary-50 dark:bg-primary-900/20 text-primary-500 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                                title="Copy transaction ID">
-                                            <i class="fas text-[9px]" :class="copiedField === 'tx-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i>
+                                                @click.stop="copyText(@js($payment->order_reference), 'ref-{{ $payment->id }}')"
+                                                class="shrink-0 w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                                title="Copy reference">
+                                            <i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i>
                                         </button>
                                     </div>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="font-bold text-primary-900 dark:text-white">{{ $memberName }}</div>
-                                <div class="text-[10px] text-primary-500">Payer: {{ $actualPayer }}</div>
-                                <div class="text-[10px] text-primary-500 font-mono">{{ $displayPhone }}</div>
-                            </td>
-                            <td>
-                                <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate" title="{{ $displayDescription }}">
-                                    {{ $displayDescription }}
-                                </div>
-                            </td>
-                            <td class="whitespace-nowrap">
-                                <div class="font-bold text-primary-600 dark:text-primary-400">
-                                    {{ number_format($payment->amount, 2) }}
-                                </div>
-                                <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payment->currency }}</div>
-                            </td>
-                            <td class="whitespace-nowrap">
-                                @if($payment->sms_sent)
-                                    <span class="badge badge-green text-[10px]">
-                                        <i class="fas fa-check me-1"></i> Sent
-                                    </span>
-                                    @if($smsSentAt)
-                                        <div class="text-[9px] text-primary-500 mt-1">{{ $smsSentAt->format('d M, H:i') }}</div>
+                                    @if($payment->transaction_id)
+                                        <div class="flex items-center gap-1.5 mt-1 max-w-[200px]">
+                                            <span class="font-mono text-[9px] text-primary-500 truncate" title="{{ $payment->transaction_id }}">TX: {{ $payment->transaction_id }}</span>
+                                            <button type="button"
+                                                    @click.stop="copyText(@js($payment->transaction_id), 'tx-{{ $payment->id }}')"
+                                                    class="shrink-0 w-6 h-6 rounded-md bg-primary-50 dark:bg-primary-900/20 text-primary-500 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                                    title="Copy transaction ID">
+                                                <i class="fas text-[9px]" :class="copiedField === 'tx-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i>
+                                            </button>
+                                        </div>
                                     @endif
-                                @elseif($payment->sms_error)
-                                    <span class="badge badge-red text-[10px]">
-                                        <i class="fas fa-times me-1"></i> Failed
-                                    </span>
-                                @elseif($isSettled)
-                                    <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                                @else
-                                    <span class="text-[10px] text-primary-400">—</span>
-                                @endif
-                            </td>
-                            <td class="whitespace-nowrap">
-                                @if($payment->email_sent)
-                                    <span class="badge badge-green text-[10px]">
-                                        <i class="fas fa-check me-1"></i> Sent
-                                    </span>
-                                    @if($emailSentAt)
-                                        <div class="text-[9px] text-primary-500 mt-1">{{ $emailSentAt->format('d M, H:i') }}</div>
+                                </td>
+                                <td>
+                                    <div class="font-bold text-primary-900 dark:text-white">{{ $memberName }}</div>
+                                    <div class="text-[10px] text-primary-500">Payer: {{ $actualPayer }}</div>
+                                    <div class="text-[10px] text-primary-500 font-mono">{{ $displayPhone }}</div>
+                                </td>
+                                <td>
+                                    <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate" title="{{ $displayDescription }}">
+                                        {{ $displayDescription }}
+                                    </div>
+                                </td>
+                                <td class="whitespace-nowrap">
+                                    <div class="font-bold text-green-600 dark:text-green-400">
+                                        + {{ number_format((float)$payment->amount, 2) }}
+                                    </div>
+                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payment->currency ?? 'TZS' }}</div>
+                                </td>
+                                <td class="whitespace-nowrap">
+                                    <div class="font-bold text-primary-600 dark:text-primary-400">
+                                        {{ number_format($item['running_balance'], 2) }}
+                                    </div>
+                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payment->currency ?? 'TZS' }}</div>
+                                </td>
+                                <td class="whitespace-nowrap">
+                                    @if($payment->sms_sent)
+                                        <span class="badge badge-green text-[10px]">
+                                            <i class="fas fa-check me-1"></i> Sent
+                                        </span>
+                                        @if($payment->sms_sent_at)
+                                            <div class="text-[9px] text-primary-500 mt-1">{{ \Illuminate\Support\Carbon::parse($payment->sms_sent_at)->format('d M, H:i') }}</div>
+                                        @endif
+                                    @elseif($payment->sms_error)
+                                        <span class="badge badge-red text-[10px]">
+                                            <i class="fas fa-times me-1"></i> Failed
+                                        </span>
+                                    @elseif($isSettled)
+                                        <span class="badge badge-yellow text-[10px]">Not Sent</span>
+                                    @else
+                                        <span class="text-[10px] text-primary-400">—</span>
                                     @endif
-                                @elseif($payment->email_error)
-                                    <span class="badge badge-red text-[10px]">
-                                        <i class="fas fa-times me-1"></i> Failed
-                                    </span>
-                                @elseif($isSettled)
-                                    <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                                @else
-                                    <span class="text-[10px] text-primary-400">—</span>
-                                @endif
-                            </td>
-                            <td>
-                                <div class="flex gap-2 justify-center">
-                                    <button type="button"
-                                            @click="openDetails(@js($detailPayload))"
-                                            class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                            title="Preview details">
-                                        <i class="fas fa-eye text-xs"></i>
-                                    </button>
-                                    @if($isSettled)
-                                        <a href="{{ route('payments.receipt', $payment->order_reference) }}" target="_blank"
+                                </td>
+                                <td class="whitespace-nowrap">
+                                    @if($payment->email_sent)
+                                        <span class="badge badge-green text-[10px]">
+                                            <i class="fas fa-check me-1"></i> Sent
+                                        </span>
+                                        @if($payment->email_sent_at)
+                                            <div class="text-[9px] text-primary-500 mt-1">{{ \Illuminate\Support\Carbon::parse($payment->email_sent_at)->format('d M, H:i') }}</div>
+                                        @endif
+                                    @elseif($payment->email_error)
+                                        <span class="badge badge-red text-[10px]">
+                                            <i class="fas fa-times me-1"></i> Failed
+                                        </span>
+                                    @elseif($isSettled)
+                                        <span class="badge badge-yellow text-[10px]">Not Sent</span>
+                                    @else
+                                        <span class="text-[10px] text-primary-400">—</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="flex gap-2 justify-center">
+                                        <button type="button"
+                                                @click="openDetails(@js($detailPayload))"
+                                                class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                                title="Preview details">
+                                            <i class="fas fa-eye text-xs"></i>
+                                        </button>
+                                        <a href="{{ route('payments.status', ['reference' => $payment->order_reference]) }}"
+                                           class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                           title="Full payment page">
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
+                                        <a href="{{ route('payments.receipt', $payment->order_reference) }}"
                                            class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
                                            title="Download receipt">
-                                            <i class="fas fa-file-invoice text-xs"></i>
+                                            <i class="fas fa-file-download text-xs"></i>
                                         </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        @else
+                            @php
+                                $payout = $item['record'];
+                                $status = strtoupper($payout->status ?? 'UNKNOWN');
+                                $isSettled = in_array($status, ['SUCCESS', 'SETTLED', 'COMPLETED']);
+
+                                $createdAt = $payout->created_at ? \Illuminate\Support\Carbon::parse($payout->created_at) : null;
+                                $updatedAt = $payout->updated_at ? \Illuminate\Support\Carbon::parse($payout->updated_at) : null;
+
+                                $detailPayload = [
+                                    'reference' => $payout->order_reference,
+                                    'transaction_id' => $payout->clickpesa_payout_id ?? 'N/A',
+                                    'status' => $status,
+                                    'isSettled' => $isSettled,
+                                    'amount' => (float) $payout->amount,
+                                    'currency' => $payout->currency ?? 'TZS',
+                                    'member_name' => $payout->recipient_name ?? 'N/A',
+                                    'payer_name' => $payout->recipient_name ?? 'N/A',
+                                    'phone' => $payout->recipient_phone ?? $payout->beneficiary_mobile ?? 'N/A',
+                                    'email' => $payout->beneficiary_email ?? null,
+                                    'payment_method' => $payout->channel ?? 'N/A',
+                                    'description' => $payout->resolvedDescription(),
+                                    'date' => $createdAt?->format('d M, Y'),
+                                    'time' => $createdAt?->format('H:i:s'),
+                                    'created_at' => $createdAt?->toIso8601String(),
+                                    'updated_at' => $updatedAt?->toIso8601String(),
+                                    'status_url' => null,
+                                    'receipt_url' => null,
+                                ];
+                            @endphp
+                            <tr class="hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
+                                <td class="whitespace-nowrap">
+                                    <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
+                                    <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-1.5 max-w-[200px]">
+                                        <span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300 truncate" title="{{ $payout->order_reference }}">
+                                            {{ $payout->order_reference }}
+                                        </span>
+                                        <button type="button"
+                                                @click.stop="copyText(@js($payout->order_reference), 'ref-{{ $payout->id }}')"
+                                                class="shrink-0 w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                                title="Copy reference">
+                                            <i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payout->id }}' ? 'fa-check' : 'fa-copy'"></i>
+                                        </button>
+                                    </div>
+                                    @if($payout->clickpesa_payout_id)
+                                        <div class="flex items-center gap-1.5 mt-1 max-w-[200px]">
+                                            <span class="font-mono text-[9px] text-red-500 truncate" title="{{ $payout->clickpesa_payout_id }}">PAYOUT: {{ $payout->clickpesa_payout_id }}</span>
+                                        </div>
                                     @endif
-                                    @if($isSettled && !$payment->sms_sent)
-                                        <form action="{{ route('payments.send-sms', $payment->order_reference) }}" method="POST" class="m-0">
-                                            @csrf
-                                            <button type="submit"
-                                                    class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
-                                                    title="Send SMS">
-                                                <i class="fas fa-sms text-xs"></i>
-                                            </button>
-                                        </form>
-                                    @endif
-                                    @if($isSettled && !$payment->email_sent)
-                                        <form action="{{ route('payments.send-email', $payment->order_reference) }}" method="POST" class="m-0">
-                                            @csrf
-                                            <button type="submit"
-                                                    class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
-                                                    title="Send Email">
-                                                <i class="fas fa-envelope text-xs"></i>
-                                            </button>
-                                        </form>
-                                    @endif
-                                </div>
-                            </td>
-                        </tr>
+                                </td>
+                                <td>
+                                    <div class="font-bold text-primary-900 dark:text-white">{{ $payout->recipient_name ?? 'N/A' }}</div>
+                                    <div class="text-[10px] text-primary-500">Recipient: {{ $payout->recipient_name ?? 'N/A' }}</div>
+                                    <div class="text-[10px] text-primary-500 font-mono">{{ $payout->recipient_phone ?? $payout->beneficiary_mobile ?? 'N/A' }}</div>
+                                </td>
+                                <td>
+                                    <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate" title="{{ $payout->resolvedDescription() }}">
+                                        {{ $payout->resolvedDescription() }}
+                                    </div>
+                                </td>
+                                <td class="whitespace-nowrap">
+                                    <div class="font-bold text-red-600 dark:text-red-400">
+                                        - {{ number_format((float)$payout->amount, 2) }}
+                                    </div>
+                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payout->currency ?? 'TZS' }}</div>
+                                </td>
+                                <td class="whitespace-nowrap">
+                                    <div class="font-bold text-primary-600 dark:text-primary-400">
+                                        {{ number_format($item['running_balance'], 2) }}
+                                    </div>
+                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payout->currency ?? 'TZS' }}</div>
+                                </td>
+                                <td class="whitespace-nowrap text-center">
+                                    <span class="text-[10px] text-primary-400">—</span>
+                                </td>
+                                <td class="whitespace-nowrap text-center">
+                                    <span class="text-[10px] text-primary-400">—</span>
+                                </td>
+                                <td>
+                                    <div class="flex gap-2 justify-center">
+                                        <button type="button"
+                                                @click="openDetails(@js($detailPayload))"
+                                                class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                                title="Preview details">
+                                            <i class="fas fa-eye text-xs"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endif
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center py-20">
+                            <td colspan="9" class="text-center py-20">
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
                                         <i class="fas fa-folder-open text-2xl text-primary-200"></i>
@@ -313,9 +417,9 @@
                                     <h4 class="font-bold text-primary-900 dark:text-white">No Transactions Found</h4>
                                     <p class="text-xs text-primary-500">
                                         @if(($activeStatus ?? 'SETTLED') === 'FAILED')
-                                            No failed payments match your filters.
+                                            No failed payments/payouts match your filters.
                                         @else
-                                            No settled payments match your filters.
+                                            No settled payments/payouts match your filters.
                                         @endif
                                     </p>
                                 </div>
@@ -325,12 +429,6 @@
                 </tbody>
             </table>
         </div>
-        
-        @if($payments->hasPages())
-            <div class="p-4 bg-primary-50/30 dark:bg-dark-900/30 border-t border-primary-50 dark:border-dark-border">
-                {{ $payments->appends(request()->query())->links() }}
-            </div>
-        @endif
     </div>
 
     <!-- Payment detail modal -->

@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Models\Payout;
 use App\Services\ClickPesaAPIService;
 use App\Services\MessagingServiceAPI;
+use App\Services\AccountBalanceService;
 use App\Support\TransactionFieldResolver;
 use Exception;
 use Illuminate\Http\Request;
@@ -13,16 +15,19 @@ use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
+use Illuminate\Support\Collection;
 
 class PaymentController extends Controller
 {
     protected ClickPesaAPIService $api;
     protected MessagingServiceAPI $messaging;
+    protected AccountBalanceService $accountBalanceService;
 
-    public function __construct(ClickPesaAPIService $api, MessagingServiceAPI $messaging)
+    public function __construct(ClickPesaAPIService $api, MessagingServiceAPI $messaging, AccountBalanceService $accountBalanceService)
     {
         $this->api = $api;
         $this->messaging = $messaging;
+        $this->accountBalanceService = $accountBalanceService;
     }
 
     public function addNote(Request $request, $orderReference)
@@ -905,15 +910,15 @@ HTML;
             'updated_at' => 'Updated At',
         ];
 
-        $query = Transaction::query()->where('type', 'payment');
-
-        $this->applyHistoryTabFilter($query, $activeStatus);
+        // Get payments from database
+        $paymentQuery = Transaction::query()->where('type', 'payment');
+        $this->applyHistoryTabFilter($paymentQuery, $activeStatus);
         if ($request->filled('currency')) {
-            $query->where('currency', $request->currency);
+            $paymentQuery->where('currency', $request->currency);
         }
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($subQuery) use ($search) {
+            $paymentQuery->where(function ($subQuery) use ($search) {
                 $subQuery->where('order_reference', 'like', '%' . $search . '%')
                     ->orWhere('transaction_id', 'like', '%' . $search . '%')
                     ->orWhere('payer_name', 'like', '%' . $search . '%')
@@ -921,19 +926,45 @@ HTML;
                     ->orWhere('phone', 'like', '%' . $search . '%');
             });
         } elseif ($request->filled('order_reference')) {
-            $query->where('order_reference', 'like', '%' . $request->order_reference . '%');
+            $paymentQuery->where('order_reference', 'like', '%' . $request->order_reference . '%');
         }
         if ($request->filled('phone')) {
-            $query->where('phone', 'like', '%' . $request->phone . '%');
+            $paymentQuery->where('phone', 'like', '%' . $request->phone . '%');
         }
         if ($request->filled('payer_name')) {
-            $query->where('payer_name', 'like', '%' . $request->payer_name . '%');
+            $paymentQuery->where('payer_name', 'like', '%' . $request->payer_name . '%');
         }
         if ($request->filled('start_date')) {
-            $query->whereDate('created_at', '>=', $request->start_date);
+            $paymentQuery->whereDate('created_at', '>=', $request->start_date);
         }
         if ($request->filled('end_date')) {
-            $query->whereDate('created_at', '<=', $request->end_date);
+            $paymentQuery->whereDate('created_at', '<=', $request->end_date);
+        }
+
+        // Get payouts from database
+        $payoutQuery = Payout::query();
+        if ($activeStatus === 'SETTLED') {
+            $payoutQuery->whereIn('status', ['SUCCESS', 'SETTLED', 'COMPLETED']);
+        } elseif ($activeStatus === 'FAILED') {
+            $payoutQuery->whereIn('status', ['FAILED', 'ERROR', 'CANCELLED']);
+        }
+        if ($request->filled('currency')) {
+            $payoutQuery->where('currency', $request->currency);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $payoutQuery->where(function ($subQuery) use ($search) {
+                $subQuery->where('order_reference', 'like', '%' . $search . '%')
+                    ->orWhere('clickpesa_payout_id', 'like', '%' . $search . '%')
+                    ->orWhere('recipient_name', 'like', '%' . $search . '%')
+                    ->orWhere('recipient_phone', 'like', '%' . $search . '%');
+            });
+        }
+        if ($request->filled('start_date')) {
+            $payoutQuery->whereDate('created_at', '>=', $request->start_date);
+        }
+        if ($request->filled('end_date')) {
+            $payoutQuery->whereDate('created_at', '<=', $request->end_date);
         }
 
         // Automatic SMS sending for unsent transactions within 1 minute
@@ -983,21 +1014,68 @@ HTML;
             }
         }
 
-        $totalCount = $query->count();
-        $payments = $query->orderBy('created_at', 'desc')->paginate($request->get('limit', 20));
+        // Get current account balance
+        $currentBalance = null;
+        try {
+            $tzsBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
+            $currentBalance = $tzsBalance['balance'];
+        } catch (Exception $e) {
+            Log::error('Failed to retrieve account balance: ' . $e->getMessage());
+        }
+
+        // Combine payments and payouts, sort by created_at desc
+        $payments = $paymentQuery->orderBy('created_at', 'desc')->get();
+        $payouts = $payoutQuery->orderBy('created_at', 'desc')->get();
+        
+        $combined = collect();
+        foreach ($payments as $payment) {
+            $combined->push([
+                'type' => 'payment',
+                'record' => $payment,
+                'created_at' => $payment->created_at,
+                'entry' => 'CREDIT',
+            ]);
+        }
+        foreach ($payouts as $payout) {
+            $combined->push([
+                'type' => 'payout',
+                'record' => $payout,
+                'created_at' => $payout->created_at,
+                'entry' => 'DEBIT',
+            ]);
+        }
+        
+        $combined = $combined->sortByDesc('created_at')->values();
+
+        // Calculate running balance
+        $runningBalance = $currentBalance ?? 0;
+        $combinedWithBalance = $combined->reverse()->map(function ($item) use (&$runningBalance) {
+            if ($item['type'] === 'payment') {
+                $amount = (float) $item['record']->amount;
+                if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
+                    $runningBalance -= $amount; // Since we are going backwards, subtract first
+                }
+            } else {
+                $amount = (float) $item['record']->amount;
+                if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
+                    $runningBalance += $amount; // Since we are going backwards, add debit
+                }
+            }
+            $item['running_balance'] = $runningBalance;
+            return $item;
+        })->reverse();
 
         $settledCount = Transaction::where('type', 'payment')->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
         $failedCount = Transaction::where('type', 'payment')->whereIn('status', ['FAILED', 'ERROR'])->count();
         
         Log::info('Payment history loaded from database', [
-            'count' => $payments->count(),
-            'total' => $totalCount,
+            'count' => $combinedWithBalance->count(),
             'tab' => $activeStatus,
         ]);
 
         return view('payments.history', compact(
-            'payments',
-            'totalCount',
+            'combinedWithBalance',
+            'currentBalance',
             'settledCount',
             'failedCount',
             'activeStatus',

@@ -1014,16 +1014,53 @@ HTML;
             }
         }
 
-        // Get current account balance
-        $currentBalance = null;
+        // Get live API account balance
+        $apiLiveBalance = null;
         try {
             $tzsBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
-            $currentBalance = $tzsBalance['balance'];
+            $apiLiveBalance = $tzsBalance['balance'];
         } catch (Exception $e) {
-            Log::error('Failed to retrieve account balance: ' . $e->getMessage());
+            Log::error('Failed to retrieve API live account balance: ' . $e->getMessage());
         }
 
-        // Combine payments and payouts, sort by created_at desc
+        // Get ALL settled transactions from database to compute internal balance
+        $allDbPayments = Transaction::where('type', 'payment')
+            ->whereIn('status', ['SUCCESS', 'SETTLED'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+        $allDbPayouts = Payout::whereIn('status', ['SUCCESS', 'SETTLED', 'COMPLETED'])
+            ->orderBy('created_at', 'asc')
+            ->get();
+        
+        // Combine all DB transactions to calculate internal balance
+        $allDbCombined = collect();
+        foreach ($allDbPayments as $payment) {
+            $allDbCombined->push([
+                'amount' => (float) $payment->amount,
+                'entry' => 'CREDIT',
+                'created_at' => $payment->created_at,
+            ]);
+        }
+        foreach ($allDbPayouts as $payout) {
+            $allDbCombined->push([
+                'amount' => (float) $payout->amount,
+                'entry' => 'DEBIT',
+                'created_at' => $payout->created_at,
+            ]);
+        }
+        $allDbCombined = $allDbCombined->sortBy('created_at')->values();
+        
+        // Calculate internal database balance
+        $internalDbBalance = 0;
+        foreach ($allDbCombined as $transaction) {
+            if ($transaction['entry'] === 'CREDIT') {
+                $internalDbBalance += $transaction['amount'];
+            } else {
+                $internalDbBalance -= $transaction['amount'];
+            }
+        }
+
+        // Combine filtered payments and payouts for display
         $payments = $paymentQuery->orderBy('created_at', 'desc')->get();
         $payouts = $payoutQuery->orderBy('created_at', 'desc')->get();
         
@@ -1047,18 +1084,18 @@ HTML;
         
         $combined = $combined->sortByDesc('created_at')->values();
 
-        // Calculate running balance
-        $runningBalance = $currentBalance ?? 0;
+        // Calculate running balance for display
+        $runningBalance = $internalDbBalance;
         $combinedWithBalance = $combined->reverse()->map(function ($item) use (&$runningBalance) {
             if ($item['type'] === 'payment') {
                 $amount = (float) $item['record']->amount;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
-                    $runningBalance -= $amount; // Since we are going backwards, subtract first
+                    $runningBalance -= $amount; // Backwards, subtract first
                 }
             } else {
                 $amount = (float) $item['record']->amount;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
-                    $runningBalance += $amount; // Since we are going backwards, add debit
+                    $runningBalance += $amount; // Backwards, add debit
                 }
             }
             $item['running_balance'] = $runningBalance;
@@ -1075,7 +1112,8 @@ HTML;
 
         return view('payments.history', compact(
             'combinedWithBalance',
-            'currentBalance',
+            'apiLiveBalance',
+            'internalDbBalance',
             'settledCount',
             'failedCount',
             'activeStatus',
@@ -1164,14 +1202,14 @@ HTML;
             }
             $combined = $combined->sortByDesc('created_at')->values();
 
-            // Get current account balance
-            $currentBalance = null;
-            try {
-                $tzsBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
-                $currentBalance = $tzsBalance['balance'];
-            } catch (Exception $e) {
-                Log::error('Failed to retrieve account balance: ' . $e->getMessage());
-            }
+            // Get live API account balance
+        $currentBalance = null;
+        try {
+            $tzsBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
+            $currentBalance = $tzsBalance['balance'];
+        } catch (Exception $e) {
+            Log::error('Failed to retrieve API live account balance: ' . $e->getMessage());
+        }
 
             // Calculate running balance
             $runningBalance = $currentBalance ?? 0;

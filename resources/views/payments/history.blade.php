@@ -154,7 +154,6 @@
                         <th>Member Name</th>
                         <th>Purpose / Description</th>
                         <th>Amount</th>
-                        <th>Running Balance</th>
                         <th>SMS Status</th>
                         <th>Email Status</th>
                         <th class="text-center">Actions</th>
@@ -264,12 +263,6 @@
                                 <td class="whitespace-nowrap">
                                     <div class="font-bold text-green-600 dark:text-green-400">
                                         + {{ number_format((float)$payment->amount, 2) }}
-                                    </div>
-                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payment->currency ?? 'TZS' }}</div>
-                                </td>
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-primary-600 dark:text-primary-400">
-                                        {{ number_format($item['running_balance'], 2) }}
                                     </div>
                                     <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payment->currency ?? 'TZS' }}</div>
                                 </td>
@@ -399,12 +392,6 @@
                                     </div>
                                     <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payout->currency ?? 'TZS' }}</div>
                                 </td>
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-primary-600 dark:text-primary-400">
-                                        {{ number_format($item['running_balance'], 2) }}
-                                    </div>
-                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payout->currency ?? 'TZS' }}</div>
-                                </td>
                                 <td class="whitespace-nowrap text-center">
                                     <span class="text-[10px] text-primary-400">—</span>
                                 </td>
@@ -425,7 +412,7 @@
                         @endif
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center py-20">
+                            <td colspan="8" class="text-center py-20">
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
                                         <i class="fas fa-folder-open text-2xl text-primary-200"></i>

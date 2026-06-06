@@ -93,7 +93,6 @@
                         <th>Member Name</th>
                         <th>Purpose / Description</th>
                         <th>Amount</th>
-                        <th>Running Balance</th>
                         @if($activeTab === 'database')
                             <th>SMS Status</th>
                             <th>Email Status</th>
@@ -218,12 +217,6 @@
                                 @endif
                                 <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $currency }}</div>
                             </td>
-                            <td class="whitespace-nowrap">
-                                <div class="font-bold text-primary-600 dark:text-primary-400">
-                                    {{ number_format($runningBalance, 2) }}
-                                </div>
-                                <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $currency }}</div>
-                            </td>
                             @if($activeTab === 'database')
                                 @if($entry === 'CREDIT')
                                     <td class="whitespace-nowrap">
@@ -319,7 +312,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $activeTab === 'database' ? 8 : 8 }}" class="text-center py-20">
+                            <td colspan="{{ $activeTab === 'database' ? 7 : 7 }}" class="text-center py-20">
                                 <div class="flex flex-col items-center">
                                     <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
                                         <i class="fas fa-search text-2xl text-primary-200"></i>

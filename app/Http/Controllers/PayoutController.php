@@ -73,7 +73,7 @@ class PayoutController extends Controller
             $query->whereDate('created_at', '<=', $request->end_date);
         }
 
-        $payouts = $query->orderBy('created_at', 'asc')->paginate(20);
+        $payouts = $query->orderBy('created_at', 'desc')->paginate(20);
 
         // Get count stats
         $successCount = Payout::whereIn('status', ['SUCCESS', 'SETTLED'])->count();

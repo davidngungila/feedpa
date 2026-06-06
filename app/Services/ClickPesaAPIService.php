@@ -264,7 +264,10 @@ class ClickPesaAPIService
     public function queryPayoutStatus(string $orderReference): array
     {
         $url = 'https://api.clickpesa.com/third-parties/payouts/' . urlencode($orderReference);
-        return $this->makeRequest('GET', $url);
+        Log::info('queryPayoutStatus request', ['url' => $url, 'orderReference' => $orderReference]);
+        $response = $this->makeRequest('GET', $url);
+        Log::info('queryPayoutStatus response', ['response' => $response]);
+        return $response;
     }
 
     /**
@@ -334,10 +337,11 @@ class ClickPesaAPIService
             } else {
                 // If no other params, add currency as query param
                 $url .= '?currency=' . urlencode($currency);
-                return $this->makeRequest('GET', $url, null);
             }
             
-            return $this->makeRequestWithCurrency('GET', $url, $currency, null);
+            $response = $this->makeRequest('GET', $url, null);
+            Log::info('Account Statement API Response', ['response' => $response]);
+            return $response;
         } catch (Exception $e) {
             Log::error('Account Statement API Error', [
                 'url' => $url,

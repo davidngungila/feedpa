@@ -53,8 +53,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReference}/send-sms', [PaymentController::class, 'sendManualSMS'])->name('send-sms');
         Route::post('/{orderReference}/send-email', [PaymentController::class, 'sendManualEmail'])->name('send-email');
         Route::post('/{orderReference}/retry', [PaymentController::class, 'retryPayment'])->name('retry');
-        Route::post('/{orderReference}/sync', [PaymentController::class, 'syncSingleTransaction'])->name('sync');
-        Route::post('/sync-all', [PaymentController::class, 'syncAllTransactions'])->name('sync-all');
     });
 
     // Payout Routes (Authenticated)

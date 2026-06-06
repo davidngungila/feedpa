@@ -32,12 +32,6 @@
             <h3 class="font-bold text-sm text-primary-900 dark:text-white flex items-center gap-2">
                 <i class="fas fa-filter text-primary-500"></i> Advanced Filters
             </h3>
-            <form action="{{ route('payments.sync-all') }}" method="POST" class="m-0">
-                @csrf
-                <button type="submit" class="text-xs text-primary-600 font-bold hover:underline flex items-center gap-1">
-                    <i class="fas fa-sync"></i> Sync All From API
-                </button>
-            </form>
             <button @click="showFilters = !showFilters" class="text-xs text-primary-600 font-bold hover:underline">
                 <span x-text="showFilters ? 'Hide Filters' : 'Show Filters'"></span>
             </button>
@@ -279,14 +273,6 @@
                                             title="Preview details">
                                         <i class="fas fa-eye text-xs"></i>
                                     </button>
-                                    <form action="{{ route('payments.sync', $payment->order_reference) }}" method="POST" class="m-0">
-                                        @csrf
-                                        <button type="submit"
-                                                class="w-8 h-8 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 flex items-center justify-center hover:bg-yellow-600 hover:text-white transition-all"
-                                                title="Sync From API">
-                                            <i class="fas fa-sync text-xs"></i>
-                                        </button>
-                                    </form>
                                     @if($isSettled)
                                         <a href="{{ route('payments.receipt', $payment->order_reference) }}" target="_blank"
                                            class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"

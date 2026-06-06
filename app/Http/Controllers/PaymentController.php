@@ -1096,15 +1096,15 @@ HTML;
             }
 
             // Get filtered payments from database
-            $query = Transaction::query()->where('type', 'payment');
+            $paymentQuery = Transaction::query()->where('type', 'payment');
 
-            $this->applyHistoryTabFilter($query, $request->get('status', 'SETTLED'));
+            $this->applyHistoryTabFilter($paymentQuery, $request->get('status', 'SETTLED'));
             if ($request->filled('currency')) {
-                $query->where('currency', $request->currency);
+                $paymentQuery->where('currency', $request->currency);
             }
             if ($request->filled('search')) {
                 $search = $request->search;
-                $query->where(function ($subQuery) use ($search) {
+                $paymentQuery->where(function ($subQuery) use ($search) {
                     $subQuery->where('order_reference', 'like', '%' . $search . '%')
                         ->orWhere('transaction_id', 'like', '%' . $search . '%')
                         ->orWhere('payer_name', 'like', '%' . $search . '%')
@@ -1113,32 +1113,113 @@ HTML;
                 });
             }
             if ($request->filled('start_date')) {
-                $query->whereDate('created_at', '>=', $request->start_date);
+                $paymentQuery->whereDate('created_at', '>=', $request->start_date);
             }
             if ($request->filled('end_date')) {
-                $query->whereDate('created_at', '<=', $request->end_date);
+                $paymentQuery->whereDate('created_at', '<=', $request->end_date);
             }
 
-            $payments = $query->orderBy('created_at', 'desc')->get();
-            
-            // Process each payment to use resolved description and other fields
-            $processedPayments = [];
-            foreach ($payments as $payment) {
-                $paymentArray = $payment->toArray();
-                $paymentArray['description'] = $payment->resolved_description;
-                $processedPayments[] = $paymentArray;
+            // Get filtered payouts from database
+            $payoutQuery = Payout::query();
+            $this->applyHistoryTabFilter($payoutQuery, $request->get('status', 'SUCCESS'));
+            if ($request->filled('currency')) {
+                $payoutQuery->where('currency', $request->currency);
             }
-            
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $payoutQuery->where(function ($subQuery) use ($search) {
+                    $subQuery->where('order_reference', 'like', '%' . $search . '%')
+                        ->orWhere('clickpesa_payout_id', 'like', '%' . $search . '%')
+                        ->orWhere('recipient_name', 'like', '%' . $search . '%')
+                        ->orWhere('recipient_phone', 'like', '%' . $search . '%');
+                });
+            }
+            if ($request->filled('start_date')) {
+                $payoutQuery->whereDate('created_at', '>=', $request->start_date);
+            }
+            if ($request->filled('end_date')) {
+                $payoutQuery->whereDate('created_at', '<=', $request->end_date);
+            }
+
+            $payments = $paymentQuery->orderBy('created_at', 'desc')->get();
+            $payouts = $payoutQuery->orderBy('created_at', 'desc')->get();
+
+            // Combine and process
+            $combined = collect();
+            foreach ($payments as $payment) {
+                $combined->push([
+                    'type' => 'payment',
+                    'record' => $payment,
+                    'created_at' => $payment->created_at,
+                    'entry' => 'CREDIT',
+                ]);
+            }
+            foreach ($payouts as $payout) {
+                $combined->push([
+                    'type' => 'payout',
+                    'record' => $payout,
+                    'created_at' => $payout->created_at,
+                    'entry' => 'DEBIT',
+                ]);
+            }
+            $combined = $combined->sortByDesc('created_at')->values();
+
+            // Get current account balance
+            $currentBalance = null;
+            try {
+                $tzsBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
+                $currentBalance = $tzsBalance['balance'];
+            } catch (Exception $e) {
+                Log::error('Failed to retrieve account balance: ' . $e->getMessage());
+            }
+
+            // Calculate running balance
+            $runningBalance = $currentBalance ?? 0;
+            $combinedWithBalance = $combined->reverse()->map(function ($item) use (&$runningBalance) {
+                if ($item['type'] === 'payment') {
+                    $amount = (float) $item['record']->amount;
+                    if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
+                        $runningBalance -= $amount; // Backwards, subtract first
+                    }
+                } else {
+                    $amount = (float) $item['record']->amount;
+                    if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
+                        $runningBalance += $amount; // Backwards, add debit
+                    }
+                }
+
+                $recordArray = $item['record']->toArray();
+                if ($item['type'] === 'payment') {
+                    $recordArray['type'] = 'payment';
+                    $recordArray['entry'] = 'CREDIT';
+                    $recordArray['description'] = $item['record']->resolved_description;
+                } else {
+                    $recordArray['type'] = 'payout';
+                    $recordArray['entry'] = 'DEBIT';
+                    $recordArray['description'] = $item['record']->resolved_description;
+                    $recordArray['order_reference'] = $item['record']->order_reference;
+                    $recordArray['transaction_id'] = $item['record']->clickpesa_payout_id ?? $item['record']->transaction_id;
+                    $recordArray['payer_name'] = $item['record']->recipient_name;
+                    $recordArray['phone'] = $item['record']->recipient_phone ?? $item['record']->beneficiary_mobile;
+                }
+                $recordArray['running_balance'] = $runningBalance;
+                return $recordArray;
+            })->reverse();
+
             // Selected columns
-            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'sms_sent', 'sms_sent_at', 'created_at', 'updated_at'];
+            $allowedColumns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'customer_name', 'payer_name', 'phone', 'email', 'description', 'payment_method', 'sms_sent', 'sms_sent_at', 'created_at', 'updated_at', 'running_balance', 'entry', 'type'];
             $columns = array_values(array_intersect($request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']), $allowedColumns));
             if (empty($columns)) {
                 $columns = ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at'];
             }
+            if (!in_array('running_balance', $columns)) {
+                $columns[] = 'running_balance'; // Always include running balance
+            }
 
             $pdf = Pdf::loadView('payments.exports.pdf', [
-                'payments' => $processedPayments,
-                'columns' => $columns
+                'payments' => $combinedWithBalance->values()->toArray(),
+                'columns' => $columns,
+                'currentBalance' => $currentBalance
             ])
                 ->setPaper('a4', 'landscape')
                 ->setOption('margin-bottom', 10);

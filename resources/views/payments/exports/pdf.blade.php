@@ -163,7 +163,7 @@
             <div class="summary-stats">
                 <div class="label" style="color: #16a34a;">Report Summary</div>
                 <div class="value" style="margin-top: 5px;">
-                    <span style="color: #166534;">Successful:</span> {{ collect($payments)->filter(fn($p) => in_array($p['status'] ?? '', ['SUCCESS', 'SETTLED']))->count() }}
+                    <span style="color: #166534;">Successful:</span> {{ collect($payments)->filter(fn($p) => in_array($p['status'] ?? '', ['SUCCESS', 'SETTLED', 'COMPLETED']))->count() }}
                 </div>
                 <div class="value">
                     <span style="color: #92400e;">Pending:</span> {{ collect($payments)->filter(fn($p) => in_array($p['status'] ?? '', ['PROCESSING', 'PENDING']))->count() }}
@@ -171,18 +171,28 @@
                 <div class="value">
                     <span style="color: #991b1b;">Failed:</span> {{ collect($payments)->filter(fn($p) => in_array($p['status'] ?? '', ['FAILED', 'ERROR']))->count() }}
                 </div>
-                <div class="value" style="margin-top: 8px; font-size: 14px; color: #15803d;">
-                    <span style="font-size: 10px; color: #16a34a;">Total Amount:</span>
-                    <br>{{ number_format(collect($payments)->sum(fn($p) => $p['amount'] ?? 0), 2) }} TZS
-                </div>
+                @if($currentBalance !== null)
+                    <div class="value" style="margin-top: 8px; font-size: 14px; color: #15803d;">
+                        <span style="font-size: 10px; color: #16a34a;">Current Account Balance:</span>
+                        <br>TZS {{ number_format($currentBalance, 2) }}
+                    </div>
+                @endif
             </div>
         </div>
 
     @php
         $columns = request()->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']);
+        // Ensure running balance is included
+        if (!in_array('running_balance', $columns)) {
+            $columns[] = 'running_balance';
+        }
         $headers = [];
         foreach($columns as $col) {
-            $headers[] = ucwords(str_replace('_', ' ', $col));
+            if ($col === 'running_balance') {
+                $headers[] = 'Running Balance';
+            } else {
+                $headers[] = ucwords(str_replace('_', ' ', $col));
+            }
         }
     @endphp
 
@@ -198,11 +208,12 @@
             @foreach($payments as $payment)
                 <tr>
                     @foreach($columns as $col)
-                        <td class="{{ $col === 'amount' ? 'text-right' : '' }}">
+                        <td class="{{ in_array($col, ['amount', 'running_balance']) ? 'text-right' : '' }}">
                             @if($col === 'status')
                                 @switch($payment[$col] ?? '')
                                     @case('SUCCESS')
                                     @case('SETTLED')
+                                    @case('COMPLETED')
                                         <span class="status-success">{{ $payment[$col] }}</span>
                                         @break
                                     @case('PROCESSING')
@@ -217,7 +228,17 @@
                                         {{ $payment[$col] ?? 'N/A' }}
                                 @endswitch
                             @elseif($col === 'amount')
-                                {{ number_format($payment[$col] ?? 0, 2) }}
+                                @php
+                                    $entry = $payment['entry'] ?? 'CREDIT';
+                                    $amountVal = $payment[$col] ?? 0;
+                                @endphp
+                                @if($entry === 'DEBIT')
+                                    <span style="color: #991b1b; font-weight: bold;">- {{ number_format($amountVal, 2) }}</span>
+                                @else
+                                    <span style="color: #166534; font-weight: bold;">+ {{ number_format($amountVal, 2) }}</span>
+                                @endif
+                            @elseif($col === 'running_balance')
+                                <span style="font-weight: bold;">{{ number_format($payment[$col] ?? 0, 2) }}</span>
                             @elseif($col === 'created_at' || $col === 'updated_at')
                                 {{ isset($payment[$col]) ? \Carbon\Carbon::parse($payment[$col])->format('Y-m-d H:i') : 'N/A' }}
                             @else

@@ -1023,44 +1023,7 @@ HTML;
             Log::error('Failed to retrieve API live account balance: ' . $e->getMessage());
         }
 
-        // Get ALL settled transactions from database to compute internal balance
-        $allDbPayments = Transaction::where('type', 'payment')
-            ->whereIn('status', ['SUCCESS', 'SETTLED'])
-            ->orderBy('created_at', 'asc')
-            ->get();
-        $allDbPayouts = Payout::whereIn('status', ['SUCCESS', 'SETTLED', 'COMPLETED'])
-            ->orderBy('created_at', 'asc')
-            ->get();
-        
-        // Combine all DB transactions to calculate internal balance
-        $allDbCombined = collect();
-        foreach ($allDbPayments as $payment) {
-            $allDbCombined->push([
-                'amount' => (float) $payment->amount,
-                'entry' => 'CREDIT',
-                'created_at' => $payment->created_at,
-            ]);
-        }
-        foreach ($allDbPayouts as $payout) {
-            $allDbCombined->push([
-                'amount' => (float) $payout->amount,
-                'entry' => 'DEBIT',
-                'created_at' => $payout->created_at,
-            ]);
-        }
-        $allDbCombined = $allDbCombined->sortBy('created_at')->values();
-        
-        // Calculate internal database balance
-        $internalDbBalance = 0;
-        foreach ($allDbCombined as $transaction) {
-            if ($transaction['entry'] === 'CREDIT') {
-                $internalDbBalance += $transaction['amount'];
-            } else {
-                $internalDbBalance -= $transaction['amount'];
-            }
-        }
-
-        // Combine filtered payments and payouts for display
+        // Combine filtered payments and payouts for display and balance calculation
         $payments = $paymentQuery->orderBy('created_at', 'asc')->get();
         $payouts = $payoutQuery->orderBy('created_at', 'asc')->get();
         
@@ -1084,23 +1047,26 @@ HTML;
         
         $combined = $combined->sortBy('created_at')->values();
 
-        // Calculate running balance for display (oldest to newest)
-        $runningBalance = 0;
-        $combinedWithBalance = $combined->map(function ($item) use (&$runningBalance) {
+        // Calculate internal database balance and running balance for display (oldest to newest)
+        $internalDbBalance = 0;
+        $combinedWithBalance = $combined->map(function ($item) use (&$internalDbBalance) {
             if ($item['type'] === 'payment') {
                 $amount = (float) $item['record']->amount;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
-                    $runningBalance += $amount;
+                    $internalDbBalance += $amount;
                 }
             } else {
                 $amount = (float) $item['record']->amount;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
-                    $runningBalance -= $amount;
+                    $internalDbBalance -= $amount;
                 }
             }
-            $item['running_balance'] = $runningBalance;
+            $item['running_balance'] = $internalDbBalance;
             return $item;
         });
+
+        // Reverse to show newest first on the page
+        $combinedWithBalance = $combinedWithBalance->reverse()->values();
 
         $settledCount = Transaction::where('type', 'payment')->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
         $failedCount = Transaction::where('type', 'payment')->whereIn('status', ['FAILED', 'ERROR'])->count();

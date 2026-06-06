@@ -162,6 +162,7 @@ class AccountController extends Controller
         $activeTab = $request->get('tab', 'database'); 
         $statusFilter = $request->get('status', 'all');
         $statementType = $request->get('type', 'payments');
+        $search = $request->get('search');
         
         $error = null;
         $displayTransactions = collect();
@@ -169,6 +170,8 @@ class AccountController extends Controller
         $dbTransactions = collect();
         $apiTransactions = collect();
         $totalPaidFilter = false;
+        $dbCount = 0;
+        $apiCount = 0;
 
         if ($statementType === 'payments') {
             // 1. Get from Database
@@ -176,6 +179,15 @@ class AccountController extends Controller
             if ($startDate) $query->whereDate('created_at', '>=', $startDate);
             if ($endDate) $query->whereDate('created_at', '<=', $endDate);
             if ($currency) $query->where('currency', $currency);
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('order_reference', 'like', "%$search%")
+                      ->orWhere('transaction_id', 'like', "%$search%")
+                      ->orWhere('customer_name', 'like', "%$search%")
+                      ->orWhere('payer_name', 'like', "%$search%")
+                      ->orWhere('phone', 'like', "%$search%");
+                });
+            }
             
             $dbTransactions = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
                 return [
@@ -197,8 +209,16 @@ class AccountController extends Controller
                     'email' => $t->email,
                     'payment_method' => $t->payment_method,
                     'type' => $t->type,
+                    'sms_sent' => (bool)$t->sms_sent,
+                    'sms_sent_at' => $t->sms_sent_at?->toIso8601String(),
+                    'sms_message' => $t->sms_message,
+                    'sms_error' => $t->sms_error,
+                    'email_sent' => (bool)$t->email_sent,
+                    'email_sent_at' => $t->email_sent_at?->toIso8601String(),
+                    'email_error' => $t->email_error,
                 ];
             });
+            $dbCount = $dbTransactions->count();
 
             // 2. Fetch API data
             try {
@@ -221,6 +241,17 @@ class AccountController extends Controller
                         $t['updated_at'] = $t['updated_at'] ?? $t['updatedAt'] ?? null;
                         return $t;
                     });
+                    
+                    if ($search) {
+                        $apiTransactions = $apiTransactions->filter(function ($t) use ($search) {
+                            return stripos($t['reference'], $search) !== false
+                                || stripos($t['transaction_id'], $search) !== false
+                                || stripos($t['customer_name'], $search) !== false
+                                || stripos($t['payer_name'], $search) !== false
+                                || stripos($t['phone'], $search) !== false;
+                        });
+                    }
+                    $apiCount = $apiTransactions->count();
                 }
             } catch (Exception $e) {
                 $error = 'API Fetch Error: ' . $e->getMessage();
@@ -235,7 +266,7 @@ class AccountController extends Controller
                 if ($statusFilter === 'settled') {
                     return $collection->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED']));
                 } elseif ($statusFilter === 'failed') {
-                    return $collection->filter(fn($t) => $t['status'] === 'FAILED');
+                    return $collection->filter(fn($t) => in_array($t['status'], ['FAILED', 'ERROR', 'CANCELLED']));
                 }
                 return $collection;
             };
@@ -243,10 +274,10 @@ class AccountController extends Controller
             if ($activeTab === 'database') {
                 $displayTransactions = $filterByStatus($dbTransactions);
             } else {
-                $displayTransactions = $apiTransactions->map(function ($t) use ($dbRefs, $dbTids) {
+                $displayTransactions = $filterByStatus($apiTransactions->map(function ($t) use ($dbRefs, $dbTids) {
                     $t['is_synced'] = in_array($t['reference'], $dbRefs) || in_array($t['transaction_id'], $dbTids);
                     return $t;
-                });
+                }));
             }
         } else {
             // Handle Billing Statement

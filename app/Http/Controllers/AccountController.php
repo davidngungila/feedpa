@@ -518,4 +518,99 @@ class AccountController extends Controller
             default => 'payment'
         };
     }
+
+    /**
+     * Fetch single payout from ClickPesa API
+     */
+    public function fetchSinglePayout(Request $request)
+    {
+        $validated = $request->validate([
+            'order_reference' => 'required|string',
+        ]);
+
+        try {
+            $payout = $this->api->queryPayoutStatus($validated['order_reference']);
+            return response()->json([
+                'success' => true,
+                'data' => $payout
+            ]);
+        } catch (Exception $e) {
+            Log::error('Failed to fetch single payout: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Sync single payout from API to database
+     */
+    public function syncSinglePayout(Request $request)
+    {
+        $validated = $request->validate([
+            'order_reference' => 'required|string',
+        ]);
+
+        try {
+            $orderReference = $validated['order_reference'];
+            
+            // Check if payout already exists
+            $existing = \App\Models\Payout::where('order_reference', $orderReference)->first();
+            if ($existing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payout already exists in database'
+                ]);
+            }
+
+            // Fetch from API
+            $apiPayout = $this->api->queryPayoutStatus($orderReference);
+            $beneficiary = $apiPayout['beneficiary'] ?? [];
+            $payoutType = ($apiPayout['channel'] ?? '') === 'BANK TRANSFER' ? 'BANK' : 'MOBILE MONEY';
+
+            // Create payout in DB
+            \App\Models\Payout::create([
+                'order_reference' => $orderReference,
+                'clickpesa_payout_id' => $apiPayout['id'] ?? null,
+                'transaction_id' => $apiPayout['id'] ?? $apiPayout['transaction_id'] ?? null,
+                'status' => $apiPayout['status'] ?? 'UNKNOWN',
+                'amount' => $apiPayout['amount'] ?? 0,
+                'currency' => $apiPayout['currency'] ?? 'TZS',
+                'fee' => $apiPayout['fee'] ?? 0,
+                'payout_type' => $payoutType,
+                'recipient_name' => $beneficiary['accountName'] ?? $apiPayout['recipient_name'] ?? $apiPayout['customerName'] ?? 'N/A',
+                'recipient_phone' => $beneficiary['beneficiaryMobileNumber'] ?? $apiPayout['recipient_phone'] ?? $apiPayout['phoneNumber'] ?? null,
+                'bank_name' => $apiPayout['bank_name'] ?? null,
+                'bank_account_number' => $beneficiary['accountNumber'] ?? $apiPayout['bank_account_number'] ?? null,
+                'bic' => $beneficiary['bic'] ?? $apiPayout['bic'] ?? null,
+                'channel' => $apiPayout['channel'] ?? null,
+                'channel_provider' => $apiPayout['channelProvider'] ?? null,
+                'transfer_type' => $apiPayout['transferType'] ?? null,
+                'beneficiary_account_number' => $beneficiary['accountNumber'] ?? null,
+                'beneficiary_account_name' => $beneficiary['accountName'] ?? null,
+                'beneficiary_mobile' => $beneficiary['beneficiaryMobileNumber'] ?? null,
+                'beneficiary_email' => $beneficiary['beneficiaryEmail'] ?? null,
+                'notes' => $apiPayout['notes'] ?? null,
+                'created_at' => isset($apiPayout['createdAt']) ? \Carbon\Carbon::parse($apiPayout['createdAt'])->toDateTimeString() : now(),
+                'updated_at' => isset($apiPayout['updatedAt']) ? \Carbon\Carbon::parse($apiPayout['updatedAt'])->toDateTimeString() : now(),
+                'callback_data' => $apiPayout,
+                'user_id' => auth()->check() ? auth()->id() : null
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Payout synced successfully!'
+            ]);
+        } catch (Exception $e) {
+            Log::error('Failed to sync single payout: ' . $e->getMessage(), [
+                'order_reference' => $request->order_reference,
+                'error' => $e
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

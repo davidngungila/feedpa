@@ -560,7 +560,7 @@ class ClickPesaAPIService
         if (stripos($errorMessage, 'insufficient funds') !== false || 
             stripos($errorMessage, 'balance') !== false ||
             stripos($errorMessage, 'top up') !== false) {
-            return "Insufficient Funds: Your account balance is too low to complete this transaction. Please top up your Halopesa account and try again. For assistance, contact your Halopesa agent.";
+            return "Insufficient Funds: Your account balance is too low to complete this transaction. Please top up your mobile money account (Halopesa, M-Pesa, Airtel Money, Mix By Yas, etc.) and try again. For assistance, contact your mobile money agent.";
         }
 
         // Invalid currency errors

@@ -82,6 +82,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/balance/api', [AccountController::class, 'balanceApi'])->name('balance.api');
         Route::post('/transaction/fetch', [AccountController::class, 'fetchSingleTransaction'])->name('transaction.fetch');
         Route::post('/transaction/sync', [AccountController::class, 'syncSingleTransaction'])->name('transaction.sync');
+        Route::post('/payout/fetch', [AccountController::class, 'fetchSinglePayout'])->name('payout.fetch');
+        Route::post('/payout/sync', [AccountController::class, 'syncSinglePayout'])->name('payout.sync');
     });
 
     // Bill Management Routes

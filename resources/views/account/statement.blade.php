@@ -189,22 +189,44 @@
                                 <div class="text-[10px] text-primary-500 font-bold">{{ $currency }}</div>
                             </td>
                             @if($activeTab === 'api')
-                                <td class="text-center">
-                                    @if($t['is_synced'] ?? false)
-                                        <i class="fas fa-check-double text-primary-500" title="Synced to DB"></i>
-                                    @else
-                                        <i class="fas fa-cloud-download-alt text-gray-300" title="API Only"></i>
-                                    @endif
-                                </td>
-                            @endif
-                            <td class="text-center">
-                                <button type="button"
-                                        @click="openDetails(@js($detailPayload))"
-                                        class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 inline-flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                        title="View full details">
-                                    <i class="fas fa-eye text-xs"></i>
-                                </button>
-                            </td>
+                <td class="text-center">
+                    @if($t['is_synced'] ?? false)
+                        <span class="text-xs text-primary-500 flex items-center gap-1 justify-center">
+                            <i class="fas fa-check-double"></i>
+                            Synced
+                        </span>
+                    @else
+                        @php
+                            $status = strtoupper($t['status'] ?? 'UNKNOWN');
+                            $canSync = in_array($status, ['SUCCESS', 'SETTLED']);
+                        @endphp
+                        <button type="button"
+                                @click="syncTransaction('{{ $reference }}')"
+                                class="px-2 py-1 rounded-lg text-xs font-semibold transition-all {{ $canSync ? 'bg-primary-500 hover:bg-primary-600 text-white' : 'bg-gray-200 text-gray-500 cursor-not-allowed' }}"
+                                {{ $canSync ? '' : 'disabled' }}
+                                title="Sync to Database">
+                            <i class="fas fa-sync-alt mr-1"></i>
+                            Sync
+                        </button>
+                    @endif
+                </td>
+            @endif
+            <td class="text-center flex items-center gap-1 justify-center">
+                <button type="button"
+                        @click="openDetails(@js($detailPayload))"
+                        class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 inline-flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                        title="View full details">
+                    <i class="fas fa-eye text-xs"></i>
+                </button>
+                @if($activeTab === 'api')
+                <button type="button"
+                        @click="fetchTransaction('{{ $reference }}')"
+                        class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800/30 text-gray-600 inline-flex items-center justify-center hover:bg-gray-200 hover:text-gray-800 transition-all"
+                        title="Fetch latest from API">
+                    <i class="fas fa-refresh text-xs"></i>
+                </button>
+                @endif
+            </td>
                         </tr>
                     @empty
                         <tr>
@@ -425,6 +447,50 @@ function statementDetails() {
         },
         formatAmount(value) {
             return new Intl.NumberFormat('en-TZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));
+        },
+        async syncTransaction(orderReference) {
+            if (confirm('Are you sure you want to sync this transaction to the database?')) {
+                try {
+                    const response = await fetch('{{ route('account.transaction.sync') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ order_reference: orderReference })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        alert('Transaction synced successfully!');
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || data.error));
+                    }
+                } catch (e) {
+                    alert('Error syncing transaction: ' + e.message);
+                }
+            }
+        },
+        async fetchTransaction(orderReference) {
+            try {
+                const response = await fetch('{{ route('account.transaction.fetch') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ order_reference: orderReference })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Transaction fetched successfully! Check console for details');
+                    console.log('Fetched Transaction:', data.data);
+                } else {
+                    alert('Error fetching transaction: ' + (data.message || data.error));
+                }
+            } catch (e) {
+                alert('Error fetching transaction: ' + e.message);
+            }
         }
     };
 }

@@ -80,6 +80,8 @@ Route::middleware(['auth'])->group(function () {
         
         // API Endpoints
         Route::get('/balance/api', [AccountController::class, 'balanceApi'])->name('balance.api');
+        Route::post('/transaction/fetch', [AccountController::class, 'fetchSingleTransaction'])->name('transaction.fetch');
+        Route::post('/transaction/sync', [AccountController::class, 'syncSingleTransaction'])->name('transaction.sync');
     });
 
     // Bill Management Routes

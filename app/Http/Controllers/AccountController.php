@@ -206,10 +206,19 @@ class AccountController extends Controller
                 if (isset($apiResponse['transactions'])) {
                     $apiTransactions = collect($apiResponse['transactions'])->map(function ($t) {
                         $t['source'] = 'API';
-                        $t['amount'] = (float)($t['amount'] ?? 0);
+                        $t['amount'] = (float) ($t['amount'] ?? $t['collectedAmount'] ?? 0);
                         $t['status'] = strtoupper($t['status'] ?? 'UNKNOWN');
                         $t['reference'] = $t['orderReference'] ?? $t['reference'] ?? null;
+                        $t['order_reference'] = $t['orderReference'] ?? $t['reference'] ?? null;
                         $t['transaction_id'] = $t['id'] ?? $t['transaction_id'] ?? null;
+                        $t['currency'] = $t['currency'] ?? $t['collectedCurrency'] ?? $currency;
+                        $t['customer_name'] = $t['customer_name'] ?? (isset($t['customer']) ? $t['customer']['customerName'] : null);
+                        $t['payer_name'] = $t['payer_name'] ?? (isset($t['customer']) ? $t['customer']['customerName'] : $t['customer_name']);
+                        $t['phone'] = $t['phone'] ?? $t['paymentPhoneNumber'] ?? (isset($t['customer']) ? $t['customer']['customerPhoneNumber'] : null);
+                        $t['payment_method'] = $t['payment_method'] ?? $t['channel'] ?? $t['paymentMethod'] ?? null;
+                        $t['description'] = $t['description'] ?? $t['narrative'] ?? null;
+                        $t['created_at'] = $t['created_at'] ?? $t['createdAt'] ?? $t['date'] ?? null;
+                        $t['updated_at'] = $t['updated_at'] ?? $t['updatedAt'] ?? null;
                         return $t;
                     });
                 }
@@ -393,5 +402,120 @@ class AccountController extends Controller
                 'billing-statement-' . date('Y-m-d') . '.xlsx'
             );
         }
+    }
+
+    /**
+     * Fetch single transaction from ClickPesa API
+     */
+    public function fetchSingleTransaction(Request $request)
+    {
+        $validated = $request->validate([
+            'order_reference' => 'required|string',
+        ]);
+
+        try {
+            $transaction = $this->api->queryPaymentStatus($validated['order_reference']);
+            return response()->json([
+                'success' => true,
+                'data' => $transaction
+            ]);
+        } catch (Exception $e) {
+            Log::error('Failed to fetch single transaction: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Sync single transaction from API to database only if successful/settled
+     */
+    public function syncSingleTransaction(Request $request)
+    {
+        $validated = $request->validate([
+            'order_reference' => 'required|string',
+        ]);
+
+        try {
+            $orderReference = $validated['order_reference'];
+            
+            // Check if transaction already exists
+            $existing = \App\Models\Transaction::where('order_reference', $orderReference)->first();
+            if ($existing) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction already exists in database'
+                ]);
+            }
+
+            // Fetch from API
+            $apiTransaction = $this->api->queryPaymentStatus($orderReference);
+            
+            // Check status is SUCCESS or SETTLED
+            $status = strtoupper($apiTransaction['status'] ?? $apiTransaction['status'] ?? 'UNKNOWN');
+            if (!in_array($status, ['SUCCESS', 'SETTLED'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Transaction is not successful/settled, skipping sync'
+                ]);
+            }
+
+            // Extract transaction data
+            $transactionId = $apiTransaction['transaction_id'] ?? $apiTransaction['id'] ?? null;
+            $amount = $apiTransaction['amount'] ?? $apiTransaction['collectedAmount'] ?? 0;
+            $currency = $apiTransaction['currency'] ?? $apiTransaction['collectedCurrency'] ?? 'TZS';
+            $phone = $apiTransaction['phone'] ?? $apiTransaction['paymentPhoneNumber'] ?? ($apiTransaction['customer']['customerPhoneNumber'] ?? null);
+            $customerName = $apiTransaction['customer_name'] ?? ($apiTransaction['customer']['customerName'] ?? null);
+            $payerName = $apiTransaction['payer_name'] ?? ($apiTransaction['customer']['customerName'] ?? $customerName);
+            $paymentMethod = $apiTransaction['payment_method'] ?? $apiTransaction['channel'] ?? $apiTransaction['paymentMethod'] ?? null;
+            $description = $apiTransaction['description'] ?? $apiTransaction['narrative'] ?? 'Synced from API';
+
+            // Create transaction in DB
+            $transaction = \App\Models\Transaction::create([
+                'id' => (string) \Illuminate\Support\Str::uuid(),
+                'order_reference' => $orderReference,
+                'transaction_id' => $transactionId,
+                'status' => $status,
+                'amount' => (float) $amount,
+                'currency' => $currency,
+                'phone' => $phone,
+                'customer_name' => $customerName,
+                'payer_name' => $payerName,
+                'description' => $description,
+                'payment_method' => $paymentMethod,
+                'callback_data' => $apiTransaction,
+                'callback_received_at' => now(),
+                'type' => $this->determineTransactionType($apiTransaction),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Transaction synced successfully!',
+                'data' => $transaction
+            ]);
+        } catch (Exception $e) {
+            Log::error('Failed to sync single transaction: ' . $e->getMessage(), [
+                'order_reference' => $request->order_reference,
+                'error' => $e
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Determine transaction type from data
+     */
+    private function determineTransactionType(array $data): string
+    {
+        return match (strtolower($data['type'] ?? 'payment')) {
+            'payment' => 'payment',
+            'payout' => 'payout',
+            'refund' => 'refund',
+            default => 'payment'
+        };
     }
 }

@@ -93,6 +93,7 @@
                         <th>Member Name</th>
                         <th>Purpose / Description</th>
                         <th>Amount</th>
+                        <th>Running Balance</th>
                         @if($activeTab === 'database')
                             <th>SMS Status</th>
                             <th>Email Status</th>
@@ -109,7 +110,7 @@
                             $customer = is_array($t['customer'] ?? null) ? $t['customer'] : [];
 
                             $status = strtoupper($t['status'] ?? 'UNKNOWN');
-                            $isSettled = in_array($status, ['SETTLED', 'SUCCESS']);
+                            $isSettled = in_array($status, ['SETTLED', 'SUCCESS', 'COMPLETED']);
                             $isFailed = in_array($status, ['FAILED', 'ERROR', 'CANCELLED']);
 
                             $rawDate = $t['created_at'] ?? $t['createdAt'] ?? $t['date'] ?? null;
@@ -120,6 +121,7 @@
                             $reference = $t['order_reference'] ?? $t['orderReference'] ?? $t['reference'] ?? 'N/A';
                             $amount = (float) ($t['amount'] ?? $t['collectedAmount'] ?? 0);
                             $currency = $t['currency'] ?? $t['collectedCurrency'] ?? 'TZS';
+                            $entry = $t['entry'] ?? 'CREDIT';
 
                             $memberName = $t['customer_name'] ?? $customer['customerName'] ?? $t['customerName'] ?? $t['payer_name'] ?? 'N/A';
                             $actualPayer = $t['payer_name'] ?? $customer['customerName'] ?? $memberName;
@@ -130,6 +132,7 @@
                             if ($description === '' || strtoupper($description) === 'N/A') {
                                 $description = 'No description';
                             }
+                            $runningBalance = (float) ($t['running_balance'] ?? 0);
 
                             $detailPayload = [
                                 'reference' => $reference,
@@ -138,7 +141,7 @@
                                 'isSettled' => $isSettled,
                                 'amount' => $amount,
                                 'currency' => $currency,
-                                'entry' => $t['entry'] ?? 'CREDIT',
+                                'entry' => $entry,
                                 'member_name' => $memberName,
                                 'payer_name' => $actualPayer,
                                 'phone' => $customerPhone,
@@ -152,7 +155,7 @@
                                 'time' => $formattedTime,
                                 'created_at' => $rawDate,
                                 'updated_at' => $t['updated_at'] ?? $t['updatedAt'] ?? null,
-                                'status_url' => ($reference !== 'N/A' && ($t['source'] ?? '') === 'DATABASE')
+                                'status_url' => ($reference !== 'N/A' && ($t['source'] ?? '') === 'DATABASE' && $entry === 'CREDIT')
                                     ? route('payments.status', ['reference' => $reference])
                                     : null,
                                 'sms_sent' => (bool) ($t['sms_sent'] ?? false),
@@ -204,48 +207,69 @@
                                 </div>
                             </td>
                             <td class="whitespace-nowrap">
+                                @if($entry === 'DEBIT')
+                                    <div class="font-bold text-red-600 dark:text-red-400">
+                                        - {{ number_format($amount, 2) }}
+                                    </div>
+                                @else
+                                    <div class="font-bold text-green-600 dark:text-green-400">
+                                        + {{ number_format($amount, 2) }}
+                                    </div>
+                                @endif
+                                <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $currency }}</div>
+                            </td>
+                            <td class="whitespace-nowrap">
                                 <div class="font-bold text-primary-600 dark:text-primary-400">
-                                    {{ number_format($amount, 2) }}
+                                    {{ number_format($runningBalance, 2) }}
                                 </div>
                                 <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $currency }}</div>
                             </td>
                             @if($activeTab === 'database')
-                                <td class="whitespace-nowrap">
-                                    @if($t['sms_sent'] ?? false)
-                                        <span class="badge badge-green text-[10px]">
-                                            <i class="fas fa-check me-1"></i> Sent
-                                        </span>
-                                        @if($t['sms_sent_at'])
-                                            <div class="text-[9px] text-primary-500 mt-1">{{ \Illuminate\Support\Carbon::parse($t['sms_sent_at'])->format('d M, H:i') }}</div>
+                                @if($entry === 'CREDIT')
+                                    <td class="whitespace-nowrap">
+                                        @if($t['sms_sent'] ?? false)
+                                            <span class="badge badge-green text-[10px]">
+                                                <i class="fas fa-check me-1"></i> Sent
+                                            </span>
+                                            @if($t['sms_sent_at'])
+                                                <div class="text-[9px] text-primary-500 mt-1">{{ \Illuminate\Support\Carbon::parse($t['sms_sent_at'])->format('d M, H:i') }}</div>
+                                            @endif
+                                        @elseif($t['sms_error'] ?? false)
+                                            <span class="badge badge-red text-[10px]">
+                                                <i class="fas fa-times me-1"></i> Failed
+                                            </span>
+                                        @elseif($isSettled)
+                                            <span class="badge badge-yellow text-[10px]">Not Sent</span>
+                                        @else
+                                            <span class="text-[10px] text-primary-400">—</span>
                                         @endif
-                                    @elseif($t['sms_error'] ?? false)
-                                        <span class="badge badge-red text-[10px]">
-                                            <i class="fas fa-times me-1"></i> Failed
-                                        </span>
-                                    @elseif($isSettled)
-                                        <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                                    @else
-                                        <span class="text-[10px] text-primary-400">—</span>
-                                    @endif
-                                </td>
-                                <td class="whitespace-nowrap">
-                                    @if($t['email_sent'] ?? false)
-                                        <span class="badge badge-green text-[10px]">
-                                            <i class="fas fa-check me-1"></i> Sent
-                                        </span>
-                                        @if($t['email_sent_at'])
-                                            <div class="text-[9px] text-primary-500 mt-1">{{ \Illuminate\Support\Carbon::parse($t['email_sent_at'])->format('d M, H:i') }}</div>
+                                    </td>
+                                    <td class="whitespace-nowrap">
+                                        @if($t['email_sent'] ?? false)
+                                            <span class="badge badge-green text-[10px]">
+                                                <i class="fas fa-check me-1"></i> Sent
+                                            </span>
+                                            @if($t['email_sent_at'])
+                                                <div class="text-[9px] text-primary-500 mt-1">{{ \Illuminate\Support\Carbon::parse($t['email_sent_at'])->format('d M, H:i') }}</div>
+                                            @endif
+                                        @elseif($t['email_error'] ?? false)
+                                            <span class="badge badge-red text-[10px]">
+                                                <i class="fas fa-times me-1"></i> Failed
+                                            </span>
+                                        @elseif($isSettled)
+                                            <span class="badge badge-yellow text-[10px]">Not Sent</span>
+                                        @else
+                                            <span class="text-[10px] text-primary-400">—</span>
                                         @endif
-                                    @elseif($t['email_error'] ?? false)
-                                        <span class="badge badge-red text-[10px]">
-                                            <i class="fas fa-times me-1"></i> Failed
-                                        </span>
-                                    @elseif($isSettled)
-                                        <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                                    @else
+                                    </td>
+                                @else
+                                    <td class="whitespace-nowrap text-center">
                                         <span class="text-[10px] text-primary-400">—</span>
-                                    @endif
-                                </td>
+                                    </td>
+                                    <td class="whitespace-nowrap text-center">
+                                        <span class="text-[10px] text-primary-400">—</span>
+                                    </td>
+                                @endif
                             @else
                                 <td class="whitespace-nowrap">
                                     @if($t['is_synced'] ?? false)

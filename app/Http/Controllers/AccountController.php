@@ -174,7 +174,7 @@ class AccountController extends Controller
         $apiCount = 0;
 
         if ($statementType === 'payments') {
-            // 1. Get from Database
+            // 1. Get PAYMENTS from Database
             $query = \App\Models\Transaction::query()->where('type', 'payment');
             if ($startDate) $query->whereDate('created_at', '>=', $startDate);
             if ($endDate) $query->whereDate('created_at', '<=', $endDate);
@@ -189,7 +189,7 @@ class AccountController extends Controller
                 });
             }
             
-            $dbTransactions = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
+            $dbPayments = $query->orderBy('created_at', 'desc')->get()->map(function ($t) {
                 return [
                     'date' => $t->created_at->toIso8601String(),
                     'created_at' => $t->created_at->toIso8601String(),
@@ -208,7 +208,7 @@ class AccountController extends Controller
                     'phone' => $t->phone,
                     'email' => $t->email,
                     'payment_method' => $t->payment_method,
-                    'type' => $t->type,
+                    'type' => 'payment',
                     'sms_sent' => (bool)$t->sms_sent,
                     'sms_sent_at' => $t->sms_sent_at?->toIso8601String(),
                     'sms_message' => $t->sms_message,
@@ -218,13 +218,71 @@ class AccountController extends Controller
                     'email_error' => $t->email_error,
                 ];
             });
+
+            // 2. Get PAYOUTS (Withdrawals) from Database
+            $payoutQuery = \App\Models\Payout::query();
+            if ($startDate) $payoutQuery->whereDate('created_at', '>=', $startDate);
+            if ($endDate) $payoutQuery->whereDate('created_at', '<=', $endDate);
+            if ($currency) $payoutQuery->where('currency', $currency);
+            if ($search) {
+                $payoutQuery->where(function ($q) use ($search) {
+                    $q->where('order_reference', 'like', "%$search%")
+                      ->orWhere('clickpesa_payout_id', 'like', "%$search%")
+                      ->orWhere('recipient_name', 'like', "%$search%")
+                      ->orWhere('recipient_phone', 'like', "%$search%");
+                });
+            }
+            $dbPayouts = $payoutQuery->orderBy('created_at', 'desc')->get()->map(function ($p) {
+                return [
+                    'date' => $p->created_at->toIso8601String(),
+                    'created_at' => $p->created_at->toIso8601String(),
+                    'updated_at' => $p->updated_at?->toIso8601String(),
+                    'description' => $p->notes ?? "Payout to {$p->recipient_name}",
+                    'amount' => (float)$p->amount,
+                    'currency' => $p->currency ?? 'TZS',
+                    'entry' => 'DEBIT',
+                    'status' => strtoupper($p->status ?? 'UNKNOWN'),
+                    'reference' => $p->order_reference,
+                    'order_reference' => $p->order_reference,
+                    'transaction_id' => $p->clickpesa_payout_id,
+                    'source' => 'DATABASE',
+                    'customer_name' => $p->recipient_name,
+                    'payer_name' => $p->recipient_name,
+                    'phone' => $p->recipient_phone,
+                    'email' => $p->beneficiary_email ?? null,
+                    'payment_method' => $p->channel ?? null,
+                    'type' => 'payout',
+                    'sms_sent' => false,
+                    'sms_sent_at' => null,
+                    'sms_message' => null,
+                    'sms_error' => null,
+                    'email_sent' => false,
+                    'email_sent_at' => null,
+                    'email_error' => null,
+                ];
+            });
+
+            // Combine payments and payouts, sort by date (newest first)
+            $dbTransactions = $dbPayments->merge($dbPayouts)->sortByDesc('date')->values();
             $dbCount = $dbTransactions->count();
 
-            // 2. Fetch API data
+            // Calculate running balance for database transactions
+            $runningBalance = 0;
+            $dbTransactions = $dbTransactions->reverse()->map(function ($t) use (&$runningBalance) {
+                if ($t['entry'] === 'CREDIT') {
+                    $runningBalance += $t['amount'];
+                } else {
+                    $runningBalance -= $t['amount'];
+                }
+                $t['running_balance'] = $runningBalance;
+                return $t;
+            })->reverse();
+
+            // 3. Fetch API data
             try {
                 $apiResponse = $this->api->getAccountStatement($currency, $startDate, $endDate);
                 if (isset($apiResponse['transactions'])) {
-                    $apiTransactions = collect($apiResponse['transactions'])->map(function ($t) {
+                    $apiTransactions = collect($apiResponse['transactions'])->map(function ($t) use ($currency) {
                         $t['source'] = 'API';
                         $t['amount'] = (float) ($t['amount'] ?? $t['collectedAmount'] ?? 0);
                         $t['status'] = strtoupper($t['status'] ?? 'UNKNOWN');
@@ -239,6 +297,12 @@ class AccountController extends Controller
                         $t['description'] = $t['description'] ?? $t['narrative'] ?? null;
                         $t['created_at'] = $t['created_at'] ?? $t['createdAt'] ?? $t['date'] ?? null;
                         $t['updated_at'] = $t['updated_at'] ?? $t['updatedAt'] ?? null;
+                        
+                        // Determine if it's a payout (debit) or payment (credit)
+                        $apiType = strtolower($t['type'] ?? 'payment');
+                        $t['type'] = $apiType;
+                        $t['entry'] = $apiType === 'payout' || $apiType === 'debit' || (isset($t['is_withdrawal']) && $t['is_withdrawal']) ? 'DEBIT' : 'CREDIT';
+                        
                         return $t;
                     });
                     
@@ -257,14 +321,14 @@ class AccountController extends Controller
                 $error = 'API Fetch Error: ' . $e->getMessage();
             }
 
-            // 3. Identification and Cross-Referencing
+            // 4. Identification and Cross-Referencing
             $dbRefs = $dbTransactions->pluck('reference')->filter()->unique()->toArray();
             $dbTids = $dbTransactions->pluck('transaction_id')->filter()->unique()->toArray();
 
-            // 4. Apply Status Sub-Tab Filtering
+            // 5. Apply Status Sub-Tab Filtering
             $filterByStatus = function ($collection) use ($statusFilter) {
                 if ($statusFilter === 'settled') {
-                    return $collection->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED']));
+                    return $collection->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED', 'COMPLETED']));
                 } elseif ($statusFilter === 'failed') {
                     return $collection->filter(fn($t) => in_array($t['status'], ['FAILED', 'ERROR', 'CANCELLED']));
                 }
@@ -274,10 +338,21 @@ class AccountController extends Controller
             if ($activeTab === 'database') {
                 $displayTransactions = $filterByStatus($dbTransactions);
             } else {
-                $displayTransactions = $filterByStatus($apiTransactions->map(function ($t) use ($dbRefs, $dbTids) {
+                // Sort API transactions and calculate running balance
+                $sortedApiTransactions = $apiTransactions->sortByDesc('created_at')->values();
+                $apiRunningBalance = 0;
+                $sortedApiTransactions = $sortedApiTransactions->reverse()->map(function ($t) use (&$apiRunningBalance, $dbRefs, $dbTids) {
                     $t['is_synced'] = in_array($t['reference'], $dbRefs) || in_array($t['transaction_id'], $dbTids);
+                    if ($t['entry'] === 'CREDIT') {
+                        $apiRunningBalance += $t['amount'];
+                    } else {
+                        $apiRunningBalance -= $t['amount'];
+                    }
+                    $t['running_balance'] = $apiRunningBalance;
                     return $t;
-                }));
+                })->reverse();
+                
+                $displayTransactions = $filterByStatus($sortedApiTransactions);
             }
         } else {
             // Handle Billing Statement

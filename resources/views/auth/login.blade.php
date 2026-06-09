@@ -58,7 +58,7 @@
     }
   </style>
 </head>
-<body class="h-full bg-[#f0fdf4]">
+<body class="h-full bg-[#f0fdf4]" x-data="loginApp()">
 
   <!-- Auto Logout Toast Notification -->
   <div id="auto-logout-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-yellow-100 border border-yellow-400" style="animation: moveRightLeft 4s ease-in-out infinite;">

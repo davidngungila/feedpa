@@ -33,7 +33,8 @@
     <style>
         *, *::before, *::after { box-sizing: border-box; }
         body { font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; }
-
+        .main-bg { background: #f0fdf4; }
+        .card { background: #ffffff; border: 1px solid #d1fae5; box-shadow: 0 2px 12px rgba(6,78,59,0.08); border-radius: 1rem; }
         .form-input {
             width: 100%;
             padding: 10px 14px;
@@ -44,21 +45,12 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
         .form-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
-
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-
-        @keyframes countUp {
-            from { opacity:0; transform: translateY(10px); }
-            to { opacity:1; transform: translateY(0); }
-        }
-        
-        @keyframes moveRightLeft {
-            0%, 100% { transform: translateX(0); }
-            50% { transform: translateX(-20px); }
-        }
+        @keyframes countUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes moveRightLeft { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-20px); } }
     </style>
 </head>
-<body class="h-full bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700" x-data="loginApp()">
+<body class="h-full main-bg" x-data="loginApp()">
 
     <!-- Auto Logout Toast Notification -->
     <div id="auto-logout-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-yellow-100 border border-yellow-400" style="animation: moveRightLeft 4s ease-in-out infinite;">
@@ -99,9 +91,9 @@
     <div x-show="!showSplash" x-transition class="fixed inset-0 z-50 flex items-center justify-center">
         <!-- Background decorations -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
-            <div class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10 bg-white"></div>
-            <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full opacity-10 bg-white"></div>
-            <div class="absolute top-1/3 right-1/4 w-64 h-64 rounded-full opacity-5 bg-white"></div>
+            <div class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10 bg-primary-600"></div>
+            <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full opacity-10 bg-primary-600"></div>
+            <div class="absolute top-1/3 right-1/4 w-64 h-64 rounded-full opacity-5 bg-primary-600"></div>
         </div>
 
         <div class="relative w-full max-w-md mx-4">
@@ -168,12 +160,12 @@
         <div class="text-center">
             <!-- Spinner -->
             <div class="mb-6">
-                <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin mx-auto"></div>
+                <div class="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto"></div>
             </div>
             <!-- Step messages -->
             <div class="space-y-1">
-                <p class="text-lg font-bold text-white" x-text="currentStep"></p>
-                <p class="text-sm text-primary-200" x-text="currentStepDescription"></p>
+                <p class="text-lg font-bold text-primary-900" x-text="currentStep"></p>
+                <p class="text-sm text-primary-600" x-text="currentStepDescription"></p>
             </div>
         </div>
     </div>

@@ -31,6 +31,10 @@
                     class="flex-1 py-3 px-4 rounded-xl bg-white border border-primary-100 text-xs font-bold text-primary-600 hover:bg-primary-50 transition-all">
                 <i class="fas fa-print mr-2"></i> Print Recovery Codes
             </button>
+            <a href="{{ route('profile.two-factor.recovery-codes.pdf') }}" 
+               class="flex-1 py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white text-center transition-all">
+                <i class="fas fa-download mr-2"></i> Download PDF
+            </a>
             <form method="POST" action="{{ route('profile.two-factor.recovery-codes.regenerate') }}">
                 @csrf
                 <button type="submit" 

@@ -135,6 +135,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/two-factor/disable', [UserController::class, 'showDisableTwoFactor'])->name('two-factor.disable.show');
         Route::post('/two-factor/disable', [UserController::class, 'disableTwoFactor'])->name('two-factor.disable');
         Route::post('/two-factor/recovery-codes/regenerate', [UserController::class, 'regenerateRecoveryCodes'])->name('two-factor.recovery-codes.regenerate');
+        Route::get('/two-factor/recovery-codes', [UserController::class, 'showRecoveryCodes'])->name('two-factor.recovery-codes');
+        Route::get('/two-factor/recovery-codes/pdf', [UserController::class, 'downloadRecoveryCodesPdf'])->name('two-factor.recovery-codes.pdf');
     });
     
     // Settings Routes (Admin Only)

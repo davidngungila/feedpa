@@ -117,6 +117,10 @@
                     <i class="fas fa-shield-alt"></i> Enable 2FA
                 </a>
             @else
+                <a href="{{ route('profile.two-factor.recovery-codes') }}" 
+                   class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white border border-primary-100 text-primary-600 text-xs font-bold hover:bg-primary-50 transition-all">
+                    <i class="fas fa-key"></i> Recovery Codes
+                </a>
                 <a href="{{ route('profile.two-factor.disable.show') }}" 
                    class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-all">
                     <i class="fas fa-shield-alt"></i> Disable 2FA

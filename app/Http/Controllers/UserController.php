@@ -488,4 +488,39 @@ class UserController extends Controller
         
         return view('profile.two-factor-recovery-codes', compact('recoveryCodes'));
     }
+
+    /**
+     * Show current 2FA recovery codes.
+     */
+    public function showRecoveryCodes()
+    {
+        $user = auth()->user();
+        
+        if (!$user->two_factor_enabled || !$user->two_factor_recovery_codes) {
+            return redirect()->route('profile.index')->with('error', 'Two-factor authentication is not enabled');
+        }
+        
+        $recoveryCodes = json_decode(Crypt::decryptString($user->two_factor_recovery_codes), true);
+        
+        return view('profile.two-factor-recovery-codes', compact('recoveryCodes'));
+    }
+
+    /**
+     * Download recovery codes as PDF.
+     */
+    public function downloadRecoveryCodesPdf()
+    {
+        $user = auth()->user();
+        
+        if (!$user->two_factor_enabled || !$user->two_factor_recovery_codes) {
+            return redirect()->route('profile.index')->with('error', 'Two-factor authentication is not enabled');
+        }
+        
+        $recoveryCodes = json_decode(Crypt::decryptString($user->two_factor_recovery_codes), true);
+        
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('profile.recovery-codes-pdf', compact('user', 'recoveryCodes'));
+        $fileName = 'feedtan-recovery-codes-' . $user->id . '-' . now()->timestamp . '.pdf';
+        
+        return $pdf->download($fileName);
+    }
 }

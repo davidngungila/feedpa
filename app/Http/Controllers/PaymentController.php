@@ -1043,6 +1043,17 @@ HTML;
                 'created_at' => $payout->created_at,
                 'entry' => 'DEBIT',
             ]);
+            // Add fee entry if there is a fee
+            $fee = (float) ($payout->fee ?? 0);
+            if ($fee > 0) {
+                $combined->push([
+                    'type' => 'payout-fee',
+                    'record' => $payout,
+                    'fee' => $fee,
+                    'created_at' => $payout->created_at,
+                    'entry' => 'DEBIT',
+                ]);
+            }
         }
         
         $combined = $combined->sortBy('created_at')->values();
@@ -1055,12 +1066,15 @@ HTML;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
                     $internalDbBalance += $amount;
                 }
-            } else {
+            } elseif ($item['type'] === 'payout') {
                 $amount = (float) $item['record']->amount;
-                $fee = (float) ($item['record']->fee ?? 0);
-                $totalDeduction = $amount + $fee;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
-                    $internalDbBalance -= $totalDeduction;
+                    $internalDbBalance -= $amount;
+                }
+            } elseif ($item['type'] === 'payout-fee') {
+                $fee = (float) $item['fee'];
+                if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
+                    $internalDbBalance -= $fee;
                 }
             }
             $item['running_balance'] = $internalDbBalance;
@@ -1167,6 +1181,17 @@ HTML;
                     'created_at' => $payout->created_at,
                     'entry' => 'DEBIT',
                 ]);
+                // Add fee entry if there is a fee
+                $fee = (float) ($payout->fee ?? 0);
+                if ($fee > 0) {
+                    $combined->push([
+                        'type' => 'payout-fee',
+                        'record' => $payout,
+                        'fee' => $fee,
+                        'created_at' => $payout->created_at,
+                        'entry' => 'DEBIT',
+                    ]);
+                }
             }
             $combined = $combined->sortBy('created_at')->values();
 
@@ -1187,21 +1212,26 @@ HTML;
                     if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
                         $runningBalance += $amount;
                     }
-                } else {
+                } elseif ($item['type'] === 'payout') {
                     $amount = (float) $item['record']->amount;
-                    $fee = (float) ($item['record']->fee ?? 0);
-                    $totalDeduction = $amount + $fee;
                     if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
-                        $runningBalance -= $totalDeduction;
+                        $runningBalance -= $amount;
+                    }
+                } elseif ($item['type'] === 'payout-fee') {
+                    $fee = (float) $item['fee'];
+                    if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
+                        $runningBalance -= $fee;
                     }
                 }
 
-                $recordArray = $item['record']->toArray();
+                $recordArray = [];
                 if ($item['type'] === 'payment') {
+                    $recordArray = $item['record']->toArray();
                     $recordArray['type'] = 'payment';
                     $recordArray['entry'] = 'CREDIT';
                     $recordArray['description'] = $item['record']->resolved_description;
-                } else {
+                } elseif ($item['type'] === 'payout') {
+                    $recordArray = $item['record']->toArray();
                     $recordArray['type'] = 'payout';
                     $recordArray['entry'] = 'DEBIT';
                     $recordArray['description'] = $item['record']->resolved_description;
@@ -1209,6 +1239,18 @@ HTML;
                     $recordArray['transaction_id'] = $item['record']->clickpesa_payout_id ?? $item['record']->transaction_id;
                     $recordArray['payer_name'] = $item['record']->recipient_name;
                     $recordArray['phone'] = $item['record']->recipient_phone ?? $item['record']->beneficiary_mobile;
+                } elseif ($item['type'] === 'payout-fee') {
+                    $recordArray = $item['record']->toArray();
+                    $recordArray['type'] = 'payout-fee';
+                    $recordArray['entry'] = 'DEBIT';
+                    $recordArray['amount'] = $item['fee'];
+                    $recordArray['description'] = 'Fee for payout ' . $item['record']->order_reference;
+                    $recordArray['order_reference'] = $item['record']->order_reference . '-FEE';
+                    $recordArray['transaction_id'] = $item['record']->clickpesa_payout_id ?? $item['record']->transaction_id;
+                    $recordArray['payer_name'] = 'Payout Fee';
+                    $recordArray['phone'] = '';
+                    $recordArray['sms_sent'] = false;
+                    $recordArray['email_sent'] = false;
                 }
                 $recordArray['running_balance'] = $runningBalance;
                 return $recordArray;

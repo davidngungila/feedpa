@@ -1057,8 +1057,10 @@ HTML;
                 }
             } else {
                 $amount = (float) $item['record']->amount;
+                $fee = (float) ($item['record']->fee ?? 0);
+                $totalDeduction = $amount + $fee;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
-                    $internalDbBalance -= $amount;
+                    $internalDbBalance -= $totalDeduction;
                 }
             }
             $item['running_balance'] = $internalDbBalance;
@@ -1187,8 +1189,10 @@ HTML;
                     }
                 } else {
                     $amount = (float) $item['record']->amount;
+                    $fee = (float) ($item['record']->fee ?? 0);
+                    $totalDeduction = $amount + $fee;
                     if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
-                        $runningBalance -= $amount;
+                        $runningBalance -= $totalDeduction;
                     }
                 }
 

@@ -283,42 +283,60 @@ class UserController extends Controller
      */
     public function getActiveSessions()
     {
-        $user = auth()->user();
-        $currentSessionId = Session::getId();
-        
-        $sessions = UserSession::where('user_id', $user->id)
-            ->orderBy('last_activity', 'desc')
-            ->get();
-        
-        // Check if current session is in the list
-        $hasCurrentSession = $sessions->contains('session_id', $currentSessionId);
-        
-        // If not, add it
-        if (!$hasCurrentSession) {
-            $currentSession = (object)[
+        try {
+            $user = auth()->user();
+            $currentSessionId = Session::getId();
+            
+            $sessions = UserSession::where('user_id', $user->id)
+                ->orderBy('last_activity', 'desc')
+                ->get();
+            
+            // Check if current session is in the list
+            $hasCurrentSession = $sessions->contains('session_id', $currentSessionId);
+            
+            // If not, add it
+            if (!$hasCurrentSession) {
+                $currentSession = (object)[
+                    'id' => 0,
+                    'session_id' => $currentSessionId,
+                    'ip_address' => request()->ip(),
+                    'user_agent' => request()->userAgent(),
+                    'last_activity' => now(),
+                    'created_at' => now(),
+                ];
+                $sessions->prepend($currentSession);
+            }
+            
+            $formattedSessions = $sessions->map(function($session) use ($currentSessionId) {
+                return [
+                    'id' => $session->id ?? 0,
+                    'session_id' => $session->session_id,
+                    'is_current' => $session->session_id === $currentSessionId,
+                    'ip_address' => $session->ip_address ?? 'Unknown',
+                    'user_agent' => $session->user_agent ?? 'Unknown',
+                    'last_activity' => isset($session->last_activity) ? $session->last_activity->diffForHumans() : 'Just now',
+                    'created_at' => isset($session->created_at) ? $session->created_at->format('M d, Y H:i') : now()->format('M d, Y H:i'),
+                ];
+            });
+            
+            return response()->json(['sessions' => $formattedSessions]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to get active sessions', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $currentSessionId = Session::getId();
+            $fallbackSessions = [[
                 'id' => 0,
                 'session_id' => $currentSessionId,
+                'is_current' => true,
                 'ip_address' => request()->ip(),
                 'user_agent' => request()->userAgent(),
-                'last_activity' => now(),
-                'created_at' => now(),
-            ];
-            $sessions->prepend($currentSession);
+                'last_activity' => 'Just now',
+                'created_at' => now()->format('M d, Y H:i'),
+            ]];
+            return response()->json(['sessions' => $fallbackSessions]);
         }
-        
-        $formattedSessions = $sessions->map(function($session) use ($currentSessionId) {
-            return [
-                'id' => $session->id ?? 0,
-                'session_id' => $session->session_id,
-                'is_current' => $session->session_id === $currentSessionId,
-                'ip_address' => $session->ip_address,
-                'user_agent' => $session->user_agent,
-                'last_activity' => isset($session->last_activity) ? $session->last_activity->diffForHumans() : 'Just now',
-                'created_at' => isset($session->created_at) ? $session->created_at->format('M d, Y H:i') : now()->format('M d, Y H:i'),
-            ];
-        });
-        
-        return response()->json(['sessions' => $formattedSessions]);
     }
     
     /**
@@ -350,14 +368,22 @@ class UserController extends Controller
      */
     public function logoutOtherSessions()
     {
-        $user = auth()->user();
-        $currentSessionId = Session::getId();
-        
-        UserSession::where('user_id', $user->id)
-            ->where('session_id', '!=', $currentSessionId)
-            ->delete();
-        
-        return back()->with('success', 'All other sessions logged out successfully');
+        try {
+            $user = auth()->user();
+            $currentSessionId = Session::getId();
+            
+            UserSession::where('user_id', $user->id)
+                ->where('session_id', '!=', $currentSessionId)
+                ->delete();
+            
+            return response()->json(['success' => true, 'message' => 'All other sessions logged out successfully']);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to logout other sessions', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json(['error' => 'Failed to logout other sessions'], 500);
+        }
     }
     
     /**

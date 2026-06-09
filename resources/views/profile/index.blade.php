@@ -134,14 +134,19 @@
     </div>
 
     <!-- Active Sessions Card -->
-    <div class="card p-6" x-data="{ activeSessions: [], loading: true }" x-init="
+    <div class="card p-6" x-data="{ activeSessions: [], loading: true, error: null }" x-init="
         async function fetchSessions() {
             try {
                 const response = await fetch('{{ route('profile.sessions') }}');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch sessions');
+                }
                 const data = await response.json();
-                activeSessions = data.sessions;
+                activeSessions = data.sessions || [];
+                error = null;
             } catch (e) {
                 console.error('Error fetching sessions:', e);
+                error = 'Failed to load sessions';
             } finally {
                 loading = false;
             }
@@ -172,14 +177,19 @@
             <p class="text-xs text-primary-500 mt-2">Loading sessions...</p>
         </div>
 
-        <template x-if="!loading && activeSessions.length === 0">
+        <div x-show="!loading && error" class="py-8 text-center">
+            <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
+            <p class="text-xs text-red-500 mt-2" x-text="error"></p>
+        </div>
+
+        <template x-if="!loading && !error && activeSessions.length === 0">
             <div class="py-8 text-center">
                 <i class="fas fa-users-slash text-4xl text-primary-200"></i>
                 <p class="text-xs text-primary-500 mt-2">No active sessions found.</p>
             </div>
         </template>
 
-        <div x-show="!loading && activeSessions.length > 0" class="space-y-3">
+        <div x-show="!loading && !error && activeSessions.length > 0" class="space-y-3">
             <template x-for="session in activeSessions" :key="session.id">
                 <div class="flex items-center justify-between p-4 rounded-xl bg-primary-50/50 border border-primary-100">
                     <div class="flex items-center gap-3">

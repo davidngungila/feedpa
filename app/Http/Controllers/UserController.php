@@ -378,7 +378,7 @@ class UserController extends Controller
         
         // Generate QR code using SimpleSoftwareIO\QrCode
         $qrCodeUrl = $google2fa->getQRCodeUrl(
-            config('app.name'),
+            'FEEDTAN DIGITAL PAYMENT SYSTEM',
             $user->email,
             $secret
         );

@@ -120,7 +120,7 @@ class LoginController extends Controller
         $google2fa = new Google2FA();
         $secret = Crypt::decryptString($user->two_factor_secret);
         
-        $valid = $google2fa->verifyKey($secret, $request->code);
+        $valid = $google2fa->verifyKey($secret, $request->code, 2);
         
         // Check recovery codes if code is invalid
         if (!$valid) {

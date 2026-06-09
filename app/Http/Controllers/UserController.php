@@ -406,7 +406,7 @@ class UserController extends Controller
             return back()->with('error', 'Two-factor setup session expired');
         }
         
-        $valid = $google2fa->verifyKey($secret, $request->code);
+        $valid = $google2fa->verifyKey($secret, $request->code, 2);
         
         if (!$valid) {
             return back()->with('error', 'Invalid verification code');

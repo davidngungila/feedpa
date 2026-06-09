@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" x-data="loginApp()" :class="{'dark': darkMode}" class="h-full">
+<html lang="en" class="h-full">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,12 +17,10 @@
 
   <script>
     tailwind.config = {
-      darkMode: 'class',
       theme: {
         extend: {
           colors: {
-            primary: { 50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857',800:'#065f46',900:'#064e3b',950:'#022c22' },
-            dark: { 800:'#0f1a14',850:'#111f17',900:'#0a140e',card:'#0d1f16',border:'#1a3328' }
+            primary: { 50:'#ecfdf5',100:'#d1fae5',200:'#a7f3d0',300:'#6ee7b7',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857',800:'#065f46',900:'#064e3b',950:'#022c22' }
           },
           fontFamily: { sans:['Plus Jakarta Sans','sans-serif'] },
           animation: { 'fade-in':'fadeIn 0.4s ease','slide-in':'slideIn 0.3s ease','count-up':'countUp 1.5s ease','pulse-slow':'pulse 3s infinite' },
@@ -60,62 +58,61 @@
     }
   </style>
 </head>
-<body class="h-full" :class="darkMode ? 'dark bg-[#0a140e]' : 'bg-[#f0fdf4]'">
+<body class="h-full bg-[#f0fdf4]">
 
   <!-- Auto Logout Toast Notification -->
-  <div id="auto-logout-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl" style="animation: moveRightLeft 4s ease-in-out infinite;">
+  <div id="auto-logout-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-yellow-100 border border-yellow-400" style="animation: moveRightLeft 4s ease-in-out infinite;">
     <div class="flex-shrink-0">
-      <i class="fa-solid fa-clock text-2xl text-yellow-600 dark:text-yellow-400"></i>
+      <i class="fa-solid fa-clock text-2xl text-yellow-600"></i>
     </div>
     <div class="flex-1">
-      <p class="font-bold text-base text-yellow-800 dark:text-yellow-200">Session Expired</p>
-      <p class="text-sm text-yellow-700 dark:text-yellow-300">You were logged out automatically due to inactivity. Please login to continue.</p>
+      <p class="font-bold text-base text-yellow-800">Session Expired</p>
+      <p class="text-sm text-yellow-700">You were logged out automatically due to inactivity. Please login to continue.</p>
     </div>
   </div>
 
   <!-- Error Toast Notification -->
-  <div id="error-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700">
+  <div id="error-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-red-100 border border-red-400">
     <div class="flex-shrink-0">
-      <i class="fa-solid fa-exclamation-circle text-2xl text-red-600 dark:text-red-400"></i>
+      <i class="fa-solid fa-exclamation-circle text-2xl text-red-600"></i>
     </div>
     <div class="flex-1">
-      <p class="font-bold text-base text-red-800 dark:text-red-200" id="error-toast-title">Error</p>
-      <p class="text-sm text-red-700 dark:text-red-300" id="error-toast-message"></p>
+      <p class="font-bold text-base text-red-800" id="error-toast-title">Error</p>
+      <p class="text-sm text-red-700" id="error-toast-message"></p>
     </div>
   </div>
   
   <!-- Success Toast Notification -->
-  <div id="success-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-green-100 dark:bg-green-900/30 border border-green-400 dark:border-green-700">
+  <div id="success-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-green-100 border border-green-400">
     <div class="flex-shrink-0">
-      <i class="fa-solid fa-check-circle text-2xl text-green-600 dark:text-green-400"></i>
+      <i class="fa-solid fa-check-circle text-2xl text-green-600"></i>
     </div>
     <div class="flex-1">
-      <p class="font-bold text-base text-green-800 dark:text-green-200">Success!</p>
-      <p class="text-sm text-green-700 dark:text-green-300" id="success-toast-message"></p>
+      <p class="font-bold text-base text-green-800">Success!</p>
+      <p class="text-sm text-green-700" id="success-toast-message"></p>
     </div>
   </div>
 
   <!-- ============================================================
        LOGIN SCREEN
        ============================================================ -->
-  <div x-show="!showSplash" x-transition class="fixed inset-0 z-50 flex items-center justify-center"
-       :class="darkMode ? 'bg-[#0a140e]' : 'bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700'">
+  <div x-show="!showSplash" x-transition class="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700">
     <!-- Background decorations -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10" :class="darkMode ? 'bg-primary-400' : 'bg-white'"></div>
-      <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full opacity-10" :class="darkMode ? 'bg-primary-500' : 'bg-white'"></div>
-      <div class="absolute top-1/3 right-1/4 w-64 h-64 rounded-full opacity-5" :class="darkMode ? 'bg-primary-300' : 'bg-white'"></div>
+      <div class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10 bg-white"></div>
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 rounded-full opacity-10 bg-white"></div>
+      <div class="absolute top-1/3 right-1/4 w-64 h-64 rounded-full opacity-5 bg-white"></div>
     </div>
 
     <div class="relative w-full max-w-md mx-4">
-      <div class="card rounded-2xl p-8 shadow-2xl" :class="darkMode ? 'bg-[#0d1f16] border border-[#1a3328]' : 'bg-white'">
+      <div class="card rounded-2xl p-8 shadow-2xl bg-white">
         <!-- Logo -->
         <div class="text-center mb-8">
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 mb-4 shadow-lg">
             <i class="fa-solid fa-leaf text-white text-2xl"></i>
           </div>
-          <h1 class="text-2xl font-bold" :class="darkMode?'text-white':'text-primary-900'">FEEDTAN DIGITAL</h1>
-          <p class="text-sm mt-1" :class="darkMode?'text-primary-300':'text-primary-600'">Payment System</p>
+          <h1 class="text-2xl font-bold text-primary-900">FEEDTAN DIGITAL</h1>
+          <p class="text-sm mt-1 text-primary-600">Payment System</p>
         </div>
 
         <form id="loginForm" method="POST" action="{{ route('login') }}" @submit.prevent="submitLogin()">
@@ -123,12 +120,11 @@
 
           <!-- Email -->
           <div class="mb-4">
-            <label class="block text-sm font-semibold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Email Address</label>
+            <label class="block text-sm font-semibold mb-2 text-primary-700">Email Address</label>
             <div class="relative">
-              <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
+              <i class="fa-solid fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-sm text-primary-500"></i>
               <input id="email" type="email" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="you@example.com"
-                     class="form-input pl-9"
-                     :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'"/>
+                     class="form-input pl-9 bg-gray-50 border-primary-200 text-primary-900"/>
             </div>
             @error('email')
               <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
@@ -137,12 +133,11 @@
 
           <!-- Password -->
           <div class="mb-6">
-            <label class="block text-sm font-semibold mb-2" :class="darkMode?'text-primary-300':'text-primary-700'">Password</label>
+            <label class="block text-sm font-semibold mb-2 text-primary-700">Password</label>
             <div class="relative">
-              <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-sm" :class="darkMode?'text-primary-400':'text-primary-500'"></i>
+              <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-sm text-primary-500"></i>
               <input id="password" type="password" name="password" required autocomplete="current-password" placeholder="••••••••"
-                     class="form-input pl-9"
-                     :class="darkMode?'bg-[#0a140e] border-[#1a3328] text-white':'bg-gray-50 border-primary-200 text-primary-900'"/>
+                     class="form-input pl-9 bg-gray-50 border-primary-200 text-primary-900"/>
             </div>
             @error('password')
               <p class="mt-2 text-xs font-bold text-red-500">{{ $message }}</p>
@@ -153,10 +148,10 @@
                     <div class="flex items-center justify-between mb-6">
                         <div class="flex items-center gap-2">
                             <input id="remember" type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }} class="w-4 h-4 rounded border-primary-200 bg-primary-50 text-primary-600 focus:ring-primary-500">
-                            <label for="remember" class="text-xs text-primary-500 font-medium cursor-pointer" :class="darkMode?'text-primary-300':'text-primary-600'">Remember Me</label>
+                            <label for="remember" class="text-xs text-primary-600 font-medium cursor-pointer">Remember Me</label>
                         </div>
                         <div>
-                            <a href="{{ route('password.request') }}" class="text-xs font-semibold text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300 transition-colors">
+                            <a href="{{ route('password.request') }}" class="text-xs font-semibold text-primary-600 hover:text-primary-500 transition-colors">
                                 Forgot Password?
                             </a>
                         </div>
@@ -168,13 +163,6 @@
           </button>
         </form>
 
-        <!-- Dark mode toggle -->
-        <div class="mt-4 flex justify-center">
-          <button @click="darkMode=!darkMode; localStorage.setItem('darkMode', darkMode);" class="text-xs flex items-center gap-2 transition-colors" :class="darkMode?'text-primary-300':'text-primary-600'">
-            <i :class="darkMode?'fa-solid fa-sun':'fa-solid fa-moon'"></i>
-            <span x-text="darkMode?'Switch to Light Mode':'Switch to Dark Mode'"></span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -182,8 +170,7 @@
   <!-- ============================================================
        LOADING SCREEN
        ============================================================ -->
-  <div x-show="showSplash" x-transition class="fixed inset-0 z-[60] flex items-center justify-center"
-       :class="darkMode ? 'bg-[#0a140e]' : 'bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700'">
+  <div x-show="showSplash" x-transition class="fixed inset-0 z-[60] flex items-center justify-center bg-gradient-to-br from-primary-900 via-primary-800 to-primary-700">
     <div class="text-center">
       <!-- Spinner -->
       <div class="mb-6">
@@ -200,7 +187,6 @@
   <script>
     function loginApp() {
       return {
-        darkMode: localStorage.getItem('darkMode') === 'true',
         showSplash: false,
         currentStep: 'Validating...',
         currentStepDescription: 'Checking your credentials',
@@ -260,12 +246,6 @@
       if (autoLogout) {
         const toast = document.getElementById('auto-logout-toast');
         toast.classList.remove('hidden');
-        const isDark = document.documentElement.classList.contains('dark');
-        if (isDark) {
-          toast.classList.add('bg-yellow-900/30', 'border', 'border-yellow-700');
-        } else {
-          toast.classList.add('bg-yellow-100', 'border', 'border-yellow-400');
-        }
       }
       
       @if($errors->any())

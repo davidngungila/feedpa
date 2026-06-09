@@ -10,19 +10,19 @@
             <div class="flex items-center gap-6">
                 <!-- Avatar Section -->
                 <div class="p-3 bg-white rounded-2xl border border-primary-100 shadow-sm flex-shrink-0">
-                    <div class="w-24 h-24 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center overflow-hidden">
+                    <div class="w-24 h-24 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center overflow-hidden">
                         @if(auth()->user()->avatar)
                             <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
                         @else
-                            <i class="fas fa-user text-4xl text-primary-600 dark:text-primary-400"></i>
+                            <i class="fas fa-user text-4xl text-primary-600"></i>
                         @endif
                     </div>
                 </div>
                 <div>
                     <div class="text-[10px] text-primary-500 uppercase font-extrabold tracking-widest mb-1">User ID</div>
-                    <div class="text-xl font-mono font-bold text-primary-900 dark:text-white">#{{ auth()->user()->id }}</div>
+                    <div class="text-xl font-mono font-bold text-primary-900">#{{ auth()->user()->id }}</div>
                     <div class="mt-2">
-                        <span class="px-4 py-1.5 text-xs font-bold rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
+                        <span class="px-4 py-1.5 text-xs font-bold rounded-full bg-primary-100 text-primary-700">
                             <i class="fas fa-id-card me-2"></i>
                             {{ auth()->user()->position ?? 'Member' }}
                         </span>
@@ -31,7 +31,7 @@
             </div>
             <div class="text-center sm:text-right">
                 <div class="text-[10px] text-primary-500 uppercase font-extrabold tracking-widest mb-1">Profile</div>
-                <div class="text-3xl font-mono font-black text-primary-600 dark:text-primary-400">
+                <div class="text-3xl font-mono font-black text-primary-600">
                     {{ auth()->user()->name }}
                 </div>
             </div>
@@ -46,17 +46,17 @@
                 <i class="fas fa-envelope"></i> Contact Information
             </h3>
             <div class="space-y-3">
-                <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
+                <div class="flex justify-between border-b border-primary-50 pb-2">
                     <span class="text-xs text-gray-400 uppercase font-bold">Email Address</span>
-                    <span class="text-xs font-bold text-primary-900 dark:text-white">{{ auth()->user()->email }}</span>
+                    <span class="text-xs font-bold text-primary-900">{{ auth()->user()->email }}</span>
                 </div>
-                <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
+                <div class="flex justify-between border-b border-primary-50 pb-2">
                     <span class="text-xs text-gray-400 uppercase font-bold">Phone Number</span>
-                    <span class="text-xs font-bold text-primary-900 dark:text-white">{{ auth()->user()->phone ?? 'N/A' }}</span>
+                    <span class="text-xs font-bold text-primary-900">{{ auth()->user()->phone ?? 'N/A' }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-xs text-gray-400 uppercase font-bold">Member Since</span>
-                    <span class="text-xs font-bold text-primary-900 dark:text-white">
+                    <span class="text-xs font-bold text-primary-900">
                         {{ auth()->user()->created_at->format('M d, Y • H:i:s') }}
                     </span>
                 </div>
@@ -69,15 +69,27 @@
                 <i class="fas fa-cog"></i> Account Details
             </h3>
             <div class="space-y-3">
-                <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
+                <div class="flex justify-between border-b border-primary-50 pb-2">
                     <span class="text-xs text-gray-400">Status</span>
-                    <span class="text-xs font-bold text-green-600 dark:text-green-400 uppercase">
+                    <span class="text-xs font-bold text-green-600 uppercase">
                         <i class="fas fa-check-circle me-1"></i> Active
                     </span>
                 </div>
+                <div class="flex justify-between border-b border-primary-50 pb-2">
+                    <span class="text-xs text-gray-400">Two-Factor Auth</span>
+                    @if(auth()->user()->two_factor_enabled)
+                        <span class="text-xs font-bold text-green-600 uppercase">
+                            <i class="fas fa-check-circle me-1"></i> Enabled
+                        </span>
+                    @else
+                        <span class="text-xs font-bold text-gray-500 uppercase">
+                            <i class="fas fa-times-circle me-1"></i> Disabled
+                        </span>
+                    @endif
+                </div>
                 <div class="flex justify-between">
                     <span class="text-xs text-gray-400">Last Updated</span>
-                    <span class="text-xs font-bold text-primary-900 dark:text-white">
+                    <span class="text-xs font-bold text-primary-900">
                         {{ auth()->user()->updated_at->format('M d, Y • H:i:s') }}
                     </span>
                 </div>
@@ -96,11 +108,22 @@
                 <i class="fas fa-edit"></i> Edit Profile
             </a>
             <a href="{{ route('profile.edit') }}#password" 
-               class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+               class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white border border-primary-100 text-primary-600 text-xs font-bold hover:bg-primary-50 transition-all">
                 <i class="fas fa-key"></i> Change Password
             </a>
+            @if(!auth()->user()->two_factor_enabled)
+                <a href="{{ route('profile.two-factor.setup') }}" 
+                   class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white border border-primary-100 text-primary-600 text-xs font-bold hover:bg-primary-50 transition-all">
+                    <i class="fas fa-shield-alt"></i> Enable 2FA
+                </a>
+            @else
+                <a href="{{ route('profile.two-factor.disable.show') }}" 
+                   class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white border border-red-200 text-red-600 text-xs font-bold hover:bg-red-50 transition-all">
+                    <i class="fas fa-shield-alt"></i> Disable 2FA
+                </a>
+            @endif
             <a href="{{ route('dashboard.index') }}" 
-               class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 transition-all">
+               class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-white border border-primary-100 text-primary-600 text-xs font-bold hover:bg-primary-50 transition-all">
                 <i class="fas fa-home"></i> Dashboard
             </a>
         </div>
@@ -134,7 +157,7 @@
                     });
             ">
                 @csrf
-                <button type="submit" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 transition-all">
+                <button type="submit" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all">
                     Logout All Others
                 </button>
             </form>
@@ -147,21 +170,21 @@
 
         <template x-if="!loading && activeSessions.length === 0">
             <div class="py-8 text-center">
-                <i class="fas fa-users-slash text-4xl text-primary-200 dark:text-primary-800"></i>
+                <i class="fas fa-users-slash text-4xl text-primary-200"></i>
                 <p class="text-xs text-primary-500 mt-2">No active sessions found.</p>
             </div>
         </template>
 
         <div x-show="!loading && activeSessions.length > 0" class="space-y-3">
             <template x-for="session in activeSessions" :key="session.id">
-                <div class="flex items-center justify-between p-4 rounded-xl bg-primary-50/50 dark:bg-primary-900/20 border border-primary-100 dark:border-dark-border">
+                <div class="flex items-center justify-between p-4 rounded-xl bg-primary-50/50 border border-primary-100">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
-                            <i class="fas fa-desktop text-primary-600 dark:text-primary-400"></i>
+                        <div class="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                            <i class="fas fa-desktop text-primary-600"></i>
                         </div>
                         <div>
                             <div class="flex items-center gap-2">
-                                <span class="text-xs font-bold text-primary-900 dark:text-white" x-text="session.is_current ? 'Current Session' : 'Session'"></span>
+                                <span class="text-xs font-bold text-primary-900" x-text="session.is_current ? 'Current Session' : 'Session'"></span>
                                 <template x-if="session.is_current">
                                     <span class="badge badge-green text-[9px]"><i class="fas fa-check"></i> Active</span>
                                 </template>
@@ -184,7 +207,7 @@
                                     .then(() => fetchSessions());
                               ">
                             @csrf
-                            <button type="submit" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400 transition-all">
+                            <button type="submit" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition-all">
                                 Logout
                             </button>
                         </form>

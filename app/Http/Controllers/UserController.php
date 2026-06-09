@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Crypt;
+use PragmaRX\Google2FAQRCode\Google2FA;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -354,5 +357,130 @@ class UserController extends Controller
             ->delete();
         
         return back()->with('success', 'All other sessions logged out successfully');
+    }
+    
+    /**
+     * Show 2FA setup page.
+     */
+    public function showTwoFactorSetup()
+    {
+        $user = auth()->user();
+        
+        if ($user->two_factor_enabled) {
+            return redirect()->route('profile.index')->with('info', 'Two-factor authentication is already enabled');
+        }
+        
+        $google2fa = new Google2FA();
+        $secret = $google2fa->generateSecretKey();
+        
+        Session::put('two_factor_setup_secret', $secret);
+        
+        $qrCodeUrl = $google2fa->getQRCodeInline(
+            config('app.name'),
+            $user->email,
+            $secret
+        );
+        
+        return view('profile.two-factor-setup', compact('qrCodeUrl', 'secret'));
+    }
+    
+    /**
+     * Verify 2FA code and enable it.
+     */
+    public function enableTwoFactor(Request $request)
+    {
+        $request->validate([
+            'code' => 'required|string',
+        ]);
+        
+        $user = auth()->user();
+        $google2fa = new Google2FA();
+        $secret = Session::get('two_factor_setup_secret');
+        
+        if (!$secret) {
+            return back()->with('error', 'Two-factor setup session expired');
+        }
+        
+        $valid = $google2fa->verifyKey($secret, $request->code);
+        
+        if (!$valid) {
+            return back()->with('error', 'Invalid verification code');
+        }
+        
+        // Generate recovery codes
+        $recoveryCodes = [];
+        for ($i = 0; $i < 8; $i++) {
+            $recoveryCodes[] = Str::random(10) . '-' . Str::random(10);
+        }
+        
+        $user->update([
+            'two_factor_secret' => Crypt::encryptString($secret),
+            'two_factor_recovery_codes' => Crypt::encryptString(json_encode($recoveryCodes)),
+            'two_factor_enabled' => true,
+            'two_factor_confirmed_at' => now(),
+        ]);
+        
+        Session::forget('two_factor_setup_secret');
+        
+        Audit::log('enable_2fa', "Enabled two-factor authentication for user: {$user->name} ({$user->email})");
+        
+        return view('profile.two-factor-recovery-codes', compact('recoveryCodes'));
+    }
+    
+    /**
+     * Show 2FA disable confirmation.
+     */
+    public function showDisableTwoFactor()
+    {
+        return view('profile.disable-two-factor');
+    }
+    
+    /**
+     * Disable 2FA.
+     */
+    public function disableTwoFactor(Request $request)
+    {
+        $request->validate([
+            'password' => 'required',
+        ]);
+        
+        $user = auth()->user();
+        
+        if (!Hash::check($request->password, $user->password)) {
+            return back()->with('error', 'The password is incorrect');
+        }
+        
+        $user->update([
+            'two_factor_enabled' => false,
+            'two_factor_secret' => null,
+            'two_factor_recovery_codes' => null,
+            'two_factor_confirmed_at' => null,
+        ]);
+        
+        Audit::log('disable_2fa', "Disabled two-factor authentication for user: {$user->name} ({$user->email})");
+        
+        return redirect()->route('profile.index')->with('success', 'Two-factor authentication disabled');
+    }
+    
+    /**
+     * Regenerate 2FA recovery codes.
+     */
+    public function regenerateRecoveryCodes()
+    {
+        $user = auth()->user();
+        
+        // Generate new recovery codes
+        $recoveryCodes = [];
+        for ($i = 0; $i < 8; $i++) {
+            $recoveryCodes[] = Str::random(10) . '-' . Str::random(10);
+        }
+        
+        $user->update([
+            'two_factor_recovery_codes' => Crypt::encryptString(json_encode($recoveryCodes)),
+        ]);
+        
+        Audit::log('regenerate_2fa_codes', "Regenerated two-factor recovery codes for user: {$user->name} ({$user->email})");
+        
+        return view('profile.two-factor-recovery-codes', compact('recoveryCodes'));
     }
 }

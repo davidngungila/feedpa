@@ -128,6 +128,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/sessions', [UserController::class, 'getActiveSessions'])->name('sessions');
         Route::post('/sessions/logout/{sessionId}', [UserController::class, 'logoutSession'])->name('sessions.logout');
         Route::post('/sessions/logout-others', [UserController::class, 'logoutOtherSessions'])->name('sessions.logout-others');
+        
+        // 2FA Routes
+        Route::get('/two-factor', [UserController::class, 'showTwoFactorSetup'])->name('two-factor.setup');
+        Route::post('/two-factor/enable', [UserController::class, 'enableTwoFactor'])->name('two-factor.enable');
+        Route::get('/two-factor/disable', [UserController::class, 'showDisableTwoFactor'])->name('two-factor.disable.show');
+        Route::post('/two-factor/disable', [UserController::class, 'disableTwoFactor'])->name('two-factor.disable');
+        Route::post('/two-factor/recovery-codes/regenerate', [UserController::class, 'regenerateRecoveryCodes'])->name('two-factor.recovery-codes.regenerate');
     });
     
     // Settings Routes (Admin Only)
@@ -193,3 +200,7 @@ Route::prefix('password')->name('password.')->group(function () {
 
 // Authentication Routes (if needed)
 Auth::routes(['reset' => false, 'confirm' => false, 'verify' => false]);
+
+// Two-Factor Authentication Routes
+Route::get('/two-factor', [\App\Http\Controllers\Auth\LoginController::class, 'showTwoFactorLoginForm'])->name('two-factor.login');
+Route::post('/two-factor', [\App\Http\Controllers\Auth\LoginController::class, 'verifyTwoFactor'])->name('two-factor.verify');

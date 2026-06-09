@@ -42,6 +42,61 @@
     @endif
 
     <div class="card p-6">
+        <!-- Filters -->
+        <form method="GET" action="{{ route('bills.index') }}" class="mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Search -->
+                <div class="lg:col-span-2">
+                    <label class="text-[10px] font-black uppercase tracking-wider text-primary-500 mb-1 block">Search</label>
+                    <div class="relative">
+                        <input type="text" name="search" value="{{ $search }}" placeholder="Search by control number, description, customer, etc."
+                               class="w-full px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-900 text-primary-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/30">
+                        <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 text-xs"></i>
+                    </div>
+                </div>
+                <!-- Status Filter -->
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-wider text-primary-500 mb-1 block">Status</label>
+                    <select name="status" class="w-full px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-900 text-primary-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/30">
+                        <option value="ALL" {{ $status === 'ALL' ? 'selected' : '' }}>All Status</option>
+                        <option value="ACTIVE" {{ $status === 'ACTIVE' ? 'selected' : '' }}>Active</option>
+                        <option value="INACTIVE" {{ $status === 'INACTIVE' ? 'selected' : '' }}>Inactive</option>
+                    </select>
+                </div>
+                <!-- Type Filter -->
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-wider text-primary-500 mb-1 block">Type</label>
+                    <select name="type" class="w-full px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-900 text-primary-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/30">
+                        <option value="ALL" {{ $type === 'ALL' ? 'selected' : '' }}>All Types</option>
+                        <option value="order" {{ $type === 'order' ? 'selected' : '' }}>Order</option>
+                        <option value="customer" {{ $type === 'customer' ? 'selected' : '' }}>Customer</option>
+                    </select>
+                </div>
+                <!-- Actions -->
+                <div class="flex gap-2 items-end">
+                    <button type="submit" class="flex-1 px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
+                        <i class="fas fa-filter me-1"></i> Filter
+                    </button>
+                    <a href="{{ route('bills.index') }}" class="flex-1 px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border text-xs font-bold text-primary-600 hover:bg-primary-50 transition-all">
+                        <i class="fas fa-redo"></i>
+                    </a>
+                </div>
+            </div>
+            <!-- Date Range -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-wider text-primary-500 mb-1 block">Start Date</label>
+                    <input type="date" name="start_date" value="{{ $startDate }}"
+                           class="w-full px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-900 text-primary-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/30">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-wider text-primary-500 mb-1 block">End Date</label>
+                    <input type="date" name="end_date" value="{{ $endDate }}"
+                           class="w-full px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-900 text-primary-900 dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-primary-500/30">
+                </div>
+            </div>
+        </form>
+
         <div class="overflow-x-auto">
             <table class="w-full text-xs">
                 <thead>
@@ -77,6 +132,7 @@
                                 'created_at' => $bill->created_at->format('d M, Y'),
                                 'created_time' => $bill->created_at->format('H:i:s'),
                                 'show_url' => route('bills.show', $bill->id),
+                                'edit_url' => route('bills.edit', $bill->id),
                                 'pdf_url' => route('bills.pdf', $bill->id),
                             ];
                         @endphp
@@ -113,20 +169,25 @@
                             </td>
                             <td class="py-3 text-primary-500">{{ $bill->created_at->format('Y-m-d H:i') }}</td>
                             <td class="py-3">
-                                <div class="flex gap-1.5 justify-center">
-                                    <button type="button"
-                                            @click="openDetails(@js($detailPayload))"
-                                            class="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                            title="Preview details">
-                                        <i class="fas fa-eye text-[10px]"></i>
-                                    </button>
-                                    <a href="{{ route('bills.pdf', $bill->id) }}" target="_blank"
-                                       class="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                       title="Download PDF">
-                                        <i class="fas fa-file-pdf text-[10px]"></i>
-                                    </a>
-                                </div>
-                            </td>
+                            <div class="flex gap-1.5 justify-center">
+                                <button type="button"
+                                        @click="openDetails(@js($detailPayload))"
+                                        class="w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
+                                        title="Preview details">
+                                    <i class="fas fa-eye text-[10px]"></i>
+                                </button>
+                                <a href="{{ route('bills.edit', $bill->id) }}"
+                                   class="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all"
+                                   title="Edit bill">
+                                    <i class="fas fa-edit text-[10px]"></i>
+                                </a>
+                                <a href="{{ route('bills.pdf', $bill->id) }}" target="_blank"
+                                   class="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                   title="Download PDF">
+                                    <i class="fas fa-file-pdf text-[10px]"></i>
+                                </a>
+                            </div>
+                        </td>
                         </tr>
                     @empty
                         <tr>
@@ -263,6 +324,9 @@
                     <div class="flex flex-wrap gap-2 pt-2">
                         <a :href="selected.show_url" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
                             <i class="fas fa-external-link-alt me-1"></i> Full Bill Page
+                        </a>
+                        <a :href="selected.edit_url" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all">
+                            <i class="fas fa-edit me-1"></i> Edit Bill
                         </a>
                         <a :href="selected.pdf_url" target="_blank" class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-all">
                             <i class="fas fa-file-pdf me-1"></i> Download PDF

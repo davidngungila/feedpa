@@ -93,6 +93,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/store-order', [BillController::class, 'storeOrder'])->name('store-order');
         Route::get('/create-customer', [BillController::class, 'createCustomer'])->name('create-customer');
         Route::post('/store-customer', [BillController::class, 'storeCustomer'])->name('store-customer');
+        Route::get('/{id}/edit', [BillController::class, 'edit'])->name('edit');
+        Route::put('/{id}', [BillController::class, 'update'])->name('update');
         Route::get('/{id}', [BillController::class, 'show'])->name('show');
         Route::get('/{id}/pdf', [BillController::class, 'pdf'])->name('pdf');
     });

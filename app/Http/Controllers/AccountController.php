@@ -262,21 +262,78 @@ class AccountController extends Controller
                 ];
             });
 
-            // Combine payments and payouts, sort by date (newest first)
-            $dbTransactions = $dbPayments->merge($dbPayouts)->sortByDesc('date')->values();
+            // Get ALL DB transactions (regardless of date range/search) to calculate correct starting balance
+            $allDbPayments = \App\Models\Transaction::query()
+                ->where('type', 'payment')
+                ->orderBy('created_at', 'asc')
+                ->get()
+                ->map(function ($t) {
+                    return [
+                        'date' => $t->created_at->toIso8601String(),
+                        'amount' => (float)$t->amount,
+                        'currency' => $t->currency ?? 'TZS',
+                        'entry' => 'CREDIT',
+                        'status' => strtoupper($t->status),
+                    ];
+                });
+
+            $allDbPayouts = \App\Models\Payout::query()
+                ->orderBy('created_at', 'asc')
+                ->get()
+                ->map(function ($p) {
+                    return [
+                        'date' => $p->created_at->toIso8601String(),
+                        'amount' => (float)$p->amount,
+                        'currency' => $p->currency ?? 'TZS',
+                        'entry' => 'DEBIT',
+                        'status' => strtoupper($p->status ?? 'UNKNOWN'),
+                    ];
+                });
+
+            // Combine and calculate total balance up to NOW
+            $allDbCombined = $allDbPayments->merge($allDbPayouts)->sortBy('date')->values();
+            $startingBalance = 0;
+            foreach ($allDbCombined as $t) {
+                if (in_array($t['status'], ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
+                    if ($t['entry'] === 'CREDIT') {
+                        $startingBalance += $t['amount'];
+                    } else {
+                        $startingBalance -= $t['amount'];
+                    }
+                }
+            }
+
+            // Combine filtered payments and payouts, sort by date ascending
+            $dbTransactions = $dbPayments->merge($dbPayouts)->sortBy('date')->values();
             $dbCount = $dbTransactions->count();
 
-            // Calculate running balance for database transactions
-            $runningBalance = 0;
+            // Calculate running balance for filtered list, starting from total balance and working backwards
+            $runningBalance = $startingBalance;
             $dbTransactions = $dbTransactions->reverse()->map(function ($t) use (&$runningBalance) {
-                if ($t['entry'] === 'CREDIT') {
-                    $runningBalance += $t['amount'];
-                } else {
-                    $runningBalance -= $t['amount'];
+                // We need to go backwards, so subtract credits and add debits
+                if (in_array($t['status'], ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
+                    if ($t['entry'] === 'CREDIT') {
+                        $runningBalance -= $t['amount'];
+                    } else {
+                        $runningBalance += $t['amount'];
+                    }
                 }
                 $t['running_balance'] = $runningBalance;
                 return $t;
             })->reverse();
+            
+            // Now re-add the first transaction's amount to get the correct starting balance for the first row
+            if ($dbTransactions->isNotEmpty()) {
+                $firstTransaction = $dbTransactions->first();
+                if (in_array($firstTransaction['status'], ['SUCCESS', 'SETTLED', 'COMPLETED'])) {
+                    if ($firstTransaction['entry'] === 'CREDIT') {
+                        $firstTransaction['running_balance'] += $firstTransaction['amount'];
+                    } else {
+                        $firstTransaction['running_balance'] -= $firstTransaction['amount'];
+                    }
+                    $dbTransactions[0] = $firstTransaction;
+                }
+            }
 
             // 3. Fetch API data
             try {

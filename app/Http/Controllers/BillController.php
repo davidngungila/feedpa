@@ -19,10 +19,49 @@ class BillController extends Controller
         $this->clickPesaService = $clickPesaService;
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $bills = BillPayNumber::latest()->paginate(20);
-        return view('bills.index', compact('bills'));
+        $status = $request->input('status', 'ALL');
+        $type = $request->input('type', 'ALL');
+        $search = $request->input('search', '');
+        $startDate = $request->input('start_date', '');
+        $endDate = $request->input('end_date', '');
+
+        $query = BillPayNumber::query();
+
+        // Status filter
+        if ($status && $status !== 'ALL') {
+            $query->where('bill_status', $status);
+        }
+
+        // Type filter
+        if ($type && $type !== 'ALL') {
+            $query->where('bill_type', $type);
+        }
+
+        // Search filter
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('bill_pay_number', 'like', "%{$search}%")
+                  ->orWhere('bill_description', 'like', "%{$search}%")
+                  ->orWhere('bill_reference', 'like', "%{$search}%")
+                  ->orWhere('customer_name', 'like', "%{$search}%")
+                  ->orWhere('customer_email', 'like', "%{$search}%")
+                  ->orWhere('customer_phone', 'like', "%{$search}%");
+            });
+        }
+
+        // Date range filter
+        if ($startDate) {
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+        if ($endDate) {
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        $bills = $query->orderBy('created_at', 'desc')->paginate(20);
+
+        return view('bills.index', compact('bills', 'status', 'type', 'search', 'startDate', 'endDate'));
     }
 
     public function createOrder()
@@ -211,6 +250,50 @@ class BillController extends Controller
         Audit::log('view_bill', "Viewed bill: {$bill->bill_pay_number} ({$bill->bill_description})");
         
         return view('bills.show', compact('bill', 'qrCodeImage', 'transactions'));
+    }
+
+    public function edit($id)
+    {
+        $bill = BillPayNumber::findOrFail($id);
+        return view('bills.edit', compact('bill'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $bill = BillPayNumber::findOrFail($id);
+
+        $request->validate([
+            'bill_description' => 'required|string',
+            'bill_amount' => 'nullable|numeric',
+            'bill_payment_mode' => 'required|in:ALLOW_PARTIAL_AND_OVER_PAYMENT,EXACT',
+            'bill_status' => 'required|in:ACTIVE,INACTIVE',
+            'notes' => 'nullable|string',
+        ]);
+
+        try {
+            // Update via API first
+            $this->clickPesaService->updateBillPayReference(
+                $bill->bill_pay_number,
+                $request->bill_amount,
+                $request->bill_description,
+                $request->bill_payment_mode,
+                $request->bill_status
+            );
+
+            // Update local database
+            $bill->update([
+                'bill_description' => $request->bill_description,
+                'bill_amount' => $request->bill_amount,
+                'bill_payment_mode' => $request->bill_payment_mode,
+                'bill_status' => $request->bill_status,
+                'notes' => $request->notes,
+            ]);
+
+            return redirect()->route('bills.show', $bill->id)->with('success', 'Bill updated successfully!');
+        } catch (\Exception $e) {
+            Log::error('Error updating bill', ['error' => $e->getMessage()]);
+            return back()->with('error', $e->getMessage());
+        }
     }
 
     public function pdf($id)

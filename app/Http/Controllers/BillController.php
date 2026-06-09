@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BillPayNumber;
+use App\Models\Audit;
 use App\Services\ClickPesaAPIService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;

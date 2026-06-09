@@ -97,7 +97,7 @@
     
     @stack('styles')
 </head>
-<body class="h-full main-bg" x-data="{ sidebarOpen: false, darkMode: localStorage.getItem('darkMode') === 'true', openDropdowns: [], profileDropdownOpen: false, isLoading: true }" :class="{'dark': darkMode}" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300);">
+<body class="h-full main-bg" x-data="{ sidebarOpen: false, openDropdowns: [], profileDropdownOpen: false, isLoading: true }" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300);">
     
     <!-- Loading Overlay -->
     <div x-show="isLoading"
@@ -107,7 +107,7 @@
          x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="opacity-100"
          x-transition:leave-end="opacity-0"
-         class="fixed inset-0 z-[9999] bg-primary-50/80 dark:bg-dark-900/90 backdrop-blur-sm flex items-center justify-center">
+         class="fixed inset-0 z-[9999] bg-primary-50/80 backdrop-blur-sm flex items-center justify-center">
         <div class="text-center space-y-4">
             <div class="flex items-center justify-center gap-2">
                 <div class="w-4 h-4 rounded-full bg-primary-500 animate-bounce-slow" style="animation-delay: 0s;"></div>
@@ -115,9 +115,9 @@
                 <div class="w-4 h-4 rounded-full bg-primary-500 animate-bounce-slow" style="animation-delay: 0.2s;"></div>
             </div>
             <div class="flex items-center gap-2">
-                <div class="w-10 h-10 rounded-full border-4 border-primary-200 dark:border-primary-900 border-t-primary-500 animate-spin-slow"></div>
+                <div class="w-10 h-10 rounded-full border-4 border-primary-200 border-t-primary-500 animate-spin-slow"></div>
             </div>
-            <p class="text-sm font-semibold text-primary-700 dark:text-primary-300">Loading...</p>
+            <p class="text-sm font-semibold text-primary-700">Loading...</p>
         </div>
     </div>
     
@@ -346,11 +346,6 @@
 
             <!-- Sidebar Footer -->
             <div class="p-4 border-t border-primary-800/50">
-                <button @click="darkMode = !darkMode; localStorage.setItem('darkMode', darkMode)" 
-                        class="w-full flex items-center gap-3 px-3 py-2 text-primary-300 hover:text-white transition-colors">
-                    <i :class="darkMode ? 'fa-solid fa-sun' : 'fa-solid fa-moon'" class="w-4 text-center"></i>
-                    <span x-text="darkMode ? 'Light Mode' : 'Dark Mode'"></span>
-                </button>
             </div>
         </aside>
 
@@ -359,17 +354,17 @@
             <!-- Top Navbar -->
             <header class="navbar-bg flex items-center justify-between px-6 h-16 flex-shrink-0">
                 <div class="flex items-center gap-4">
-                    <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-lg text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30">
+                    <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-lg text-primary-600 hover:bg-primary-50">
                         <i class="fa-solid fa-bars"></i>
                     </button>
-                    <h2 class="text-lg font-bold text-primary-900 dark:text-white">
+                    <h2 class="text-lg font-bold text-primary-900">
                         @yield('title', 'Dashboard')
                     </h2>
                 </div>
                 
                 <!-- Connection Status -->
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-50 dark:bg-primary-900/30">
+                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-50">
                         <div class="relative">
                             @if(cache()->get('api_status', 'connected') === 'connected')
                                 <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
@@ -378,22 +373,22 @@
                                 <div class="w-3 h-3 rounded-full bg-red-500"></div>
                             @endif
                         </div>
-                        <span class="text-xs font-bold text-primary-600 dark:text-primary-400">
+                        <span class="text-xs font-bold text-primary-600">
                             {{ cache()->get('api_status', 'connected') === 'connected' ? 'API Connected' : 'API Disconnected' }}
                         </span>
                     </div>
 
                 <div class="relative">
-                    <button @click="profileDropdownOpen = !profileDropdownOpen" class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
-                        <div class="w-10 h-10 rounded-xl bg-primary-100 dark:bg-primary-900 flex items-center justify-center overflow-hidden border-2 border-green-500">
+                    <button @click="profileDropdownOpen = !profileDropdownOpen" class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-primary-50 transition-all">
+                        <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center overflow-hidden border-2 border-green-500">
                             @if(auth()->user()->avatar)
                                 <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
                             @else
-                                <span class="text-primary-600 dark:text-primary-400 font-bold">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
+                                <span class="text-primary-600 font-bold">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
                             @endif
                         </div>
                         <div class="hidden sm:flex flex-col text-left">
-                            <p class="text-xs font-bold text-primary-900 dark:text-white">{{ auth()->user()->name ?? 'Administrator' }}</p>
+                            <p class="text-xs font-bold text-primary-900">{{ auth()->user()->name ?? 'Administrator' }}</p>
                             <p class="text-[10px] text-primary-500">{{ auth()->user()->position ?? 'Member' }}</p>
                         </div>
                         <i class="fas fa-chevron-down text-xs text-primary-400"></i>
@@ -408,21 +403,21 @@
                          x-transition:leave-start="opacity-100 transform scale-100"
                          x-transition:leave-end="opacity-0 transform scale-95"
                          @click.outside="profileDropdownOpen = false"
-                         class="absolute right-0 mt-2 w-64 z-50 rounded-xl shadow-xl bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border overflow-hidden">
+                         class="absolute right-0 mt-2 w-64 z-50 rounded-xl shadow-xl bg-white border border-primary-100 overflow-hidden">
                         
-                        <div class="p-4 bg-primary-50 dark:bg-primary-900/20 border-b border-primary-100 dark:border-dark-border">
+                        <div class="p-4 bg-primary-50 border-b border-primary-100">
                             <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 rounded-xl bg-primary-100 dark:bg-primary-900 flex items-center justify-center overflow-hidden border-2 border-green-500">
+                                <div class="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center overflow-hidden border-2 border-green-500">
                                     @if(auth()->user()->avatar)
                                         <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">
                                     @else
-                                        <span class="text-primary-600 dark:text-primary-400 font-bold text-lg">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
+                                        <span class="text-primary-600 font-bold text-lg">{{ substr(auth()->user()->name ?? 'A', 0, 1) }}</span>
                                     @endif
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-bold text-primary-900 dark:text-white truncate">{{ auth()->user()->name ?? 'Administrator' }}</p>
+                                    <p class="text-sm font-bold text-primary-900 truncate">{{ auth()->user()->name ?? 'Administrator' }}</p>
                                     <p class="text-xs text-primary-500 truncate">{{ auth()->user()->email ?? 'admin@feedtancmg.org' }}</p>
-                                    <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
+                                    <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-100 text-primary-700">
                                         {{ auth()->user()->position ?? 'Member' }}
                                     </span>
                                 </div>
@@ -431,22 +426,22 @@
 
                         <div class="py-2">
                             <a href="{{ route('profile.index') }}" 
-                               class="flex items-center gap-3 px-4 py-2.5 text-xs text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                               class="flex items-center gap-3 px-4 py-2.5 text-xs text-primary-700 hover:bg-primary-50 transition-all">
                                 <i class="fas fa-id-card w-4"></i>
                                 <span>My Profile</span>
                             </a>
                             <a href="{{ route('profile.edit') }}" 
-                               class="flex items-center gap-3 px-4 py-2.5 text-xs text-primary-700 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                               class="flex items-center gap-3 px-4 py-2.5 text-xs text-primary-700 hover:bg-primary-50 transition-all">
                                 <i class="fas fa-cog w-4"></i>
                                 <span>Settings</span>
                             </a>
                         </div>
 
-                        <div class="border-t border-primary-100 dark:border-dark-border">
+                        <div class="border-t border-primary-100">
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <button type="submit" 
-                                        class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all">
+                                        class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 transition-all">
                                     <i class="fas fa-sign-out-alt w-4"></i>
                                     <span>Logout</span>
                                 </button>

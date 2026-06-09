@@ -347,80 +347,6 @@
                                     'description' => $payout->resolvedDescription(),
                                     'date' => $createdAt?->format('d M, Y'),
                                     'time' => $createdAt?->format('H:i:s'),
-                        @elseif($item['type'] === 'payout-fee')
-                            @php
-                                $payout = $item['record'];
-                                $fee = $item['fee'];
-                                $status = strtoupper($payout->status ?? 'UNKNOWN');
-                                $isSettled = in_array($status, ['SUCCESS', 'SETTLED', 'COMPLETED']);
-                                $createdAt = $payout->created_at ? \Illuminate\Support\Carbon::parse($payout->created_at) : null;
-                            @endphp
-                            <tr class="hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
-                                    <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
-                                </td>
-                                <td>
-                                    <div class="flex items-center gap-1.5 max-w-[200px]">
-                                        <span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300 truncate" title="{{ $payout->order_reference }}-FEE">
-                                            {{ $payout->order_reference }}-FEE
-                                        </span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="font-bold text-primary-900 dark:text-white">Payout Fee</div>
-                                </td>
-                                <td>
-                                    <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate">
-                                        Fee for payout {{ $payout->order_reference }}
-                                    </div>
-                                </td>
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-red-600 dark:text-red-400">
-                                        - {{ number_format((float)$fee, 2) }}
-                                    </div>
-                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payout->currency ?? 'TZS' }}</div>
-                                </td>
-                                <td class="whitespace-nowrap text-center">
-                                    <span class="text-[10px] text-primary-400">—</span>
-                                </td>
-                                <td class="whitespace-nowrap text-center">
-                                    <span class="text-[10px] text-primary-400">—</span>
-                                </td>
-                                <td>
-                                    <div class="flex gap-2 justify-center">
-                                        <a href="{{ route('payouts.status', $payout->order_reference) }}"
-                                           class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                                           title="View payout">
-                                            <i class="fas fa-external-link-alt text-xs"></i>
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @else
-                            @php
-                                $payout = $item['record'];
-                                $status = strtoupper($payout->status ?? 'UNKNOWN');
-                                $isSettled = in_array($status, ['SUCCESS', 'SETTLED', 'COMPLETED']);
-
-                                $createdAt = $payout->created_at ? \Illuminate\Support\Carbon::parse($payout->created_at) : null;
-                                $updatedAt = $payout->updated_at ? \Illuminate\Support\Carbon::parse($payout->updated_at) : null;
-
-                                $detailPayload = [
-                                    'reference' => $payout->order_reference,
-                                    'transaction_id' => $payout->clickpesa_payout_id ?? 'N/A',
-                                    'status' => $status,
-                                    'isSettled' => $isSettled,
-                                    'amount' => (float) $payout->amount,
-                                    'currency' => $payout->currency ?? 'TZS',
-                                    'member_name' => $payout->recipient_name ?? 'N/A',
-                                    'payer_name' => $payout->recipient_name ?? 'N/A',
-                                    'phone' => $payout->recipient_phone ?? $payout->beneficiary_mobile ?? 'N/A',
-                                    'email' => $payout->beneficiary_email ?? null,
-                                    'payment_method' => $payout->channel ?? 'N/A',
-                                    'description' => $payout->resolvedDescription(),
-                                    'date' => $createdAt?->format('d M, Y'),
-                                    'time' => $createdAt?->format('H:i:s'),
                                     'created_at' => $createdAt?->toIso8601String(),
                                     'updated_at' => $updatedAt?->toIso8601String(),
                                     'status_url' => null,
@@ -480,6 +406,56 @@
                                                 title="Preview details">
                                             <i class="fas fa-eye text-xs"></i>
                                         </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @elseif($item['type'] === 'payout-fee')
+                            @php
+                                $payout = $item['record'];
+                                $fee = $item['fee'];
+                                $status = strtoupper($payout->status ?? 'UNKNOWN');
+                                $isSettled = in_array($status, ['SUCCESS', 'SETTLED', 'COMPLETED']);
+                                $createdAt = $payout->created_at ? \Illuminate\Support\Carbon::parse($payout->created_at) : null;
+                            @endphp
+                            <tr class="hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
+                                <td class="whitespace-nowrap">
+                                    <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
+                                    <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center gap-1.5 max-w-[200px]">
+                                        <span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300 truncate" title="{{ $payout->order_reference }}-FEE">
+                                            {{ $payout->order_reference }}-FEE
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="font-bold text-primary-900 dark:text-white">Payout Fee</div>
+                                </td>
+                                <td>
+                                    <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate">
+                                        Fee for payout {{ $payout->order_reference }}
+                                    </div>
+                                </td>
+                                <td class="whitespace-nowrap">
+                                    <div class="font-bold text-red-600 dark:text-red-400">
+                                        - {{ number_format((float)$fee, 2) }}
+                                    </div>
+                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payout->currency ?? 'TZS' }}</div>
+                                </td>
+                                <td class="whitespace-nowrap text-center">
+                                    <span class="text-[10px] text-primary-400">—</span>
+                                </td>
+                                <td class="whitespace-nowrap text-center">
+                                    <span class="text-[10px] text-primary-400">—</span>
+                                </td>
+                                <td>
+                                    <div class="flex gap-2 justify-center">
+                                        <a href="{{ route('payouts.status', $payout->order_reference) }}"
+                                           class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                           title="View payout">
+                                            <i class="fas fa-external-link-alt text-xs"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>

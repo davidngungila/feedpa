@@ -17,7 +17,7 @@
 
         <div class="flex flex-col items-center gap-4 mb-6">
             <div class="p-4 bg-white rounded-2xl border border-primary-100 shadow-sm">
-                {!! $qrCodeUrl !!}
+                {!! $qrCodeSvg !!}
             </div>
             <div class="text-center">
                 <p class="text-xs text-primary-500">Or manually enter this code:</p>

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Crypt;
 use PragmaRX\Google2FAQRCode\Google2FA;
 use Illuminate\Support\Str;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class UserController extends Controller
 {
@@ -375,13 +376,17 @@ class UserController extends Controller
         
         Session::put('two_factor_setup_secret', $secret);
         
-        $qrCodeUrl = $google2fa->getQRCodeInline(
+        // Generate QR code using SimpleSoftwareIO\QrCode
+        $qrCodeUrl = $google2fa->getQRCodeUrl(
             config('app.name'),
             $user->email,
             $secret
         );
         
-        return view('profile.two-factor-setup', compact('qrCodeUrl', 'secret'));
+        // Generate SVG QR code
+        $qrCodeSvg = QrCode::size(200)->margin(1)->generate($qrCodeUrl);
+        
+        return view('profile.two-factor-setup', compact('qrCodeSvg', 'secret'));
     }
     
     /**

@@ -27,7 +27,7 @@ class SyncClickPesaPayouts extends Command
         $this->info('Starting ClickPesa payout sync...');
 
         try {
-            $apiPayouts = $this->api->queryAllPayouts(['limit' => 100, 'orderBy' => 'DESC']);
+            $apiPayouts = $this->api->queryAllPayouts(['limit' => 20, 'orderBy' => 'DESC']);
             $payoutsData = $apiPayouts['data'] ?? $apiPayouts['payouts'] ?? [];
             
             if (!is_array($payoutsData)) {

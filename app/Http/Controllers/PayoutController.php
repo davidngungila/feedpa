@@ -487,7 +487,7 @@ class PayoutController extends Controller
     public function syncFromApi()
     {
         try {
-            $apiPayouts = $this->api->queryAllPayouts(['limit' => 100, 'orderBy' => 'DESC']);
+            $apiPayouts = $this->api->queryAllPayouts(['limit' => 20, 'orderBy' => 'DESC']);
             $payoutsData = $apiPayouts['data'] ?? $apiPayouts['payouts'] ?? [];
             $syncedCount = 0;
             

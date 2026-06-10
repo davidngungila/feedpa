@@ -5,7 +5,7 @@
 @section('content')
 <div class="space-y-6" x-data="paymentHistoryDetails()">
     <!-- Current Account Balances -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 gap-4">
         <div class="card p-5 bg-gradient-to-br from-primary-500 to-primary-700">
             <div class="flex items-center justify-between">
                 <div>
@@ -20,20 +20,6 @@
                 </div>
                 <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
                     <i class="fas fa-cloud text-2xl text-white"></i>
-                </div>
-            </div>
-        </div>
-        
-        <div class="card p-5 bg-gradient-to-br from-green-500 to-green-700">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-[10px] font-bold uppercase text-white/70 mb-1">Internal Database Balance</p>
-                    <p class="text-3xl font-black text-white">
-                        TZS {{ number_format($internalDbBalance, 2) }}
-                    </p>
-                </div>
-                <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                    <i class="fas fa-database text-2xl text-white"></i>
                 </div>
             </div>
         </div>

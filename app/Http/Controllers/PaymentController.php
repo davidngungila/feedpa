@@ -910,8 +910,8 @@ HTML;
             'updated_at' => 'Updated At',
         ];
 
-        // Get payments from database
-        $paymentQuery = Transaction::query()->where('type', 'payment');
+        // Get payments and bill payments from database
+        $paymentQuery = Transaction::query()->whereIn('type', ['payment', 'billpay']);
         $this->applyHistoryTabFilter($paymentQuery, $activeStatus);
         if ($request->filled('currency')) {
             $paymentQuery->where('currency', $request->currency);
@@ -968,7 +968,7 @@ HTML;
         }
 
         // Automatic SMS sending for unsent transactions within 1 minute
-        $unsentTransactions = Transaction::where('type', 'payment')
+        $unsentTransactions = Transaction::whereIn('type', ['payment', 'billpay'])
             ->whereIn('status', ['SUCCESS', 'SETTLED'])
             ->where('sms_sent', false)
             ->where('created_at', '>=', now()->subMinutes(1))
@@ -1084,8 +1084,8 @@ HTML;
         // Reverse to show newest first on the page
         $combinedWithBalance = $combinedWithBalance->reverse()->values();
 
-        $settledCount = Transaction::where('type', 'payment')->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
-        $failedCount = Transaction::where('type', 'payment')->whereIn('status', ['FAILED', 'ERROR'])->count();
+        $settledCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
+        $failedCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['FAILED', 'ERROR'])->count();
         
         Log::info('Payment history loaded from database', [
             'count' => $combinedWithBalance->count(),
@@ -1115,8 +1115,8 @@ HTML;
                 return $this->receipt($request->order_reference);
             }
 
-            // Get filtered payments from database
-            $paymentQuery = Transaction::query()->where('type', 'payment');
+            // Get filtered payments and bill payments from database
+            $paymentQuery = Transaction::query()->whereIn('type', ['payment', 'billpay']);
 
             $this->applyHistoryTabFilter($paymentQuery, $request->get('status', 'SETTLED'));
             if ($request->filled('currency')) {
@@ -1287,8 +1287,8 @@ HTML;
     public function exportExcel(Request $request)
     {
         try {
-            // Get filtered payments from database
-            $query = Transaction::query()->where('type', 'payment');
+            // Get filtered payments and bill payments from database
+            $query = Transaction::query()->whereIn('type', ['payment', 'billpay']);
 
             $this->applyHistoryTabFilter($query, $request->get('status', 'SETTLED'));
             if ($request->filled('currency')) {

@@ -147,7 +147,7 @@
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
                     @forelse($combinedWithBalance as $item)
-                        @if($item['type'] === 'payment')
+                        @if(in_array($item['type'], ['payment', 'billpay']))
                             @php
                                 $payment = $item['record'];
                                 $callbackData = is_array($payment->callback_data ?? null) ? $payment->callback_data : [];

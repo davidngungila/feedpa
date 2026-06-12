@@ -14,7 +14,7 @@ class ReportController extends Controller
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         
-        $paymentsQuery = Transaction::where('type', 'payment')->whereIn('status', ['SETTLED', 'SUCCESS']);
+        $paymentsQuery = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['SETTLED', 'SUCCESS']);
         
         if ($startDate) $paymentsQuery->whereDate('created_at', '>=', $startDate);
         if ($endDate) $paymentsQuery->whereDate('created_at', '<=', $endDate);
@@ -64,7 +64,7 @@ class ReportController extends Controller
     {
         $asOfDate = $request->get('as_of_date', now()->format('Y-m-d'));
         
-        $payments = Transaction::where('type', 'payment')
+        $payments = Transaction::whereIn('type', ['payment', 'billpay'])
             ->whereIn('status', ['SETTLED', 'SUCCESS'])
             ->whereDate('created_at', '<=', $asOfDate)
             ->get();
@@ -108,7 +108,7 @@ class ReportController extends Controller
         $startDate = $request->get('start_date', now()->subMonth()->format('Y-m-01'));
         $endDate = $request->get('end_date', now()->format('Y-m-d'));
         
-        $paymentsQuery = Transaction::where('type', 'payment')->whereIn('status', ['SETTLED', 'SUCCESS']);
+        $paymentsQuery = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['SETTLED', 'SUCCESS']);
         $payoutsQuery = Payout::whereIn('status', ['SUCCESS', 'SETTLED']);
         
         if ($startDate) {
@@ -155,7 +155,7 @@ class ReportController extends Controller
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
         
-        $paymentsQuery = Transaction::where('type', 'payment')->whereIn('status', ['SETTLED', 'SUCCESS']);
+        $paymentsQuery = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['SETTLED', 'SUCCESS']);
         $payoutsQuery = Payout::whereIn('status', ['SUCCESS', 'SETTLED']);
         
         if ($startDate) {
@@ -214,7 +214,7 @@ class ReportController extends Controller
     {
         $asOfDate = $request->get('as_of_date', now()->format('Y-m-d'));
         
-        $payments = Transaction::where('type', 'payment')
+        $payments = Transaction::whereIn('type', ['payment', 'billpay'])
             ->whereIn('status', ['SETTLED', 'SUCCESS'])
             ->whereDate('created_at', '<=', $asOfDate)
             ->get();
@@ -262,7 +262,7 @@ class ReportController extends Controller
         $startDate = $request->get('start_date', now()->subMonth()->format('Y-m-01'));
         $endDate = $request->get('end_date', now()->format('Y-m-d'));
         
-        $paymentsQuery = Transaction::where('type', 'payment')->whereIn('status', ['SETTLED', 'SUCCESS']);
+        $paymentsQuery = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['SETTLED', 'SUCCESS']);
         $payoutsQuery = Payout::whereIn('status', ['SUCCESS', 'SETTLED']);
         
         if ($startDate) {

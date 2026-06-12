@@ -175,7 +175,7 @@ class AccountController extends Controller
 
         if ($statementType === 'payments') {
             // 1. Get PAYMENTS from Database
-            $query = \App\Models\Transaction::query()->where('type', 'payment');
+            $query = \App\Models\Transaction::query()->whereIn('type', ['payment', 'billpay']);
             if ($startDate) $query->whereDate('created_at', '>=', $startDate);
             if ($endDate) $query->whereDate('created_at', '<=', $endDate);
             if ($currency) $query->where('currency', $currency);
@@ -208,7 +208,7 @@ class AccountController extends Controller
                     'phone' => $t->phone,
                     'email' => $t->email,
                     'payment_method' => $t->payment_method,
-                    'type' => 'payment',
+                    'type' => $t->type,
                     'sms_sent' => (bool)$t->sms_sent,
                     'sms_sent_at' => $t->sms_sent_at?->toIso8601String(),
                     'sms_message' => $t->sms_message,
@@ -264,7 +264,7 @@ class AccountController extends Controller
 
             // Get ALL DB transactions (regardless of date range/search) to calculate correct starting balance
             $allDbPayments = \App\Models\Transaction::query()
-                ->where('type', 'payment')
+                ->whereIn('type', ['payment', 'billpay'])
                 ->orderBy('created_at', 'asc')
                 ->get()
                 ->map(function ($t) {

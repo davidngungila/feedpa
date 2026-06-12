@@ -193,14 +193,6 @@
                                                class="input-field w-full pl-14 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50/80 text-sm font-bold text-slate-900 placeholder:text-slate-400 placeholder:font-normal"
                                                placeholder="5,000" min="500" max="5000000" required inputmode="numeric">
                                     </div>
-                                    <div class="flex flex-wrap gap-2 mt-2.5" id="amountChips">
-                                        @foreach([5000, 10000, 20000, 50000, 100000] as $chip)
-                                            <button type="button" data-amount="{{ $chip }}"
-                                                    class="amount-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
-                                                {{ number_format($chip) }}
-                                            </button>
-                                        @endforeach
-                                    </div>
                                     <p class="hidden sm:block mt-1.5 text-[11px] text-slate-400">Kiwango: TZS 500 — 5,000,000</p>
                                 </div>
 
@@ -319,15 +311,6 @@
 
         amountInput.addEventListener('input', function () {
             btnAmount.textContent = formatAmountDisplay(this.value);
-        });
-
-        document.querySelectorAll('.amount-chip').forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                amountInput.value = this.dataset.amount;
-                btnAmount.textContent = formatAmountDisplay(this.dataset.amount);
-                document.querySelectorAll('.amount-chip').forEach(c => c.classList.remove('ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50'));
-                this.classList.add('ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50');
-            });
         });
 
         document.querySelectorAll('.purpose-chip').forEach(function (chip) {

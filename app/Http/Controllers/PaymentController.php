@@ -521,6 +521,11 @@ HTML;
                 ->withInput();
         }
 
+        // Combine description with akiba_type if purpose is Akiba
+        if ($description === 'Akiba' && !empty($validated['akiba_type'])) {
+            $description = $description . '-' . $validated['akiba_type'];
+        }
+
         try {
             $amount = $this->api->formatAmount($validated['amount']);
             $phoneNumber = $this->api->validatePhoneNumber($validated['phone_number']);

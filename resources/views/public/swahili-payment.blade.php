@@ -222,6 +222,22 @@
                                               placeholder="Eleza madhumuni ya malipo yako…"></textarea>
                                 </div>
 
+                                <!-- Akiba Type (only shown when Akiba is selected) -->
+                                <div id="akibaTypeSection" class="hidden">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        Aina ya Akiba <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="flex flex-wrap gap-2" id="akibaTypeChips">
+                                        @foreach(['RDA', 'FLEX', 'EMERGENCE'] as $type)
+                                            <button type="button" data-akiba-type="{{ $type }}"
+                                                    class="akiba-type-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
+                                                {{ $type }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                    <input type="hidden" id="akiba_type" name="akiba_type">
+                                </div>
+
                                 <!-- Summary + submit -->
                                 <div class="rounded-xl bg-brand-50 border border-brand-100 p-4 flex items-center justify-between gap-4">
                                     <div>
@@ -269,6 +285,8 @@
         const descriptionInput = document.getElementById('description');
         const phoneInput = document.getElementById('phone_number');
         const modalRoot = document.getElementById('modalRoot');
+        const akibaTypeSection = document.getElementById('akibaTypeSection');
+        const akibaTypeInput = document.getElementById('akiba_type');
 
         // Polling variables
         let pollingInterval = null;
@@ -299,6 +317,23 @@
                 descriptionInput.value = this.dataset.purpose;
                 document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
                 this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
+                
+                // Show/hide akiba type section
+                if (this.dataset.purpose === 'Akiba') {
+                    akibaTypeSection.classList.remove('hidden');
+                } else {
+                    akibaTypeSection.classList.add('hidden');
+                    akibaTypeInput.value = '';
+                    document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                }
+            });
+        });
+
+        document.querySelectorAll('.akiba-type-chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                akibaTypeInput.value = this.dataset.akibaType;
+                document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
             });
         });
 
@@ -317,7 +352,8 @@
                 amount: formData.get('amount'),
                 phone_number: String(formData.get('phone_number') || '').replace(/\D/g, ''),
                 payer_name: String(formData.get('payer_name') || '').trim(),
-                description: String(formData.get('description') || '').trim()
+                description: String(formData.get('description') || '').trim(),
+                akiba_type: String(formData.get('akiba_type') || '').trim()
             };
 
             if (!data.payer_name) {
@@ -326,6 +362,11 @@
             }
             if (!data.description) {
                 showAlert('error', 'Tafadhali ingiza maelezo ya malipo (Malipo Kwaajili Ya).');
+                return;
+            }
+            // Validate akiba type if purpose is Akiba
+            if (data.description === 'Akiba' && !data.akiba_type) {
+                showAlert('error', 'Tafadhali chagua aina ya Akiba (RDA, FLEX, au EMERGENCE).');
                 return;
             }
             if (!data.phone_number.match(/^255[67]\d{8}$/)) {

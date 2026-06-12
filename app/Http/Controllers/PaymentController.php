@@ -504,6 +504,7 @@ HTML;
             'phone_number' => 'required|string',
             'payer_name' => 'required|string|max:255',
             'description' => 'required|string|max:500',
+            'akiba_type' => 'nullable|string|max:50',
         ]);
 
         $description = trim($validated['description']);
@@ -548,6 +549,7 @@ HTML;
                 'customer_name' => $memberName,
                 'payer_name' => $memberName,
                 'description' => $description,
+                'akiba_type' => $validated['akiba_type'] ?? null,
                 'type' => 'payment',
                 'callback_data' => TransactionFieldResolver::initialCallbackSnapshot(
                     $description,

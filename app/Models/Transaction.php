@@ -22,6 +22,7 @@ class Transaction extends Model
         'phone',
         'email',
         'description',
+        'akiba_type',
         'type',
         'payment_method',
         'payer_name',

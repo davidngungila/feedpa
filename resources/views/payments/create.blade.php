@@ -132,6 +132,22 @@
                     <input type="hidden" id="akiba_type" name="akiba_type">
                 </div>
 
+                <!-- Uwekezaji Type (only shown when Uwekezaji is selected) -->
+                <div id="uwekezajiTypeSection" class="hidden">
+                    <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">
+                        Uwekezaji Type <span class="text-red-500">*</span>
+                    </label>
+                    <div class="flex flex-wrap gap-2" id="uwekezajiTypeChips">
+                        @foreach(['2Year FIA', '4Years FIA', '6 Years FIA'] as $type)
+                            <button type="button" data-uwekezaji-type="{{ $type }}"
+                                    class="uwekezaji-type-chip px-3 py-1.5 rounded-lg border border-primary-200 bg-white dark:bg-dark-900 dark:border-dark-border text-xs font-semibold text-primary-700 dark:text-primary-300 hover:border-primary-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/30 transition-colors">
+                                {{ $type }}
+                            </button>
+                        @endforeach
+                    </div>
+                    <input type="hidden" id="uwekezaji_type" name="uwekezaji_type">
+                </div>
+
                 <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
                     <label class="flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" id="confirm" name="confirm" class="mt-0.5 rounded border-amber-300 text-primary-600 focus:ring-primary-500" required>
@@ -203,6 +219,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const resetBtn = document.getElementById('resetBtn');
     const akibaTypeSection = document.getElementById('akibaTypeSection');
     const akibaTypeInput = document.getElementById('akiba_type');
+    const uwekezajiTypeSection = document.getElementById('uwekezajiTypeSection');
+    const uwekezajiTypeInput = document.getElementById('uwekezaji_type');
 
     const previewName = document.getElementById('previewName');
     const previewPhone = document.getElementById('previewPhone');
@@ -253,10 +271,21 @@ document.addEventListener('DOMContentLoaded', function () {
             // Show/hide akiba type section
             if (this.dataset.purpose === 'Akiba') {
                 akibaTypeSection.classList.remove('hidden');
-            } else {
+                uwekezajiTypeSection.classList.add('hidden');
+                uwekezajiTypeInput.value = '';
+                document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+            } else if (this.dataset.purpose === 'Uwekezaji') {
+                uwekezajiTypeSection.classList.remove('hidden');
                 akibaTypeSection.classList.add('hidden');
                 akibaTypeInput.value = '';
                 document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+            } else {
+                akibaTypeSection.classList.add('hidden');
+                uwekezajiTypeSection.classList.add('hidden');
+                akibaTypeInput.value = '';
+                uwekezajiTypeInput.value = '';
+                document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+                document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
             }
         });
     });
@@ -266,7 +295,16 @@ document.addEventListener('DOMContentLoaded', function () {
         chip.addEventListener('click', function () {
             akibaTypeInput.value = this.dataset.akibaType;
             document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
-            this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200');
+            this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+        });
+    });
+
+    // Uwekezaji type chips functionality
+    document.querySelectorAll('.uwekezaji-type-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+            uwekezajiTypeInput.value = this.dataset.uwekezajiType;
+            document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+            this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
         });
     });
 
@@ -282,8 +320,11 @@ document.addEventListener('DOMContentLoaded', function () {
         charCount.classList.add('text-primary-500');
         document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
         akibaTypeSection.classList.add('hidden');
+        uwekezajiTypeSection.classList.add('hidden');
         akibaTypeInput.value = '';
+        uwekezajiTypeInput.value = '';
         document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+        document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
         syncPreview();
     });
 

@@ -238,6 +238,22 @@
                                     <input type="hidden" id="akiba_type" name="akiba_type">
                                 </div>
 
+                                <!-- Uwekezaji Type (only shown when Uwekezaji is selected) -->
+                                <div id="uwekezajiTypeSection" class="hidden">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        Aina ya Uwekezaji <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="flex flex-wrap gap-2" id="uwekezajiTypeChips">
+                                        @foreach(['2Year FIA', '4Years FIA', '6 Years FIA'] as $type)
+                                            <button type="button" data-uwekezaji-type="{{ $type }}"
+                                                    class="uwekezaji-type-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
+                                                {{ $type }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                    <input type="hidden" id="uwekezaji_type" name="uwekezaji_type">
+                                </div>
+
                                 <!-- Summary + submit -->
                                 <div class="rounded-xl bg-brand-50 border border-brand-100 p-4 flex items-center justify-between gap-4">
                                     <div>
@@ -287,6 +303,8 @@
         const modalRoot = document.getElementById('modalRoot');
         const akibaTypeSection = document.getElementById('akibaTypeSection');
         const akibaTypeInput = document.getElementById('akiba_type');
+        const uwekezajiTypeSection = document.getElementById('uwekezajiTypeSection');
+        const uwekezajiTypeInput = document.getElementById('uwekezaji_type');
 
         // Polling variables
         let pollingInterval = null;
@@ -318,13 +336,24 @@
                 document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
                 this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
                 
-                // Show/hide akiba type section
+                // Show/hide appropriate sections
                 if (this.dataset.purpose === 'Akiba') {
                     akibaTypeSection.classList.remove('hidden');
-                } else {
+                    uwekezajiTypeSection.classList.add('hidden');
+                    uwekezajiTypeInput.value = '';
+                    document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                } else if (this.dataset.purpose === 'Uwekezaji') {
+                    uwekezajiTypeSection.classList.remove('hidden');
                     akibaTypeSection.classList.add('hidden');
                     akibaTypeInput.value = '';
                     document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                } else {
+                    akibaTypeSection.classList.add('hidden');
+                    uwekezajiTypeSection.classList.add('hidden');
+                    akibaTypeInput.value = '';
+                    uwekezajiTypeInput.value = '';
+                    document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                    document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
                 }
             });
         });
@@ -333,6 +362,14 @@
             chip.addEventListener('click', function () {
                 akibaTypeInput.value = this.dataset.akibaType;
                 document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
+            });
+        });
+
+        document.querySelectorAll('.uwekezaji-type-chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                uwekezajiTypeInput.value = this.dataset.uwekezajiType;
+                document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
                 this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
             });
         });
@@ -353,7 +390,8 @@
                 phone_number: String(formData.get('phone_number') || '').replace(/\D/g, ''),
                 payer_name: String(formData.get('payer_name') || '').trim(),
                 description: String(formData.get('description') || '').trim(),
-                akiba_type: String(formData.get('akiba_type') || '').trim()
+                akiba_type: String(formData.get('akiba_type') || '').trim(),
+                uwekezaji_type: String(formData.get('uwekezaji_type') || '').trim()
             };
 
             if (!data.payer_name) {
@@ -367,6 +405,11 @@
             // Validate akiba type if purpose is Akiba
             if (data.description === 'Akiba' && !data.akiba_type) {
                 showAlert('error', 'Tafadhali chagua aina ya Akiba (RDA, FLEX, au EMERGENCE).');
+                return;
+            }
+            // Validate uwekezaji type if purpose is Uwekezaji
+            if (data.description === 'Uwekezaji' && !data.uwekezaji_type) {
+                showAlert('error', 'Tafadhali chagua aina ya Uwekezaji (2Year FIA, 4Years FIA, au 6 Years FIA).');
                 return;
             }
             if (!data.phone_number.match(/^255[67]\d{8}$/)) {

@@ -23,6 +23,7 @@ class Transaction extends Model
         'email',
         'description',
         'akiba_type',
+        'uwekezaji_type',
         'type',
         'payment_method',
         'payer_name',

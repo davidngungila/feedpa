@@ -505,6 +505,7 @@ HTML;
             'payer_name' => 'required|string|max:255',
             'description' => 'required|string|max:500',
             'akiba_type' => 'nullable|string|max:50',
+            'uwekezaji_type' => 'nullable|string|max:50',
         ]);
 
         $description = trim($validated['description']);
@@ -524,6 +525,10 @@ HTML;
         // Combine description with akiba_type if purpose is Akiba
         if ($description === 'Akiba' && !empty($validated['akiba_type'])) {
             $description = $description . '-' . $validated['akiba_type'];
+        }
+        // Combine description with uwekezaji_type if purpose is Uwekezaji
+        if ($description === 'Uwekezaji' && !empty($validated['uwekezaji_type'])) {
+            $description = $description . '-' . $validated['uwekezaji_type'];
         }
 
         try {
@@ -555,6 +560,7 @@ HTML;
                 'payer_name' => $memberName,
                 'description' => $description,
                 'akiba_type' => $validated['akiba_type'] ?? null,
+                'uwekezaji_type' => $validated['uwekezaji_type'] ?? null,
                 'type' => 'payment',
                 'callback_data' => TransactionFieldResolver::initialCallbackSnapshot(
                     $description,

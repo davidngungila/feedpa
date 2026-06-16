@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EcommercePaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,4 +17,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
+});
+
+// E-commerce Payment API Routes
+Route::prefix('ecommerce')->group(function () {
+    Route::post('/payments/initiate', [EcommercePaymentController::class, 'initiatePayment']);
+    Route::get('/payments/status/{orderReference}', [EcommercePaymentController::class, 'checkStatus']);
+    Route::get('/payments/history', [EcommercePaymentController::class, 'transactionHistory']);
 });

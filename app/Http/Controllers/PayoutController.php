@@ -307,10 +307,10 @@ class PayoutController extends Controller
                 'amount' => 'required|numeric|min:100',
                 'currency' => 'required|in:TZS,USD',
                 'payout_type' => 'required|in:MOBILE_MONEY,BANK',
+                'recipient_name' => 'required|string|max:255',
                 'recipient_phone' => 'required_if:payout_type,MOBILE_MONEY|nullable|string',
                 'bank_account_number' => 'required_if:payout_type,BANK|nullable|string',
                 'bic' => 'required_if:payout_type,BANK|nullable|string',
-                'account_name' => 'required_if:payout_type,BANK|nullable|string',
                 'transfer_type' => 'required_if:payout_type,BANK|in:ACH,RTGS',
             ]);
 
@@ -328,7 +328,7 @@ class PayoutController extends Controller
                     $validated['amount'],
                     $validated['currency'],
                     $validated['bank_account_number'],
-                    $validated['account_name'],
+                    $validated['recipient_name'],
                     $validated['bic'],
                     $validated['transfer_type'],
                     $orderReference

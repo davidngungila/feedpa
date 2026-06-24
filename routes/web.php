@@ -59,6 +59,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('payouts')->name('payouts.')->group(function () {
         Route::get('/', [PayoutController::class, 'index'])->name('index');
         Route::get('/create', [PayoutController::class, 'create'])->name('create');
+        Route::post('/preview', [PayoutController::class, 'previewPayout'])->name('preview');
         Route::post('/', [PayoutController::class, 'store'])->name('store');
         Route::get('/{orderReference}/verify', [PayoutController::class, 'showVerifyOtp'])->name('verify-otp');
         Route::post('/{orderReference}/verify', [PayoutController::class, 'verifyOtp'])->name('verify');

@@ -268,7 +268,58 @@ class PayoutController extends Controller
 
     public function create()
     {
-        return view('payouts.create');
+        $banks = [];
+        try {
+            $banksResponse = $this->api->getBanksList();
+            if (isset($banksResponse['data']) && is_array($banksResponse['data'])) {
+                $banks = $banksResponse['data'];
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch banks list', ['error' => $e->getMessage()]);
+        }
+        return view('payouts.create', compact('banks'));
+    }
+
+    public function previewPayout(\Illuminate\Http\Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'amount' => 'required|numeric|min:100',
+                'currency' => 'required|in:TZS,USD',
+                'payout_type' => 'required|in:MOBILE_MONEY,BANK',
+                'recipient_phone' => 'required_if:payout_type,MOBILE_MONEY|nullable|string',
+                'bank_account_number' => 'required_if:payout_type,BANK|nullable|string',
+                'bic' => 'required_if:payout_type,BANK|nullable|string',
+                'account_name' => 'required_if:payout_type,BANK|nullable|string',
+                'transfer_type' => 'required_if:payout_type,BANK|in:ACH,RTGS',
+            ]);
+
+            $orderReference = $this->api->generateOrderReference('PREVIEW');
+
+            if ($validated['payout_type'] === 'MOBILE_MONEY') {
+                $response = $this->api->previewMobileMoneyPayout(
+                    $validated['amount'],
+                    $validated['recipient_phone'],
+                    $validated['currency'],
+                    $orderReference
+                );
+            } else {
+                $response = $this->api->previewBankPayout(
+                    $validated['amount'],
+                    $validated['currency'],
+                    $validated['bank_account_number'],
+                    $validated['account_name'],
+                    $validated['bic'],
+                    $validated['transfer_type'],
+                    $orderReference
+                );
+            }
+
+            return response()->json(['success' => true, 'data' => $response, 'order_reference' => $orderReference]);
+        } catch (\Exception $e) {
+            Log::error('Payout preview failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
     }
 
     public function store(Request $request)
@@ -282,6 +333,9 @@ class PayoutController extends Controller
             'bank_account_number' => 'required_if:payout_type,BANK|nullable|string',
             'bank_name' => 'required_if:payout_type,BANK|nullable|string',
             'bic' => 'required_if:payout_type,BANK|nullable|string',
+            'transfer_type' => 'required_if:payout_type,BANK|in:ACH,RTGS',
+            'beneficiary_email' => 'nullable|email|max:255',
+            'beneficiary_mobile' => 'nullable|string|max:20',
             'description' => 'nullable|string|max:500'
         ]);
 
@@ -298,6 +352,9 @@ class PayoutController extends Controller
                 'bank_account_number' => $validated['bank_account_number'] ?? null,
                 'bank_name' => $validated['bank_name'] ?? null,
                 'bic' => $validated['bic'] ?? null,
+                'transfer_type' => $validated['transfer_type'] ?? null,
+                'beneficiary_email' => $validated['beneficiary_email'] ?? null,
+                'beneficiary_mobile' => $validated['beneficiary_mobile'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'user_id' => auth()->id()
             ]);
@@ -376,7 +433,7 @@ class PayoutController extends Controller
                     $payout->bank_account_number,
                     $payout->recipient_name,
                     $payout->bic,
-                    'ACH',
+                    $payout->transfer_type ?? 'ACH',
                     $orderReference
                 );
             }

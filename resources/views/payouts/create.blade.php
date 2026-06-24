@@ -103,9 +103,9 @@
                             </div>
                         </div>
 
-                        <!-- Phone/Bank & Recipient Name Row -->
+                        <!-- Recipient Details Row -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <!-- Mobile Money Phone Number -->
+                            <!-- Mobile Money: Phone Number -->
                             <div id="phoneNumberColumn" class="{{ old('payout_type') === 'BANK' ? 'hidden' : '' }}">
                                 <label for="recipient_phone" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                     Phone Number
@@ -131,8 +131,8 @@
                                     <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
                                 @enderror
                             </div>
-                            
-                            <!-- Bank Transfer Bank Selection -->
+
+                            <!-- Bank Transfer: Select Bank -->
                             <div id="bankColumn" class="{{ old('payout_type') === 'BANK' ? '' : 'hidden' }}">
                                 <label for="bank_id" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                     Select Bank
@@ -157,8 +157,8 @@
                                 @enderror
                             </div>
 
-                            <!-- Recipient Name -->
-                            <div>
+                            <!-- Recipient Name (Mobile Money) -->
+                            <div id="recipientNameMobileColumn" class="{{ old('payout_type') === 'BANK' ? 'hidden' : '' }}">
                                 <label for="recipient_name" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                     Recipient Name
                                 </label>
@@ -209,19 +209,41 @@
                                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                                            placeholder="recipient@example.com">
                                 </div>
+                            </div>
+                        </div>
 
-                                <!-- Bank Account Number -->
-                                <div id="accountNumberColumn" class="{{ old('payout_type') === 'BANK' ? '' : 'hidden' }}">
-                                    <label for="bank_account_number" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                                        Account Number
-                                    </label>
-                                    <input type="text" id="bank_account_number" name="bank_account_number" value="{{ old('bank_account_number') }}"
-                                           class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('bank_account_number') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                           placeholder="0123456789">
-                                    @error('bank_account_number')
-                                        <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
-                                    @enderror
+                        <!-- Bank Account & Recipient Name Row -->
+                        <div id="bankAccountNameRow" class="grid grid-cols-1 md:grid-cols-2 gap-5 {{ old('payout_type') === 'BANK' ? '' : 'hidden' }}">
+                            <!-- Bank Transfer: Account Number -->
+                            <div id="accountNumberColumn">
+                                <label for="bank_account_number" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                    Account Number
+                                </label>
+                                <input type="text" id="bank_account_number" name="bank_account_number" value="{{ old('bank_account_number') }}"
+                                       class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('bank_account_number') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                       placeholder="0123456789">
+                                @error('bank_account_number')
+                                    <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Recipient Name (Bank) -->
+                            <div>
+                                <label for="recipient_name" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                    Recipient Name
+                                </label>
+                                <div class="relative">
+                                    <div id="recipientNameLoader" class="hidden absolute left-4 top-1/2 -translate-y-1/2">
+                                        <svg class="w-4 h-4 animate-spin text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </div>
+                                    <input type="text" id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" maxlength="255" required readonly
+                                           class="w-full pl-12 pr-4 py-3 bg-gray-100 dark:bg-gray-800 border {{ $errors->has('recipient_name') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 cursor-not-allowed transition-all"
+                                           placeholder="Waiting for details...">
                                 </div>
+                                <p id="recipientNameError" class="hidden mt-1.5 text-xs font-semibold text-red-500"></p>
                             </div>
                         </div>
 
@@ -494,7 +516,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (phoneNumberColumn) phoneNumberColumn.classList.toggle('hidden', type !== 'MOBILE_MONEY');
         if (bankColumn) bankColumn.classList.toggle('hidden', type !== 'BANK');
         if (emailColumn) emailColumn.classList.toggle('hidden', type !== 'MOBILE_MONEY');
-        if (accountNumberColumn) accountNumberColumn.classList.toggle('hidden', type !== 'BANK');
+        if (document.getElementById('recipientNameMobileColumn')) document.getElementById('recipientNameMobileColumn').classList.toggle('hidden', type !== 'MOBILE_MONEY');
+        if (document.getElementById('bankAccountNameRow')) document.getElementById('bankAccountNameRow').classList.toggle('hidden', type !== 'BANK');
         if (additionalBankFields) additionalBankFields.classList.toggle('hidden', type !== 'BANK');
         updateMinAmount();
         syncPreview();

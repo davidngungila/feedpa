@@ -304,7 +304,7 @@ class ClickPesaAPIService
             $orderReference = $this->generateOrderReference('LOOKUP');
         }
         
-        return $this->makeRequest('POST', $url, [
+        $payload = [
             'amount' => 100,
             'currency' => $currency,
             'accountNumber' => $accountNumber,
@@ -313,7 +313,13 @@ class ClickPesaAPIService
             'transferType' => 'ACH',
             'accountCurrency' => $currency,
             'orderReference' => $orderReference
-        ]);
+        ];
+        
+        Log::info('ClickPesa lookupBankAccountName request', ['url' => $url, 'payload' => $payload]);
+        $response = $this->makeRequest('POST', $url, $payload);
+        Log::info('ClickPesa lookupBankAccountName response', ['response' => $response]);
+        
+        return $response;
     }
 
     /**

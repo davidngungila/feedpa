@@ -376,24 +376,38 @@ class PayoutController extends Controller
                 'currency' => 'sometimes|in:TZS,USD'
             ]);
 
-            $response = $this->api->lookupBankAccountName(
-                $validated['bic'],
+            $orderReference = $this->api->generateOrderReference('LOOKUP');
+            $response = $this->api->previewBankPayout(
+                100,
+                $validated['currency'] ?? 'TZS',
                 $validated['accountNumber'],
-                $validated['currency'] ?? 'TZS'
+                'Temp',
+                $validated['bic'],
+                'ACH',
+                $orderReference
             );
 
             Log::info('Account name lookup response', ['response' => $response]);
 
-            // Extract account name from preview response
+            // Check all possible keys for account name
             $accountName = $response['data']['receiver']['accountName'] 
                 ?? $response['receiver']['accountName'] 
+                ?? $response['data']['recipient']['accountName'] 
+                ?? $response['recipient']['accountName'] 
                 ?? $response['data']['accountName'] 
                 ?? $response['accountName'] 
+                ?? $response['data']['customerName'] 
+                ?? $response['customerName'] 
                 ?? null;
 
             if ($accountName) {
                 return response()->json(['success' => true, 'accountName' => $accountName]);
             } else {
+                // Also log all keys for debugging
+                Log::info('All response keys for debugging:', array_keys($response));
+                if (isset($response['data'])) {
+                    Log::info('Data keys:', array_keys($response['data']));
+                }
                 return response()->json(['success' => false, 'message' => 'Unable to retrieve account name from response'], 400);
             }
         } catch (\Exception $e) {

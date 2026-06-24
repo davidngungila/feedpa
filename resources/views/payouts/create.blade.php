@@ -628,6 +628,7 @@ document.addEventListener('DOMContentLoaded', function () {
         
         try {
             if (recipientName) recipientName.value = '';
+            syncPreview();
             if (recipientNameLoader) recipientNameLoader.classList.remove('hidden');
             if (recipientNameError) recipientNameError.classList.add('hidden');
 
@@ -647,6 +648,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.log('Setting recipient name to:', data.accountName);
                 if (recipientName) recipientName.value = data.accountName;
                 console.log('recipientName element value after setting:', recipientName?.value);
+                syncPreview();
             } else {
                 if (recipientNameError) {
                     recipientNameError.textContent = data.message || 'Could not retrieve account name';
@@ -805,11 +807,27 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     if (currency) currency.addEventListener('change', syncPreview);
     if (amount) amount.addEventListener('input', syncPreview);
+    if (recipientName) recipientName.addEventListener('input', syncPreview);
     if (description) description.addEventListener('input', () => {
         if (descCharCount) descCharCount.textContent = 500 - description.value.length;
     });
     if (payoutType) payoutType.addEventListener('change', togglePayoutFields);
     if (bankSelect) bankSelect.addEventListener('change', updateBankDetails);
+    
+    // Load bank account name when account number is entered
+    const bankAccountNumber = document.getElementById('bank_account_number');
+    let bankAccountTimeout;
+    if (bankAccountNumber) {
+        bankAccountNumber.addEventListener('input', function () {
+            clearTimeout(bankAccountTimeout);
+            const currentBic = document.getElementById('bic')?.value;
+            if (currentBic && this.value.length > 3) {
+                bankAccountTimeout = setTimeout(() => {
+                    loadBankAccountName(this.value, currentBic);
+                }, 600);
+            }
+        });
+    }
 
     // Close modal when clicking outside
     previewModal.addEventListener('click', (e) => {

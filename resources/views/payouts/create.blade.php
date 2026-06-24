@@ -603,17 +603,10 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await previewResponse.json();
             if (result.success && result.data && result.data.receiver && result.data.receiver.accountName) {
                 if (recipientName) recipientName.value = result.data.receiver.accountName;
-            } else {
-                if (recipientNameError) {
-                    recipientNameError.textContent = 'Could not retrieve recipient name';
-                    recipientNameError.classList.remove('hidden');
-                }
+                syncPreview();
             }
         } catch (error) {
-            if (recipientNameError) {
-                recipientNameError.textContent = 'Error retrieving recipient name';
-                recipientNameError.classList.remove('hidden');
-            }
+            console.error('Error retrieving recipient name:', error);
         } finally {
             if (recipientNameLoader) recipientNameLoader.classList.add('hidden');
         }
@@ -649,18 +642,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (recipientName) recipientName.value = data.accountName;
                 console.log('recipientName element value after setting:', recipientName?.value);
                 syncPreview();
-            } else {
-                if (recipientNameError) {
-                    recipientNameError.textContent = data.message || 'Could not retrieve account name';
-                    recipientNameError.classList.remove('hidden');
-                }
             }
         } catch (error) {
             console.error('Error in loadBankAccountName:', error);
-            if (recipientNameError) {
-                recipientNameError.textContent = 'Error retrieving account name';
-                recipientNameError.classList.remove('hidden');
-            }
         } finally {
             if (recipientNameLoader) recipientNameLoader.classList.add('hidden');
         }

@@ -622,6 +622,8 @@ document.addEventListener('DOMContentLoaded', function () {
     async function loadBankAccountName(accountNumber, bic) {
         const recipientNameLoader = document.getElementById('recipientNameLoader');
         const recipientNameError = document.getElementById('recipientNameError');
+        const currencyEl = document.getElementById('currency');
+        const currency = currencyEl ? currencyEl.value : 'TZS';
         
         try {
             if (recipientName) recipientName.value = '';
@@ -634,7 +636,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value
                 },
-                body: JSON.stringify({ bic: bic, accountNumber: accountNumber })
+                body: JSON.stringify({ bic: bic, accountNumber: accountNumber, currency: currency })
             });
 
             const data = await response.json();

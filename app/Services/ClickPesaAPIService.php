@@ -294,6 +294,19 @@ class ClickPesaAPIService
     }
 
     /**
+     * Lookup Bank Account Name
+     */
+    public function lookupBankAccountName(string $bic, string $accountNumber, string $currency = 'TZS'): array
+    {
+        $url = 'https://api.clickpesa.com/third-parties/payouts/lookup-account-name';
+        return $this->makeRequest('POST', $url, [
+            'bic' => $bic,
+            'accountNumber' => $accountNumber,
+            'currency' => $currency
+        ]);
+    }
+
+    /**
      * Get Account Balance
      */
     public function getAccountBalance(string $currency = 'TZS'): array

@@ -372,12 +372,28 @@ class PayoutController extends Controller
         try {
             $validated = $request->validate([
                 'bic' => 'required|string',
-                'accountNumber' => 'required|string'
+                'accountNumber' => 'required|string',
+                'currency' => 'sometimes|in:TZS,USD'
             ]);
-            // For now, return placeholder name
-            return response()->json(['success' => true, 'accountName' => 'Account Holder Name']);
+
+            $response = $this->api->lookupBankAccountName(
+                $validated['bic'],
+                $validated['accountNumber'],
+                $validated['currency'] ?? 'TZS'
+            );
+
+            Log::info('Account name lookup response', ['response' => $response]);
+
+            // Extract account name from response
+            $accountName = $response['data']['accountName'] ?? $response['accountName'] ?? null;
+
+            if ($accountName) {
+                return response()->json(['success' => true, 'accountName' => $accountName]);
+            } else {
+                return response()->json(['success' => false, 'message' => 'Unable to retrieve account name'], 400);
+            }
         } catch (\Exception $e) {
-            Log::error('Account name lookup failed', ['error' => $e->getMessage()]);
+            Log::error('Account name lookup failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
         }
     }

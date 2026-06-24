@@ -134,12 +134,18 @@
                                 <label for="recipient_name" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                     Recipient Name
                                 </label>
-                                <input type="text" id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" maxlength="255" required
-                                       class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('recipient_name') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                       placeholder="John Doe">
-                                @error('recipient_name')
-                                    <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
-                                @enderror
+                                <div class="relative">
+                                    <div id="recipientNameLoader" class="hidden absolute left-4 top-1/2 -translate-y-1/2">
+                                        <svg class="w-4 h-4 animate-spin text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    </div>
+                                    <input type="text" id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" maxlength="255" required readonly
+                                           class="w-full pl-12 pr-4 py-3 bg-gray-100 dark:bg-gray-800 border {{ $errors->has('recipient_name') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 cursor-not-allowed transition-all"
+                                           placeholder="Waiting for details...">
+                                </div>
+                                <p id="recipientNameError" class="hidden mt-1.5 text-xs font-semibold text-red-500"></p>
                             </div>
 
                             <div>
@@ -510,9 +516,16 @@ document.addEventListener('DOMContentLoaded', function () {
         if (selectedOption && selectedOption.value) {
             if (bicInput) bicInput.value = selectedOption.value;
             if (bankNameInput) bankNameInput.value = selectedOption.getAttribute('data-bank-name');
+            
+            // If account number is already entered, load the name
+            const currentAccountNumber = document.getElementById('bank_account_number')?.value;
+            if (currentAccountNumber) {
+                loadBankAccountName(currentAccountNumber, selectedOption.value);
+            }
         } else {
             if (bicInput) bicInput.value = '';
             if (bankNameInput) bankNameInput.value = '';
+            if (recipientName) recipientName.value = '';
         }
     }
 
@@ -544,10 +557,10 @@ document.addEventListener('DOMContentLoaded', function () {
         return /^255[67]\d{8}$/.test(cleaned) || /^[67]\d{8}$/.test(cleaned);
     }
 
-    async function detectProvider(phone) {
+    async function detectProviderAndName(phone) {
         try {
             const formattedPhone = formatPhoneNumberForApi(phone);
-            const response = await fetch('{{ route('payouts.detect-provider') }}', {
+            const providerResponse = await fetch('{{ route('payouts.detect-provider') }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -555,20 +568,105 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 body: JSON.stringify({ phoneNumber: formattedPhone })
             });
-            const data = await response.json();
-            if (providerName && providerBadge && data.success && data.provider) {
-                providerName.textContent = data.provider;
+            const providerData = await providerResponse.json();
+            if (providerName && providerBadge && providerData.success && providerData.provider) {
+                providerName.textContent = providerData.provider;
                 providerBadge.classList.remove('hidden');
                 providerBadge.classList.add('flex');
             } else if (providerBadge) {
                 providerBadge.classList.add('hidden');
                 providerBadge.classList.remove('flex');
             }
+
+            // Try to get recipient name via preview
+            await loadMobileMoneyRecipientName(formattedPhone);
         } catch (error) {
             if (providerBadge) {
                 providerBadge.classList.add('hidden');
                 providerBadge.classList.remove('flex');
             }
+        }
+    }
+
+    async function loadMobileMoneyRecipientName(phone) {
+        const recipientNameLoader = document.getElementById('recipientNameLoader');
+        const recipientNameError = document.getElementById('recipientNameError');
+        
+        try {
+            if (recipientName) recipientName.value = '';
+            if (recipientNameLoader) recipientNameLoader.classList.remove('hidden');
+            if (recipientNameError) recipientNameError.classList.add('hidden');
+
+            const previewData = {
+                amount: 100,
+                currency: 'TZS',
+                payout_type: 'MOBILE_MONEY',
+                recipient_phone: phone,
+                _token: document.querySelector('input[name="_token"]')?.value
+            };
+
+            const previewResponse = await fetch('{{ route('payouts.preview') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(previewData)
+            });
+
+            const result = await previewResponse.json();
+            if (result.success && result.data && result.data.receiver && result.data.receiver.accountName) {
+                if (recipientName) recipientName.value = result.data.receiver.accountName;
+            } else {
+                if (recipientNameError) {
+                    recipientNameError.textContent = 'Could not retrieve recipient name';
+                    recipientNameError.classList.remove('hidden');
+                }
+            }
+        } catch (error) {
+            if (recipientNameError) {
+                recipientNameError.textContent = 'Error retrieving recipient name';
+                recipientNameError.classList.remove('hidden');
+            }
+        } finally {
+            if (recipientNameLoader) recipientNameLoader.classList.add('hidden');
+        }
+    }
+
+    async function loadBankAccountName(accountNumber, bic) {
+        const recipientNameLoader = document.getElementById('recipientNameLoader');
+        const recipientNameError = document.getElementById('recipientNameError');
+        
+        try {
+            if (recipientName) recipientName.value = '';
+            if (recipientNameLoader) recipientNameLoader.classList.remove('hidden');
+            if (recipientNameError) recipientNameError.classList.add('hidden');
+
+            const response = await fetch('{{ route('payouts.lookup-account-name') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]')?.value
+                },
+                body: JSON.stringify({ bic: bic, accountNumber: accountNumber })
+            });
+
+            const data = await response.json();
+            if (data.success && data.accountName) {
+                if (recipientName) recipientName.value = data.accountName;
+            } else {
+                if (recipientNameError) {
+                    recipientNameError.textContent = 'Could not retrieve account name';
+                    recipientNameError.classList.remove('hidden');
+                }
+            }
+        } catch (error) {
+            if (recipientNameError) {
+                recipientNameError.textContent = 'Error retrieving account name';
+                recipientNameError.classList.remove('hidden');
+            }
+        } finally {
+            if (recipientNameLoader) recipientNameLoader.classList.add('hidden');
         }
     }
 
@@ -579,16 +677,46 @@ document.addEventListener('DOMContentLoaded', function () {
             clearTimeout(phoneTimeout);
             if (validatePhoneNumber(this.value)) {
                 phoneTimeout = setTimeout(() => {
-                    detectProvider(this.value);
+                    detectProviderAndName(this.value);
                 }, 500);
-            } else if (providerBadge) {
-                providerBadge.classList.add('hidden');
-                providerBadge.classList.remove('flex');
+            } else {
+                if (providerBadge) {
+                    providerBadge.classList.add('hidden');
+                    providerBadge.classList.remove('flex');
+                }
+                if (recipientName) recipientName.value = '';
+                const recipientNameError = document.getElementById('recipientNameError');
+                if (recipientNameError) recipientNameError.classList.add('hidden');
             }
         });
         recipientPhone.addEventListener('blur', function () {
             if (validatePhoneNumber(this.value)) {
-                detectProvider(this.value);
+                detectProviderAndName(this.value);
+            }
+        });
+    }
+
+    // Bank account number listener
+    const bankAccountNumber = document.getElementById('bank_account_number');
+    let bankAccountTimeout;
+    if (bankAccountNumber) {
+        bankAccountNumber.addEventListener('input', function () {
+            clearTimeout(bankAccountTimeout);
+            const currentBic = bicInput ? bicInput.value : '';
+            if (this.value && currentBic) {
+                bankAccountTimeout = setTimeout(() => {
+                    loadBankAccountName(this.value, currentBic);
+                }, 500);
+            } else {
+                if (recipientName) recipientName.value = '';
+                const recipientNameError = document.getElementById('recipientNameError');
+                if (recipientNameError) recipientNameError.classList.add('hidden');
+            }
+        });
+        bankAccountNumber.addEventListener('blur', function () {
+            const currentBic = bicInput ? bicInput.value : '';
+            if (this.value && currentBic) {
+                loadBankAccountName(this.value, currentBic);
             }
         });
     }

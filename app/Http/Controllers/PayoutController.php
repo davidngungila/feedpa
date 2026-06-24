@@ -398,7 +398,7 @@ class PayoutController extends Controller
         // Format phone number for mobile money payouts
         $recipientPhone = $validated['recipient_phone'] ?? null;
         if ($validated['payout_type'] === 'MOBILE_MONEY' && $recipientPhone) {
-            $cleaned = preg_replace('/[^0-9]/g', '', $recipientPhone);
+            $cleaned = preg_replace('/[^0-9]/', '', $recipientPhone);
             if (strlen($cleaned) === 9) {
                 $recipientPhone = '255' . $cleaned;
             } elseif (strlen($cleaned) === 10 && str_starts_with($cleaned, '0')) {

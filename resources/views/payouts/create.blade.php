@@ -214,9 +214,9 @@
                                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
                                 </div>
-                                <input type="text" id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" maxlength="255" required readonly
-                                       class="w-full pl-12 pr-4 py-3 bg-gray-100 dark:bg-gray-800 border {{ $errors->has('recipient_name') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 cursor-not-allowed transition-all"
-                                       placeholder="Waiting for details...">
+                                <input type="text" id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" maxlength="255" required
+                                       class="w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('recipient_name') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                       placeholder="Enter recipient name or it will be auto-filled">
                             </div>
                             <p id="recipientNameError" class="hidden mt-1.5 text-xs font-semibold text-red-500"></p>
                         </div>
@@ -620,6 +620,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function loadBankAccountName(accountNumber, bic) {
+        console.log('loadBankAccountName called with accountNumber:', accountNumber, 'bic:', bic);
         const recipientNameLoader = document.getElementById('recipientNameLoader');
         const recipientNameError = document.getElementById('recipientNameError');
         const currencyEl = document.getElementById('currency');
@@ -630,6 +631,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (recipientNameLoader) recipientNameLoader.classList.remove('hidden');
             if (recipientNameError) recipientNameError.classList.add('hidden');
 
+            console.log('Sending request to lookup account name');
             const response = await fetch('{{ route('payouts.lookup-account-name') }}', {
                 method: 'POST',
                 headers: {
@@ -640,15 +642,19 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             const data = await response.json();
+            console.log('Account name lookup response:', data);
             if (data.success && data.accountName) {
+                console.log('Setting recipient name to:', data.accountName);
                 if (recipientName) recipientName.value = data.accountName;
+                console.log('recipientName element value after setting:', recipientName?.value);
             } else {
                 if (recipientNameError) {
-                    recipientNameError.textContent = 'Could not retrieve account name';
+                    recipientNameError.textContent = data.message || 'Could not retrieve account name';
                     recipientNameError.classList.remove('hidden');
                 }
             }
         } catch (error) {
+            console.error('Error in loadBankAccountName:', error);
             if (recipientNameError) {
                 recipientNameError.textContent = 'Error retrieving account name';
                 recipientNameError.classList.remove('hidden');

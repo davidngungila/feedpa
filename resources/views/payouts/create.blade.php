@@ -85,7 +85,7 @@
                                         Payout Type
                                     </span>
                                 </label>
-                                <select id="payout_type" name="payout_type" onchange="togglePayoutFields()"
+                                <select id="payout_type" name="payout_type"
                                         class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
                                     <option value="MOBILE_MONEY" {{ old('payout_type') !== 'BANK' ? 'selected' : '' }}>Mobile Money - Fast & Simple</option>
                                     <option value="BANK" {{ old('payout_type') === 'BANK' ? 'selected' : '' }}>Bank Transfer - Secure & Reliable</option>
@@ -137,7 +137,7 @@
                                 <label for="bank_id" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                     Select Bank
                                 </label>
-                                <select id="bank_id" name="bank_id" onchange="updateBankDetails()"
+                                <select id="bank_id" name="bank_id"
                                         class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('bank_id') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
                                     <option value="">Choose a bank...</option>
                                     @foreach($banks as $bank)
@@ -804,6 +804,8 @@ document.addEventListener('DOMContentLoaded', function () {
     if (description) description.addEventListener('input', () => {
         if (descCharCount) descCharCount.textContent = 500 - description.value.length;
     });
+    if (payoutType) payoutType.addEventListener('change', togglePayoutFields);
+    if (bankSelect) bankSelect.addEventListener('change', updateBankDetails);
 
     // Close modal when clicking outside
     previewModal.addEventListener('click', (e) => {

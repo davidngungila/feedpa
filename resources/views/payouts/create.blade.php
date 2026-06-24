@@ -103,8 +103,61 @@
                             </div>
                         </div>
 
-                        <!-- Recipient Name & Amount -->
+                        <!-- Phone/Bank & Recipient Name Row -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <!-- Mobile Money Phone Number -->
+                            <div id="phoneNumberColumn" class="{{ old('payout_type') === 'BANK' ? 'hidden' : '' }}">
+                                <label for="recipient_phone" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                    Phone Number
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                        <span class="text-sm font-bold text-gray-500 dark:text-gray-400">+255</span>
+                                    </div>
+                                    <input type="tel" id="recipient_phone" name="recipient_phone" value="{{ old('recipient_phone') }}"
+                                           class="w-full pl-16 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('recipient_phone') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                           placeholder="712345678">
+                                </div>
+                                <div class="mt-2 flex items-center justify-between">
+                                    <p class="text-xs text-gray-500">Format: 7XXXXXXXX</p>
+                                    <div id="providerBadge" class="hidden items-center gap-1 px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-bold text-green-700 dark:text-green-300">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        <span id="providerName"></span>
+                                    </div>
+                                </div>
+                                @error('recipient_phone')
+                                    <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+                            
+                            <!-- Bank Transfer Bank Selection -->
+                            <div id="bankColumn" class="{{ old('payout_type') === 'BANK' ? '' : 'hidden' }}">
+                                <label for="bank_id" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                    Select Bank
+                                </label>
+                                <select id="bank_id" name="bank_id" onchange="updateBankDetails()"
+                                        class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('bank_id') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                                    <option value="">Choose a bank...</option>
+                                    @foreach($banks as $bank)
+                                        @php
+                                            $bankCode = $bank['bic'] ?? $bank['code'] ?? $bank['id'] ?? '';
+                                            $bankName = $bank['name'] ?? $bank['bankName'] ?? '';
+                                        @endphp
+                                        <option value="{{ $bankCode }}" data-bank-name="{{ $bankName }}" {{ old('bic') === $bankCode ? 'selected' : '' }}>
+                                            {{ $bankName }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <input type="hidden" id="bic" name="bic" value="{{ old('bic') }}">
+                                <input type="hidden" id="bank_name" name="bank_name" value="{{ old('bank_name') }}">
+                                @error('bic')
+                                    <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <!-- Recipient Name -->
                             <div>
                                 <label for="recipient_name" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                     Recipient Name
@@ -113,7 +166,7 @@
                                     <div id="recipientNameLoader" class="hidden absolute left-4 top-1/2 -translate-y-1/2">
                                         <svg class="w-4 h-4 animate-spin text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                         </svg>
                                     </div>
                                     <input type="text" id="recipient_name" name="recipient_name" value="{{ old('recipient_name') }}" maxlength="255" required readonly
@@ -122,7 +175,11 @@
                                 </div>
                                 <p id="recipientNameError" class="hidden mt-1.5 text-xs font-semibold text-red-500"></p>
                             </div>
+                        </div>
 
+                        <!-- Amount & Dynamic Second Column -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <!-- Amount -->
                             <div>
                                 <label for="amount" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                     Amount
@@ -140,37 +197,11 @@
                                     <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
                                 @enderror
                             </div>
-                        </div>
 
-                        <!-- Mobile Money Fields -->
-                        <div id="mobileMoneyFields" class="space-y-5 {{ old('payout_type') === 'BANK' ? 'hidden' : '' }}">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div>
-                                    <label for="recipient_phone" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                                        Phone Number
-                                    </label>
-                                    <div class="relative">
-                                        <div class="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                            <span class="text-sm font-bold text-gray-500 dark:text-gray-400">+255</span>
-                                        </div>
-                                        <input type="tel" id="recipient_phone" name="recipient_phone" value="{{ old('recipient_phone') }}"
-                                               class="w-full pl-16 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('recipient_phone') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                               placeholder="712345678">
-                                    </div>
-                                    <div class="mt-2 flex items-center justify-between">
-                                        <p class="text-xs text-gray-500">Format: 7XXXXXXXX</p>
-                                        <div id="providerBadge" class="hidden items-center gap-1 px-2.5 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-xs font-bold text-green-700 dark:text-green-300">
-                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <span id="providerName"></span>
-                                        </div>
-                                    </div>
-                                    @error('recipient_phone')
-                                        <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                                <div>
+                            <!-- Dynamic Second Column -->
+                            <div id="dynamicSecondColumn">
+                                <!-- Mobile Money Email -->
+                                <div id="emailColumn" class="{{ old('payout_type') === 'BANK' ? 'hidden' : '' }}">
                                     <label for="beneficiary_email" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                         Email (Optional)
                                     </label>
@@ -178,46 +209,9 @@
                                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
                                            placeholder="recipient@example.com">
                                 </div>
-                            </div>
-                        </div>
 
-                        <!-- Bank Transfer Fields -->
-                        <div id="bankFields" class="space-y-5 {{ old('payout_type') === 'BANK' ? '' : 'hidden' }}">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                <div>
-                                    <label for="bank_id" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                                        Select Bank
-                                    </label>
-                                    <select id="bank_id" name="bank_id" onchange="updateBankDetails()"
-                                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('bank_id') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
-                                        <option value="">Choose a bank...</option>
-                                        @foreach($banks as $bank)
-                                            @php
-                                                $bankCode = $bank['bic'] ?? $bank['code'] ?? $bank['id'] ?? '';
-                                                $bankName = $bank['name'] ?? $bank['bankName'] ?? '';
-                                            @endphp
-                                            <option value="{{ $bankCode }}" data-bank-name="{{ $bankName }}" {{ old('bic') === $bankCode ? 'selected' : '' }}>
-                                                {{ $bankName }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                    <input type="hidden" id="bic" name="bic" value="{{ old('bic') }}">
-                                    <input type="hidden" id="bank_name" name="bank_name" value="{{ old('bank_name') }}">
-                                    @error('bic')
-                                        <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                                <div>
-                                    <label for="transfer_type" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                                        Transfer Type
-                                    </label>
-                                    <select id="transfer_type" name="transfer_type" onchange="updateMinAmount()"
-                                            class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
-                                        <option value="ACH" {{ old('transfer_type') !== 'RTGS' ? 'selected' : '' }}>ACH - Standard (1-2 days)</option>
-                                        <option value="RTGS" {{ old('transfer_type') === 'RTGS' ? 'selected' : '' }}>RTGS - Express (Same day)</option>
-                                    </select>
-                                </div>
-                                <div>
+                                <!-- Bank Account Number -->
+                                <div id="accountNumberColumn" class="{{ old('payout_type') === 'BANK' ? '' : 'hidden' }}">
                                     <label for="bank_account_number" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                         Account Number
                                     </label>
@@ -228,22 +222,36 @@
                                         <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
                                     @enderror
                                 </div>
-                                <div>
-                                    <label for="beneficiary_mobile" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                                        Mobile (Optional)
-                                    </label>
-                                    <input type="tel" id="beneficiary_mobile" name="beneficiary_mobile" value="{{ old('beneficiary_mobile') }}"
-                                           class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                           placeholder="255712345678">
-                                </div>
-                                <div class="md:col-span-2">
-                                    <label for="beneficiary_email" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
-                                        Email (Optional)
-                                    </label>
-                                    <input type="email" id="beneficiary_email" name="beneficiary_email" value="{{ old('beneficiary_email') }}"
-                                           class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
-                                           placeholder="recipient@example.com">
-                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Bank Fields -->
+                        <div id="additionalBankFields" class="grid grid-cols-1 md:grid-cols-2 gap-5 {{ old('payout_type') === 'BANK' ? '' : 'hidden' }}">
+                            <div>
+                                <label for="transfer_type" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                    Transfer Type
+                                </label>
+                                <select id="transfer_type" name="transfer_type" onchange="updateMinAmount()"
+                                        class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                                    <option value="ACH" {{ old('transfer_type') !== 'RTGS' ? 'selected' : '' }}>ACH - Standard (1-2 days)</option>
+                                    <option value="RTGS" {{ old('transfer_type') === 'RTGS' ? 'selected' : '' }}>RTGS - Express (Same day)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="beneficiary_mobile" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                    Mobile (Optional)
+                                </label>
+                                <input type="tel" id="beneficiary_mobile" name="beneficiary_mobile" value="{{ old('beneficiary_mobile') }}"
+                                       class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                       placeholder="255712345678">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label for="bank_beneficiary_email" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                    Email (Optional)
+                                </label>
+                                <input type="email" id="bank_beneficiary_email" name="beneficiary_email" value="{{ old('beneficiary_email') }}"
+                                       class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+                                       placeholder="recipient@example.com">
                             </div>
                         </div>
 
@@ -432,8 +440,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const previewBalanceAfter = document.getElementById('previewBalanceAfter');
     const previewError = document.getElementById('previewError');
     const currencyLabel = document.getElementById('currencyLabel');
-    const mobileMoneyFields = document.getElementById('mobileMoneyFields');
-    const bankFields = document.getElementById('bankFields');
+    const phoneNumberColumn = document.getElementById('phoneNumberColumn');
+    const bankColumn = document.getElementById('bankColumn');
+    const emailColumn = document.getElementById('emailColumn');
+    const accountNumberColumn = document.getElementById('accountNumberColumn');
+    const additionalBankFields = document.getElementById('additionalBankFields');
     const bankSelect = document.getElementById('bank_id');
     const bicInput = document.getElementById('bic');
     const bankNameInput = document.getElementById('bank_name');
@@ -480,8 +491,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function togglePayoutFields() {
         const type = getCurrentPayoutType();
-        if (mobileMoneyFields) mobileMoneyFields.classList.toggle('hidden', type !== 'MOBILE_MONEY');
-        if (bankFields) bankFields.classList.toggle('hidden', type !== 'BANK');
+        if (phoneNumberColumn) phoneNumberColumn.classList.toggle('hidden', type !== 'MOBILE_MONEY');
+        if (bankColumn) bankColumn.classList.toggle('hidden', type !== 'BANK');
+        if (emailColumn) emailColumn.classList.toggle('hidden', type !== 'MOBILE_MONEY');
+        if (accountNumberColumn) accountNumberColumn.classList.toggle('hidden', type !== 'BANK');
+        if (additionalBankFields) additionalBankFields.classList.toggle('hidden', type !== 'BANK');
         updateMinAmount();
         syncPreview();
     }
@@ -573,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (recipientNameLoader) recipientNameLoader.classList.remove('hidden');
             if (recipientNameError) recipientNameError.classList.add('hidden');
 
-            const previewData = {
+            const previewPayload = {
                 amount: 100,
                 currency: 'TZS',
                 payout_type: 'MOBILE_MONEY',
@@ -587,7 +601,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify(previewData)
+                body: JSON.stringify(previewPayload)
             });
 
             const result = await previewResponse.json();
@@ -701,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             if (previewBtn) {
                 previewBtn.disabled = true;
-                previewBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"></circle><path d="M4 12a8 8 0 018-8" stroke-width="4" class="opacity-75"></path></svg> Previewing...';
+                previewBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"></circle><path d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Previewing...';
             }
             if (previewError) previewError.classList.add('hidden');
             if (previewFeeSection) previewFeeSection.classList.add('hidden');
@@ -716,11 +730,10 @@ document.addEventListener('DOMContentLoaded', function () {
             };
 
             if (type === 'MOBILE_MONEY') {
-                data.recipient_phone = formatPhoneNumberForApi(recipientPhone?.value || '');
+                data.recipient_phone = formatPhoneNumberForApi(recipientPhone.value);
             } else {
                 data.bank_account_number = document.getElementById('bank_account_number')?.value;
                 data.bic = bicInput?.value;
-                data.account_name = recipientName.value;
                 data.transfer_type = transferType?.value;
             }
 
@@ -734,32 +747,37 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             const result = await response.json();
-
             if (result.success) {
-                previewData = result;
-                const fee = result.data.fee || 0;
-                const total = parseFloat(data.amount) + parseFloat(fee);
-                
-                if (previewFee) previewFee.textContent = data.currency + ' ' + formatCurrency(fee);
-                if (previewTotal) previewTotal.textContent = data.currency + ' ' + formatCurrency(total);
-                
-                @if($balance)
-                    const balanceAfter = parseFloat({{ $balance['available'] ?? 0 }}) - total;
-                    if (previewBalanceAfter) previewBalanceAfter.textContent = data.currency + ' ' + formatCurrency(balanceAfter);
-                @endif
-                
-                if (previewFeeSection) previewFeeSection.classList.remove('hidden');
-
-                showPreviewModal(result.data, data);
-            } else if (previewError) {
-                previewError.textContent = result.message || 'Preview failed';
+                previewData = result.data;
+                previewModalContent.innerHTML = `
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Order Ref</span>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white font-mono">${result.order_reference}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Payout Type</span>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white">${type === 'MOBILE_MONEY' ? 'Mobile Money' : 'Bank Transfer'}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Recipient</span>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white">${recipientName.value}</span>
+                        </div>
+                        <div class="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700">
+                            <span class="text-xs text-gray-500 dark:text-gray-400">Amount</span>
+                            <span class="text-xl font-extrabold text-primary-600 dark:text-primary-400">${currency.value} ${formatCurrency(amount.value)}</span>
+                        </div>
+                    </div>
+                `;
+                previewModal.classList.remove('hidden');
+                previewModal.classList.add('flex');
+            } else {
+                previewError.textContent = result.message || 'Failed to preview payout';
                 previewError.classList.remove('hidden');
             }
         } catch (error) {
-            if (previewError) {
-                previewError.textContent = 'Error previewing payout: ' + error.message;
-                previewError.classList.remove('hidden');
-            }
+            previewError.textContent = 'Error previewing payout: ' + error.message;
+            previewError.classList.remove('hidden');
         } finally {
             if (previewBtn) {
                 previewBtn.disabled = false;
@@ -768,138 +786,36 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function showPreviewModal(apiData, formData) {
-        if (!previewModalContent) return;
-        previewModalContent.innerHTML = `
-            <div class="space-y-5">
-                <div class="p-4 rounded-xl bg-gradient-to-r from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 border border-primary-100 dark:border-primary-800">
-                    <div class="text-sm font-bold text-primary-900 dark:text-white mb-2">
-                        ${formData.payout_type === 'MOBILE_MONEY' ? '📱 Mobile Money Payout' : '🏦 Bank Transfer'}
-                    </div>
-                    ${formData.payout_type === 'MOBILE_MONEY' ? `
-                        <div class="text-xs text-primary-600 dark:text-primary-300">Provider: <span class="font-bold">${apiData.channelProvider || 'Detected automatically'}</span></div>
-                        <div class="text-xs text-primary-600 dark:text-primary-300 mt-1">Phone: <span class="font-mono font-bold">${formData.recipient_phone}</span></div>
-                    ` : `
-                        <div class="text-xs text-primary-600 dark:text-primary-300">Bank: <span class="font-bold">${bankNameInput?.value || 'Selected Bank'}</span></div>
-                        <div class="text-xs text-primary-600 dark:text-primary-300 mt-1">Account: <span class="font-mono font-bold">${formData.bank_account_number}</span></div>
-                        <div class="text-xs text-primary-600 dark:text-primary-300 mt-1">Transfer Type: <span class="font-bold">${formData.transfer_type}</span></div>
-                    `}
-                </div>
-
-                <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                    <h4 class="text-xs font-bold text-gray-900 dark:text-white mb-3 uppercase tracking-wide">Amount Breakdown</h4>
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-gray-500">Payout Amount</span>
-                        <span class="text-sm font-semibold text-gray-900 dark:text-white">${formData.currency} ${formatCurrency(formData.amount)}</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs text-gray-500">Transaction Fee</span>
-                        <span class="text-sm font-semibold text-gray-900 dark:text-white">${formData.currency} ${formatCurrency(apiData.fee || 0)}</span>
-                    </div>
-                    <div class="pt-3 mt-3 border-t border-gray-200 dark:border-gray-500 flex items-center justify-between">
-                        <span class="text-sm font-bold text-gray-900 dark:text-white">Total</span>
-                        <span class="text-xl font-extrabold text-green-600">${formData.currency} ${formatCurrency(parseFloat(formData.amount) + parseFloat(apiData.fee || 0))}</span>
-                    </div>
-                </div>
-
-                <div class="p-4 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600">
-                    <h4 class="text-xs font-bold text-gray-900 dark:text-white mb-3 uppercase tracking-wide">Recipient Details</h4>
-                    <div class="text-xs text-gray-600 dark:text-gray-400 mb-1">Name: <span class="font-semibold text-gray-900 dark:text-white">${formData.recipient_name}</span></div>
-                    <div class="text-xs text-gray-600 dark:text-gray-400">Order Reference: <span class="font-mono font-semibold text-primary-600 dark:text-primary-400">${previewData?.order_reference || 'PREVIEW'}</span></div>
-                </div>
-            </div>
-        `;
-        if (previewModal) {
-            previewModal.classList.remove('hidden');
-            previewModal.classList.add('flex');
-        }
-    }
-
-    if (editPreviewBtn) {
-        editPreviewBtn.addEventListener('click', function () {
-            if (previewModal) {
-                previewModal.classList.add('hidden');
-                previewModal.classList.remove('flex');
-            }
-        });
-    }
-
-    if (confirmPreviewBtn) {
-        confirmPreviewBtn.addEventListener('click', function () {
-            if (previewModal) {
-                previewModal.classList.add('hidden');
-                previewModal.classList.remove('flex');
-            }
-            if (form) form.submit();
-        });
-    }
-
-    if (previewModal) {
-        previewModal.addEventListener('click', function (e) {
-            if (e.target === previewModal && editPreviewBtn) {
-                previewModal.classList.add('hidden');
-                previewModal.classList.remove('flex');
-            }
-        });
-    }
-
-    if (description && descCharCount) {
-        description.addEventListener('input', function () {
-            const remaining = 500 - this.value.length;
-            descCharCount.textContent = remaining;
-            descCharCount.classList.toggle('text-red-500', remaining < 30);
-            descCharCount.classList.toggle('text-gray-400', remaining >= 30);
-        });
-    }
-
-    if (recipientName && amount && currency) {
-        [recipientName, amount, currency].forEach((el) => {
-            el?.addEventListener('input', syncPreview);
-            el?.addEventListener('change', syncPreview);
-        });
-    }
-
-    if (payoutTypeMobile) payoutTypeMobile.addEventListener('change', togglePayoutFields);
-    if (payoutTypeBank) payoutTypeBank.addEventListener('change', togglePayoutFields);
+    // Event Listeners
     if (previewBtn) previewBtn.addEventListener('click', previewPayout);
+    if (editPreviewBtn) editPreviewBtn.addEventListener('click', () => {
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+    });
+    if (confirmPreviewBtn) confirmPreviewBtn.addEventListener('click', () => {
+        form.submit();
+    });
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+        form.reset();
+        syncPreview();
+    });
+    if (currency) currency.addEventListener('change', syncPreview);
+    if (amount) amount.addEventListener('input', syncPreview);
+    if (description) description.addEventListener('input', () => {
+        if (descCharCount) descCharCount.textContent = 500 - description.value.length;
+    });
 
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function () {
-            if (form) form.reset();
-            if (descCharCount) {
-                descCharCount.textContent = '500';
-                descCharCount.classList.remove('text-red-500');
-                descCharCount.classList.add('text-gray-400');
-            }
-            if (previewFeeSection) previewFeeSection.classList.add('hidden');
-            if (previewError) previewError.classList.add('hidden');
-            if (providerBadge) {
-                providerBadge.classList.add('hidden');
-                providerBadge.classList.remove('flex');
-            }
-            togglePayoutFields();
-            const prefix = 'FEEDTANPAY';
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-            let randomPart = '';
-            for (let i = 0; i < 7; i++) {
-                randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-            const orderInput = document.getElementById('orderReferenceInput');
-            if (orderInput) orderInput.value = prefix + randomPart;
-        });
-    }
+    // Close modal when clicking outside
+    previewModal.addEventListener('click', (e) => {
+        if (e.target === previewModal) {
+            previewModal.classList.add('hidden');
+            previewModal.classList.remove('flex');
+        }
+    });
 
-    if (form && submitBtn) {
-        form.addEventListener('submit', function () {
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"></circle><path d="M4 12a8 8 0 018-8" stroke-width="4" class="opacity-75"></path></svg> Processing...';
-            }
-        });
-    }
-
-    togglePayoutFields();
+    // Initialize
     syncPreview();
+    updateMinAmount();
 });
 </script>
 @endpush

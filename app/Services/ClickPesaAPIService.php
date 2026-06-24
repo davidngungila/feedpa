@@ -294,15 +294,25 @@ class ClickPesaAPIService
     }
 
     /**
-     * Lookup Bank Account Name
+     * Lookup Bank Account Name (using preview endpoint to get account details)
      */
-    public function lookupBankAccountName(string $bic, string $accountNumber, string $currency = 'TZS'): array
+    public function lookupBankAccountName(string $bic, string $accountNumber, string $currency = 'TZS', ?string $orderReference = null): array
     {
-        $url = 'https://api.clickpesa.com/third-parties/payouts/lookup-account-name';
+        $url = 'https://api.clickpesa.com/third-parties/payouts/preview-bank-payout';
+        
+        if (!$orderReference) {
+            $orderReference = $this->generateOrderReference('LOOKUP');
+        }
+        
         return $this->makeRequest('POST', $url, [
-            'bic' => $bic,
+            'amount' => 100,
+            'currency' => $currency,
             'accountNumber' => $accountNumber,
-            'currency' => $currency
+            'accountName' => 'Temp', // Placeholder just to get preview
+            'bic' => $bic,
+            'transferType' => 'ACH',
+            'accountCurrency' => $currency,
+            'orderReference' => $orderReference
         ]);
     }
 

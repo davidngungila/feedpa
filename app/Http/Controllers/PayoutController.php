@@ -384,13 +384,17 @@ class PayoutController extends Controller
 
             Log::info('Account name lookup response', ['response' => $response]);
 
-            // Extract account name from response
-            $accountName = $response['data']['accountName'] ?? $response['accountName'] ?? null;
+            // Extract account name from preview response
+            $accountName = $response['data']['receiver']['accountName'] 
+                ?? $response['receiver']['accountName'] 
+                ?? $response['data']['accountName'] 
+                ?? $response['accountName'] 
+                ?? null;
 
             if ($accountName) {
                 return response()->json(['success' => true, 'accountName' => $accountName]);
             } else {
-                return response()->json(['success' => false, 'message' => 'Unable to retrieve account name'], 400);
+                return response()->json(['success' => false, 'message' => 'Unable to retrieve account name from response'], 400);
             }
         } catch (\Exception $e) {
             Log::error('Account name lookup failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);

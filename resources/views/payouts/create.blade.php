@@ -16,7 +16,7 @@
             <a href="{{ route('dashboard.index') }}" class="px-4 py-2 rounded-xl border border-primary-100 dark:border-dark-border text-xs font-bold text-primary-600 dark:text-primary-300 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
                 <i class="fas fa-home me-1"></i> Dashboard
             </a>
-            <a href="{{ route('payouts.index') }}" class="px-4 py-2 rounded-xl bg-primary-50 dark:bg-primary-900/20 text-xs font-bold text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-all">
+            <a href="{{ route('payouts.index') }}" class="px-4 py-2 rounded-xl bg-primary-50 dark:bg-primary-900/20 text-xs font-black text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/40 transition-all">
                 <i class="fas fa-history me-1"></i> Payout History
             </a>
         </div>
@@ -42,6 +42,7 @@
         <div class="xl:col-span-2">
             <form action="{{ route('payouts.store') }}" method="POST" id="payoutForm" class="card p-6 space-y-6">
                 @csrf
+                <input type="hidden" id="orderReferenceInput" name="order_reference" value="{{ $orderReference }}">
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -83,7 +84,12 @@
                                    class="w-full pl-14 bg-primary-50 dark:bg-dark-900 border {{ $errors->has('amount') ? 'border-red-400' : 'border-primary-100 dark:border-dark-border' }} rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500"
                                    placeholder="5000">
                         </div>
-                        <p class="mt-1 text-[10px] text-primary-500">Minimum 100</p>
+                        <div class="mt-1 flex justify-between">
+                            <p class="text-[10px] text-primary-500">Minimum: <span id="minAmount">100 TZS</span></p>
+                            @if($balance)
+                                <p class="text-[10px] text-green-600 font-bold">Balance: {{ number_format($balance['available'] ?? 0, 2) }} {{ $balance['currency'] ?? 'TZS' }}</p>
+                            @endif
+                        </div>
                         @error('amount')
                             <p class="mt-1 text-[10px] text-red-500 font-bold">{{ $message }}</p>
                         @enderror
@@ -98,7 +104,12 @@
                             <input type="tel" id="recipient_phone" name="recipient_phone" value="{{ old('recipient_phone') }}"
                                    class="w-full bg-primary-50 dark:bg-dark-900 border {{ $errors->has('recipient_phone') ? 'border-red-400' : 'border-primary-100 dark:border-dark-border' }} rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500"
                                    placeholder="255712345678">
-                            <p class="mt-1 text-[10px] text-primary-500">Use Tanzanian format: <span class="font-mono">2557XXXXXXXX</span></p>
+                            <div class="mt-1 flex justify-between items-center">
+                                <p class="text-[10px] text-primary-500">Use Tanzanian format: <span class="font-mono">2557XXXXXXXX</span></p>
+                                <div id="providerBadge" class="hidden px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-[10px] font-bold text-green-700 dark:text-green-300">
+                                    <i class="fas fa-check-circle me-1"></i> <span id="providerName"></span>
+                                </div>
+                            </div>
                             @error('recipient_phone')
                                 <p class="mt-1 text-[10px] text-red-500 font-bold">{{ $message }}</p>
                             @enderror
@@ -134,10 +145,10 @@
                         </div>
                         <div>
                             <label for="transfer_type" class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Transfer Type</label>
-                            <select id="transfer_type" name="transfer_type"
+                            <select id="transfer_type" name="transfer_type" onchange="updateMinAmount()"
                                     class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500">
-                                <option value="ACH" {{ old('transfer_type') === 'ACH' ? 'selected' : '' }}>ACH (Standard)</option>
-                                <option value="RTGS" {{ old('transfer_type') === 'RTGS' ? 'selected' : '' }}>RTGS (Express)</option>
+                                <option value="ACH" {{ old('transfer_type') === 'ACH' ? 'selected' : '' }}>ACH (Standard - 1-2 days)</option>
+                                <option value="RTGS" {{ old('transfer_type') === 'RTGS' ? 'selected' : '' }}>RTGS (Express - Same day)</option>
                             </select>
                         </div>
                         <div>
@@ -175,15 +186,6 @@
                     </div>
                 </div>
 
-                <div class="p-4 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800">
-                    <label class="flex items-start gap-2 cursor-pointer">
-                        <input type="checkbox" id="confirm" name="confirm" class="mt-0.5 rounded border-amber-300 text-primary-600 focus:ring-primary-500" required>
-                        <span class="text-xs text-amber-700 dark:text-amber-300">
-                            I confirm all details are correct and authorize this payout.
-                        </span>
-                    </label>
-                </div>
-
                 <div class="flex flex-wrap gap-2">
                     <button type="button" id="previewBtn" class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black transition-all">
                         <i class="fas fa-eye me-1"></i> Preview Payout
@@ -214,7 +216,7 @@
                         <span class="text-primary-500">Amount</span>
                         <span id="previewAmount" class="font-black text-primary-600 dark:text-primary-400">TZS 0.00</span>
                     </div>
-                    <div id="previewFeeSection" class="hidden">
+                    <div id="previewFeeSection" class="hidden pt-3 border-t border-primary-100 dark:border-dark-border space-y-2">
                         <div class="flex justify-between">
                             <span class="text-primary-500">Fee</span>
                             <span id="previewFee" class="font-bold text-primary-900 dark:text-white">-</span>
@@ -223,6 +225,12 @@
                             <span class="text-primary-500">Total</span>
                             <span id="previewTotal" class="font-black text-green-600 dark:text-green-400">-</span>
                         </div>
+                        @if($balance)
+                            <div class="flex justify-between">
+                                <span class="text-primary-500">Balance After</span>
+                                <span id="previewBalanceAfter" class="font-bold text-primary-900 dark:text-white">-</span>
+                            </div>
+                        @endif
                     </div>
                 </div>
                 <div id="previewError" class="hidden mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-xs text-red-700 dark:text-red-300">
@@ -241,6 +249,25 @@
         </div>
     </div>
 </div>
+
+<!-- Preview Modal -->
+<div id="previewModal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+    <div class="card max-w-md w-full mx-4 p-6">
+        <h3 class="text-lg font-black text-primary-900 dark:text-white mb-4">
+            <i class="fas fa-calculator me-2 text-primary-500"></i> Payout Preview
+        </h3>
+        <div id="previewModalContent" class="space-y-4"></div>
+        <div class="mt-6 flex gap-2">
+            <button type="button" id="editPreviewBtn" class="px-4 py-2 rounded-xl border border-primary-200 dark:border-dark-border text-primary-700 dark:text-primary-300 text-xs font-bold">
+                <i class="fas fa-edit me-1"></i> Edit
+            </button>
+            <button type="button" id="confirmPreviewBtn" class="px-4 py-2 rounded-xl bg-primary-600 text-white text-xs font-black">
+                <i class="fas fa-check me-1"></i> Continue to Verify
+            </button>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @push('scripts')
@@ -262,6 +289,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const previewFeeSection = document.getElementById('previewFeeSection');
     const previewFee = document.getElementById('previewFee');
     const previewTotal = document.getElementById('previewTotal');
+    const previewBalanceAfter = document.getElementById('previewBalanceAfter');
     const previewError = document.getElementById('previewError');
     const currencyLabel = document.getElementById('currencyLabel');
     const mobileMoneyFields = document.getElementById('mobileMoneyFields');
@@ -269,10 +297,32 @@ document.addEventListener('DOMContentLoaded', function () {
     const bankSelect = document.getElementById('bank_id');
     const bicInput = document.getElementById('bic');
     const bankNameInput = document.getElementById('bank_name');
+    const recipientPhone = document.getElementById('recipient_phone');
+    const providerBadge = document.getElementById('providerBadge');
+    const providerName = document.getElementById('providerName');
+    const transferType = document.getElementById('transfer_type');
+    const minAmountSpan = document.getElementById('minAmount');
+    const previewModal = document.getElementById('previewModal');
+    const previewModalContent = document.getElementById('previewModalContent');
+    const editPreviewBtn = document.getElementById('editPreviewBtn');
+    const confirmPreviewBtn = document.getElementById('confirmPreviewBtn');
+
+    let previewData = null;
 
     function formatCurrency(value, currencyCode) {
         const numeric = Number(value || 0);
         return new Intl.NumberFormat('en-TZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numeric);
+    }
+
+    function updateMinAmount() {
+        const type = payoutType.value;
+        const transType = transferType ? transferType.value : 'ACH';
+        let minAmount = 100;
+        if (type === 'BANK') {
+            minAmount = transType === 'RTGS' ? 10000 : 1000;
+        }
+        amount.min = minAmount;
+        minAmountSpan.textContent = minAmount + ' ' + currency.value;
     }
 
     function syncPreview() {
@@ -292,6 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
             mobileMoneyFields.classList.add('hidden');
             bankFields.classList.remove('hidden');
         }
+        updateMinAmount();
         syncPreview();
     }
 
@@ -306,6 +357,63 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    function formatPhoneNumber(phone) {
+        let cleaned = phone.replace(/[^0-9]/g, '');
+        if (cleaned.startsWith('0')) {
+            cleaned = '255' + cleaned.slice(1);
+        }
+        if (!cleaned.startsWith('255') && cleaned.length === 9) {
+            cleaned = '255' + cleaned;
+        }
+        return cleaned;
+    }
+
+    function validatePhoneNumber(phone) {
+        const cleaned = phone.replace(/[^0-9]/g, '');
+        return /^255[67]\d{8}$/.test(cleaned);
+    }
+
+    async function detectProvider(phone) {
+        try {
+            const response = await fetch('{{ route('payouts.detect-provider') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
+                },
+                body: JSON.stringify({ phoneNumber: phone })
+            });
+            const data = await response.json();
+            if (data.success && data.provider) {
+                providerName.textContent = data.provider;
+                providerBadge.classList.remove('hidden');
+            } else {
+                providerBadge.classList.add('hidden');
+            }
+        } catch (error) {
+            providerBadge.classList.add('hidden');
+        }
+    }
+
+    let phoneTimeout;
+    recipientPhone.addEventListener('input', function () {
+        this.value = formatPhoneNumber(this.value);
+        clearTimeout(phoneTimeout);
+        if (validatePhoneNumber(this.value)) {
+            phoneTimeout = setTimeout(() => {
+                detectProvider(this.value);
+            }, 500);
+        } else {
+            providerBadge.classList.add('hidden');
+        }
+    });
+
+    recipientPhone.addEventListener('blur', function () {
+        if (validatePhoneNumber(this.value)) {
+            detectProvider(this.value);
+        }
+    });
+
     async function previewPayout() {
         try {
             previewBtn.disabled = true;
@@ -314,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function () {
             previewFeeSection.classList.add('hidden');
 
             const data = {
-                amount: amount.value,
+                amount: parseFloat(amount.value),
                 currency: currency.value,
                 payout_type: payoutType.value,
                 recipient_name: recipientName.value,
@@ -327,10 +435,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 data.bank_account_number = document.getElementById('bank_account_number').value;
                 data.bic = bicInput.value;
                 data.account_name = recipientName.value;
-                data.transfer_type = document.getElementById('transfer_type').value;
+                data.transfer_type = transferType.value;
             }
 
-            const response = await fetch('{{ route("payouts.preview") }}', {
+            const response = await fetch('{{ route('payouts.preview') }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -342,12 +450,22 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await response.json();
 
             if (result.success) {
+                previewData = result;
                 const fee = result.data.fee || 0;
-                const total = Number(data.amount) + Number(fee);
+                const total = parseFloat(data.amount) + parseFloat(fee);
                 
                 previewFee.textContent = data.currency + ' ' + formatCurrency(fee);
                 previewTotal.textContent = data.currency + ' ' + formatCurrency(total);
+                
+                @if($balance)
+                    const balanceAfter = parseFloat({{ $balance['available'] ?? 0 }}) - total;
+                    previewBalanceAfter.textContent = data.currency + ' ' + formatCurrency(balanceAfter);
+                @endif
+                
                 previewFeeSection.classList.remove('hidden');
+
+                // Show modal
+                showPreviewModal(result.data, data);
             } else {
                 previewError.textContent = result.message || 'Preview failed';
                 previewError.classList.remove('hidden');
@@ -360,6 +478,62 @@ document.addEventListener('DOMContentLoaded', function () {
             previewBtn.innerHTML = '<i class="fas fa-eye me-1"></i> Preview Payout';
         }
     }
+
+    function showPreviewModal(data, formData) {
+        previewModalContent.innerHTML = `
+            <div class="space-y-3">
+                <div class="p-3 rounded-lg bg-primary-50 dark:bg-dark-900">
+                    <div class="text-xs font-bold text-primary-900 dark:text-white mb-2">
+                        ${formData.payout_type === 'MOBILE_MONEY' ? '📱 Mobile Money Payout' : '🏦 Bank Transfer'}
+                    </div>
+                    ${formData.payout_type === 'MOBILE_MONEY' ? `
+                        <div class="text-xs text-primary-500">Provider: <span class="font-bold text-primary-700">${data.channelProvider || '-'}</span></div>
+                        <div class="text-xs text-primary-500">Phone: <span class="font-bold text-primary-700">${formData.recipient_phone}</span></div>
+                    ` : `
+                        <div class="text-xs text-primary-500">Bank: <span class="font-bold text-primary-700">${bankNameInput.value}</span></div>
+                        <div class="text-xs text-primary-500">Account: <span class="font-bold text-primary-700">${formData.bank_account_number}</span></div>
+                        <div class="text-xs text-primary-500">Transfer Type: <span class="font-bold text-primary-700">${formData.transfer_type}</span></div>
+                    `}
+                </div>
+
+                <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                    <h4 class="text-xs font-bold text-primary-900 dark:text-white mb-2">Amount Details</h4>
+                    <div class="flex justify-between text-xs text-primary-500 mb-1">
+                        <span>Payout Amount</span>
+                        <span class="font-bold text-primary-900">${formData.currency} ${formatCurrency(formData.amount)}</span>
+                    </div>
+                    <div class="flex justify-between text-xs text-primary-500 mb-1">
+                        <span>Transaction Fee</span>
+                        <span class="font-bold text-primary-900">${formData.currency} ${formatCurrency(data.fee || 0)}</span>
+                    </div>
+                    <div class="pt-2 mt-2 border-t border-gray-200 dark:border-dark-border flex justify-between text-xs">
+                        <span class="font-bold text-primary-900">Total</span>
+                        <span class="font-black text-green-600">${formData.currency} ${formatCurrency(parseFloat(formData.amount) + parseFloat(data.fee || 0))}</span>
+                    </div>
+                </div>
+
+                <div class="p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50">
+                    <h4 class="text-xs font-bold text-primary-900 dark:text-white mb-2">Recipient Details</h4>
+                    <div class="text-xs text-primary-500 mb-1">Name: <span class="font-bold text-primary-700">${formData.recipient_name}</span></div>
+                    <div class="text-xs text-primary-500">Order Reference: <span class="font-mono font-bold text-primary-700">${previewData.order_reference}</span></div>
+                </div>
+            </div>
+        `;
+        previewModal.classList.remove('hidden');
+        previewModal.classList.add('flex');
+    }
+
+    editPreviewBtn.addEventListener('click', function () {
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+    });
+
+    confirmPreviewBtn.addEventListener('click', function () {
+        previewModal.classList.add('hidden');
+        previewModal.classList.remove('flex');
+        // Submit form
+        form.submit();
+    });
 
     description.addEventListener('input', function () {
         const remaining = 500 - this.value.length;
@@ -382,7 +556,17 @@ document.addEventListener('DOMContentLoaded', function () {
         descCharCount.classList.add('text-primary-500');
         previewFeeSection.classList.add('hidden');
         previewError.classList.add('hidden');
+        providerBadge.classList.add('hidden');
         togglePayoutFields();
+        // Regenerate order reference
+        const now = new Date();
+        const prefix = 'FEEDTANPAY';
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomPart = '';
+        for (let i = 0; i < 7; i++) {
+            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        document.getElementById('orderReferenceInput').value = prefix + randomPart;
     });
 
     form.addEventListener('submit', function () {

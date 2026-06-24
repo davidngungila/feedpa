@@ -269,15 +269,21 @@ class PayoutController extends Controller
     public function create()
     {
         $banks = [];
+        $balance = null;
         try {
             $banksResponse = $this->api->getBanksList();
             if (isset($banksResponse['data']) && is_array($banksResponse['data'])) {
                 $banks = $banksResponse['data'];
             }
+            $balanceResponse = $this->api->getAccountBalance();
+            if (isset($balanceResponse['data'])) {
+                $balance = $balanceResponse['data'];
+            }
         } catch (\Exception $e) {
-            Log::error('Failed to fetch banks list', ['error' => $e->getMessage()]);
+            Log::error('Failed to fetch initial data', ['error' => $e->getMessage()]);
         }
-        return view('payouts.create', compact('banks'));
+        $orderReference = $this->api->generateOrderReference('FEEDTANPAY');
+        return view('payouts.create', compact('banks', 'balance', 'orderReference'));
     }
 
     public function previewPayout(\Illuminate\Http\Request $request)
@@ -322,9 +328,50 @@ class PayoutController extends Controller
         }
     }
 
+    public function detectProvider(\Illuminate\Http\Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'phoneNumber' => 'required|string'
+            ]);
+            // For now, simulate provider detection based on prefix
+            $phone = preg_replace('/[^0-9]/', '', $validated['phoneNumber']);
+            $provider = null;
+            if (preg_match('/^25565/', $phone)) {
+                $provider = 'TIGO PESA';
+            } elseif (preg_match('/^2557[14]/', $phone)) {
+                $provider = 'M-PESA';
+            } elseif (preg_match('/^2557[56]/', $phone)) {
+                $provider = 'AIRTEL MONEY';
+            } elseif (preg_match('/^25577/', $phone)) {
+                $provider = 'HALOPESA';
+            }
+            return response()->json(['success' => true, 'provider' => $provider]);
+        } catch (\Exception $e) {
+            Log::error('Provider detection failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
+    public function lookupAccountName(\Illuminate\Http\Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'bic' => 'required|string',
+                'accountNumber' => 'required|string'
+            ]);
+            // For now, return placeholder name
+            return response()->json(['success' => true, 'accountName' => 'Account Holder Name']);
+        } catch (\Exception $e) {
+            Log::error('Account name lookup failed', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 400);
+        }
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'order_reference' => 'required|string|max:255',
             'amount' => 'required|numeric|min:100',
             'currency' => 'required|in:TZS,USD',
             'payout_type' => 'required|in:MOBILE_MONEY,BANK',
@@ -340,7 +387,7 @@ class PayoutController extends Controller
         ]);
 
         try {
-            $orderReference = $this->api->generateOrderReference('FEEDTANPAY');
+            $orderReference = $validated['order_reference'];
             $payout = Payout::create([
                 'order_reference' => $orderReference,
                 'status' => 'PENDING_VERIFICATION',

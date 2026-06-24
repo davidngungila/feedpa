@@ -60,6 +60,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [PayoutController::class, 'index'])->name('index');
         Route::get('/create', [PayoutController::class, 'create'])->name('create');
         Route::post('/preview', [PayoutController::class, 'previewPayout'])->name('preview');
+        Route::post('/detect-provider', [PayoutController::class, 'detectProvider'])->name('detect-provider');
+        Route::post('/lookup-account-name', [PayoutController::class, 'lookupAccountName'])->name('lookup-account-name');
         Route::post('/', [PayoutController::class, 'store'])->name('store');
         Route::get('/{orderReference}/verify', [PayoutController::class, 'showVerifyOtp'])->name('verify-otp');
         Route::post('/{orderReference}/verify', [PayoutController::class, 'verifyOtp'])->name('verify');

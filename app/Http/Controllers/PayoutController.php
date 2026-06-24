@@ -275,13 +275,20 @@ class PayoutController extends Controller
             if (isset($banksResponse['data']) && is_array($banksResponse['data'])) {
                 $banks = $banksResponse['data'];
             }
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch banks list', ['error' => $e->getMessage()]);
+        }
+        
+        try {
             $balanceResponse = $this->api->getAccountBalance();
             if (isset($balanceResponse['data'])) {
                 $balance = $balanceResponse['data'];
             }
         } catch (\Exception $e) {
-            Log::error('Failed to fetch initial data', ['error' => $e->getMessage()]);
+            Log::error('Failed to fetch account balance', ['error' => $e->getMessage()]);
+            $balance = null;
         }
+        
         $orderReference = $this->api->generateOrderReference('FEEDTANPAY');
         return view('payouts.create', compact('banks', 'balance', 'orderReference'));
     }
@@ -386,6 +393,19 @@ class PayoutController extends Controller
             'description' => 'nullable|string|max:500'
         ]);
 
+        // Format phone number for mobile money payouts
+        $recipientPhone = $validated['recipient_phone'] ?? null;
+        if ($validated['payout_type'] === 'MOBILE_MONEY' && $recipientPhone) {
+            $cleaned = preg_replace('/[^0-9]/g', $recipientPhone);
+            if (strlen($cleaned) === 9) {
+                $recipientPhone = '255' . $cleaned;
+            } elseif (strlen($cleaned) === 10 && str_starts_with($cleaned, '0')) {
+                $recipientPhone = '255' . substr($cleaned, 1);
+            } elseif (strlen($cleaned) === 12 && str_starts_with($cleaned, '255')) {
+                $recipientPhone = $cleaned;
+            }
+        }
+
         try {
             $orderReference = $validated['order_reference'];
             $payout = Payout::create([
@@ -395,7 +415,7 @@ class PayoutController extends Controller
                 'currency' => $validated['currency'],
                 'payout_type' => $validated['payout_type'],
                 'recipient_name' => $validated['recipient_name'],
-                'recipient_phone' => $validated['recipient_phone'] ?? null,
+                'recipient_phone' => $recipientPhone ?? null,
                 'bank_account_number' => $validated['bank_account_number'] ?? null,
                 'bank_name' => $validated['bank_name'] ?? null,
                 'bic' => $validated['bic'] ?? null,
@@ -424,7 +444,7 @@ class PayoutController extends Controller
             $smsMessage .= "Reference: {$orderReference}\n";
             $smsMessage .= "Amount: {$validated['amount']} {$validated['currency']}\n";
             $smsMessage .= "Recipient: {$validated['recipient_name']}\n";
-            $smsMessage .= $validated['payout_type'] === 'MOBILE_MONEY' ? "Phone: {$validated['recipient_phone']}\n" : "Bank: {$validated['bank_name']}\nAcc: {$validated['bank_account_number']}\n";
+            $smsMessage .= $validated['payout_type'] === 'MOBILE_MONEY' ? "Phone: {$recipientPhone}\n" : "Bank: {$validated['bank_name']}\nAcc: {$validated['bank_account_number']}\n";
             $smsMessage .= "Description: {$validated['description']}\n";
             $smsMessage .= "OTP: {$otp}\n";
             $smsMessage .= "Expires in 10 minutes.\nDo not share.";

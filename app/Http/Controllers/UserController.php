@@ -173,8 +173,12 @@ class UserController extends Controller
         $deletedUserName = $user->name;
         $deletedUserEmail = $user->email;
 
-        // Manually delete related records to avoid foreign key issues
+        // Manually delete/update related records to avoid foreign key issues
         \App\Models\UserSession::where('user_id', $user->id)->delete();
+        \App\Models\PasswordResetToken::where('user_id', $user->id)->delete();
+        \App\Models\PayoutOtp::where('user_id', $user->id)->delete();
+        \App\Models\PayoutNote::where('user_id', $user->id)->delete();
+        \App\Models\TransactionNote::where('user_id', $user->id)->delete();
         \App\Models\Payout::where('user_id', $user->id)->update(['user_id' => null]);
         \App\Models\Audit::where('user_id', $user->id)->update(['user_id' => null]);
         

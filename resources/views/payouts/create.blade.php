@@ -813,21 +813,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     if (payoutType) payoutType.addEventListener('change', togglePayoutFields);
     if (bankSelect) bankSelect.addEventListener('change', updateBankDetails);
-    
-    // Load bank account name when account number is entered
-    const bankAccountNumber = document.getElementById('bank_account_number');
-    let bankAccountTimeout;
-    if (bankAccountNumber) {
-        bankAccountNumber.addEventListener('input', function () {
-            clearTimeout(bankAccountTimeout);
-            const currentBic = document.getElementById('bic')?.value;
-            if (currentBic && this.value.length > 3) {
-                bankAccountTimeout = setTimeout(() => {
-                    loadBankAccountName(this.value, currentBic);
-                }, 600);
-            }
-        });
-    }
 
     // Close modal when clicking outside
     previewModal.addEventListener('click', (e) => {

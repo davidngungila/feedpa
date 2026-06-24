@@ -77,7 +77,7 @@
                         <!-- Payout Type & Currency Row -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
-                                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                <label for="payout_type" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
                                     <span class="flex items-center gap-1.5">
                                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -85,36 +85,11 @@
                                         Payout Type
                                     </span>
                                 </label>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="payout_type" value="MOBILE_MONEY" id="type_mm" class="peer sr-only" {{ old('payout_type') !== 'BANK' ? 'checked' : '' }} onchange="togglePayoutFields()">
-                                        <div class="flex items-center gap-3 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20 transition-all">
-                                            <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg peer-checked:bg-primary-500 transition-colors">
-                                                <svg class="w-5 h-5 text-primary-600 dark:text-primary-400 peer-checked:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                                </svg>
-                                            </div>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-bold text-gray-900 dark:text-white">Mobile Money</p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">Fast & Simple</p>
-                                            </div>
-                                        </div>
-                                    </label>
-                                    <label class="cursor-pointer">
-                                        <input type="radio" name="payout_type" value="BANK" id="type_bank" class="peer sr-only" {{ old('payout_type') === 'BANK' ? 'checked' : '' }} onchange="togglePayoutFields()">
-                                        <div class="flex items-center gap-3 p-3 border-2 border-gray-200 dark:border-gray-600 rounded-xl peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20 transition-all">
-                                            <div class="p-2 bg-primary-100 dark:bg-primary-900/30 rounded-lg peer-checked:bg-primary-500 transition-colors">
-                                                <svg class="w-5 h-5 text-primary-600 dark:text-primary-400 peer-checked:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                                                </svg>
-                                            </div>
-                                            <div class="flex-1">
-                                                <p class="text-sm font-bold text-gray-900 dark:text-white">Bank Transfer</p>
-                                                <p class="text-xs text-gray-500 dark:text-gray-400">Secure & Reliable</p>
-                                            </div>
-                                        </div>
-                                    </label>
-                                </div>
+                                <select id="payout_type" name="payout_type" onchange="togglePayoutFields()"
+                                        class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                                    <option value="MOBILE_MONEY" {{ old('payout_type') !== 'BANK' ? 'selected' : '' }}>Mobile Money - Fast & Simple</option>
+                                    <option value="BANK" {{ old('payout_type') === 'BANK' ? 'selected' : '' }}>Bank Transfer - Secure & Reliable</option>
+                                </select>
                             </div>
 
                             <div>
@@ -217,8 +192,12 @@
                                             class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border {{ $errors->has('bank_id') ? 'border-red-400' : 'border-gray-200 dark:border-gray-600' }} rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
                                         <option value="">Choose a bank...</option>
                                         @foreach($banks as $bank)
-                                            <option value="{{ $bank['bic'] }}" data-bank-name="{{ $bank['name'] }}" {{ old('bic') === $bank['bic'] ? 'selected' : '' }}>
-                                                {{ $bank['name'] }}
+                                            @php
+                                                $bankCode = $bank['bic'] ?? $bank['code'] ?? $bank['id'] ?? '';
+                                                $bankName = $bank['name'] ?? $bank['bankName'] ?? '';
+                                            @endphp
+                                            <option value="{{ $bankCode }}" data-bank-name="{{ $bankName }}" {{ old('bic') === $bankCode ? 'selected' : '' }}>
+                                                {{ $bankName }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -435,8 +414,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('payoutForm');
-    const payoutTypeMobile = document.getElementById('type_mm');
-    const payoutTypeBank = document.getElementById('type_bank');
+    const payoutType = document.getElementById('payout_type');
     const currency = document.getElementById('currency');
     const recipientName = document.getElementById('recipient_name');
     const amount = document.getElementById('amount');
@@ -477,9 +455,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function getCurrentPayoutType() {
-        if (payoutTypeMobile && payoutTypeMobile.checked) return 'MOBILE_MONEY';
-        if (payoutTypeBank && payoutTypeBank.checked) return 'BANK';
-        return 'MOBILE_MONEY';
+        return payoutType ? payoutType.value : 'MOBILE_MONEY';
     }
 
     function updateMinAmount() {

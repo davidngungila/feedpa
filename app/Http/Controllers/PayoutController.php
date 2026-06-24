@@ -272,9 +272,11 @@ class PayoutController extends Controller
         $balance = null;
         try {
             $banksResponse = $this->api->getBanksList();
+            Log::info('Banks response', ['response' => $banksResponse]);
             if (isset($banksResponse['data']) && is_array($banksResponse['data'])) {
                 $banks = $banksResponse['data'];
             }
+            Log::info('Processed banks', ['banks' => $banks]);
         } catch (\Exception $e) {
             Log::error('Failed to fetch banks list', ['error' => $e->getMessage()]);
         }

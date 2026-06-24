@@ -142,8 +142,8 @@
                                     <option value="">Choose a bank...</option>
                                     @foreach($banks as $bank)
                                         @php
-                                            $bankCode = $bank['bic'] ?? $bank['code'] ?? $bank['id'] ?? '';
-                                            $bankName = $bank['name'] ?? $bank['bankName'] ?? '';
+                                            $bankCode = $bank['bic'] ?? $bank['code'] ?? $bank['id'] ?? $bank['bank_code'] ?? '';
+                                            $bankName = $bank['name'] ?? $bank['bankName'] ?? $bank['bank_name'] ?? $bank['full_name'] ?? 'Unknown Bank';
                                         @endphp
                                         <option value="{{ $bankCode }}" data-bank-name="{{ $bankName }}" {{ old('bic') === $bankCode ? 'selected' : '' }}>
                                             {{ $bankName }}

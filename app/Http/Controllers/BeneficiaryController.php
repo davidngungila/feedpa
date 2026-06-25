@@ -19,6 +19,8 @@ class BeneficiaryController extends Controller
         $banks = [];
         try {
             $banksResponse = app('App\Services\ClickPesaAPIService')->getBanksList();
+            // Log the banks response to debug what we're receiving
+            Log::info('Banks API response', ['response' => $banksResponse]);
             if (isset($banksResponse['data']) && is_array($banksResponse['data'])) {
                 $banks = $banksResponse['data'];
             } elseif (isset($banksResponse['banks']) && is_array($banksResponse['banks'])) {
@@ -26,10 +28,11 @@ class BeneficiaryController extends Controller
             } elseif (is_array($banksResponse)) {
                 $banks = $banksResponse;
             }
+            // Log the processed banks array
+            Log::info('Processed banks array', ['banks' => $banks]);
         } catch (\Exception $e) {
-            //
+            Log::error('Failed to fetch banks list', ['error' => $e->getMessage()]);
         }
-        
         return view('beneficiaries.create', compact('banks'));
     }
 
@@ -76,6 +79,8 @@ class BeneficiaryController extends Controller
         $banks = [];
         try {
             $banksResponse = app('App\Services\ClickPesaAPIService')->getBanksList();
+            // Log the banks response to debug what we're receiving
+            Log::info('Banks API response (edit)', ['response' => $banksResponse]);
             if (isset($banksResponse['data']) && is_array($banksResponse['data'])) {
                 $banks = $banksResponse['data'];
             } elseif (isset($banksResponse['banks']) && is_array($banksResponse['banks'])) {
@@ -83,8 +88,10 @@ class BeneficiaryController extends Controller
             } elseif (is_array($banksResponse)) {
                 $banks = $banksResponse;
             }
+            // Log the processed banks array
+            Log::info('Processed banks array (edit)', ['banks' => $banks]);
         } catch (\Exception $e) {
-            //
+            Log::error('Failed to fetch banks list (edit)', ['error' => $e->getMessage()]);
         }
         
         return view('beneficiaries.edit', compact('beneficiary', 'banks'));

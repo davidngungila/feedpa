@@ -193,11 +193,13 @@
                         <i :class="openDropdowns.includes('payouts') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
                     </button>
                     <div :class="openDropdowns.includes('payouts') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        @if(auth()->check() && auth()->user()->can_create_payouts)
                         <a href="{{ route('payouts.create') }}" 
                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('payouts.create') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
                             <i class="fa-solid fa-circle text-[6px] ml-1"></i>
                             <span>New Payout</span>
                         </a>
+                        @endif
                         <a href="{{ route('payouts.index') }}" 
                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('payouts.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
                             <i class="fa-solid fa-circle text-[6px] ml-1"></i>
@@ -205,6 +207,13 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- Beneficiaries -->
+                <a href="{{ route('beneficiaries.index') }}" 
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('beneficiaries.*') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                    <i class="fa-solid fa-address-book w-4 text-center"></i>
+                    <span>Beneficiaries</span>
+                </a>
 
                 <!-- Bill Management Dropdown -->
                 <div class="space-y-0.5">

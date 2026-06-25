@@ -381,8 +381,8 @@ class PayoutController extends Controller
 
     public function lookupAccountName(\Illuminate\Http\Request $request)
     {
-        if (!auth()->user()->can_create_payouts) {
-            return response()->json(['success' => false, 'message' => 'You are not authorized to create payouts'], 403);
+        if (!auth()->check()) {
+            return response()->json(['success' => false, 'message' => 'You must be logged in'], 401);
         }
         
         try {

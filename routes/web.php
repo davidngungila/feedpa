@@ -13,6 +13,7 @@ use App\Http\Controllers\AuditController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\BeneficiaryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -102,6 +103,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{id}/pdf', [BillController::class, 'pdf'])->name('pdf');
     });
 
+    // Beneficiary Management Routes
+    Route::resource('beneficiaries', BeneficiaryController::class);
+    
     // User Management Routes
     Route::resource('users', UserController::class);
     Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');

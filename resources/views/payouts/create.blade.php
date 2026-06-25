@@ -74,6 +74,30 @@
                     </div>
 
                     <div class="p-6 space-y-6">
+                        <!-- Select Beneficiary (Optional) -->
+                        <div>
+                            <label for="beneficiary_id" class="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                Select Beneficiary
+                            </label>
+                            <select id="beneficiary_id" name="beneficiary_id"
+                                    class="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all">
+                                <option value="">-- Select a beneficiary (or fill details manually) --</option>
+                                @foreach($beneficiaries as $beneficiary)
+                                    <option value="{{ $beneficiary->id }}"
+                                        data-type="{{ $beneficiary->type }}"
+                                        data-name="{{ $beneficiary->name }}"
+                                        data-phone="{{ $beneficiary->phone }}"
+                                        data-bank-name="{{ $beneficiary->bank_name }}"
+                                        data-account-number="{{ $beneficiary->account_number }}"
+                                        data-bic="{{ $beneficiary->bic }}"
+                                        data-transfer-type="{{ $beneficiary->transfer_type }}"
+                                        data-email="{{ $beneficiary->email }}">
+                                        {{ $beneficiary->name }} ({{ $beneficiary->type === 'bank' ? 'Bank' : 'Mobile Money' }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <!-- Payout Type & Currency Row -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <div>
@@ -453,8 +477,58 @@ document.addEventListener('DOMContentLoaded', function () {
     const previewModalContent = document.getElementById('previewModalContent');
     const editPreviewBtn = document.getElementById('editPreviewBtn');
     const confirmPreviewBtn = document.getElementById('confirmPreviewBtn');
+    const beneficiarySelect = document.getElementById('beneficiary_id');
 
     let previewData = null;
+
+    function handleBeneficiaryChange() {
+        if (!beneficiarySelect) return;
+        const selectedOption = beneficiarySelect.options[beneficiarySelect.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+            // Get data from data attributes
+            const type = selectedOption.getAttribute('data-type');
+            const name = selectedOption.getAttribute('data-name');
+            const phone = selectedOption.getAttribute('data-phone');
+            const bankName = selectedOption.getAttribute('data-bank-name');
+            const accountNumber = selectedOption.getAttribute('data-account-number');
+            const bic = selectedOption.getAttribute('data-bic');
+            const transferType = selectedOption.getAttribute('data-transfer-type');
+            const email = selectedOption.getAttribute('data-email');
+
+            // Update payout type
+            if (payoutType) {
+                payoutType.value = type === 'bank' ? 'BANK' : 'MOBILE_MONEY';
+                togglePayoutFields();
+            }
+
+            // Update name
+            if (recipientName) recipientName.value = name;
+
+            // Update fields based on type
+            if (type === 'mobile') {
+                if (recipientPhone) recipientPhone.value = formatPhoneNumberForInput(phone);
+                if (document.getElementById('beneficiary_email')) document.getElementById('beneficiary_email').value = email;
+            } else {
+                // Bank fields
+                // Select the bank if possible
+                if (bankSelect && bankName) {
+                    for (let option of bankSelect.options) {
+                        if (option.getAttribute('data-bank-name') === bankName) {
+                            bankSelect.value = option.value;
+                            break;
+                        }
+                    }
+                    updateBankDetails();
+                }
+                if (document.getElementById('bank_account_number')) document.getElementById('bank_account_number').value = accountNumber;
+                if (transferType) transferType.value = transferType;
+                if (document.getElementById('beneficiary_email')) document.getElementById('beneficiary_email').value = email;
+                if (document.getElementById('bank_beneficiary_email')) document.getElementById('bank_beneficiary_email').value = email;
+            }
+
+            syncPreview();
+        }
+    }
 
     function formatCurrency(value, currencyCode) {
         const numeric = Number(value || 0);
@@ -797,6 +871,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
     if (payoutType) payoutType.addEventListener('change', togglePayoutFields);
     if (bankSelect) bankSelect.addEventListener('change', updateBankDetails);
+    if (beneficiarySelect) beneficiarySelect.addEventListener('change', handleBeneficiaryChange);
 
     // Close modal when clicking outside
     previewModal.addEventListener('click', (e) => {

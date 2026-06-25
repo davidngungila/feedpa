@@ -301,7 +301,11 @@ class PayoutController extends Controller
         }
         
         $orderReference = $this->api->generateOrderReference('FEEDTANPAY');
-        return view('payouts.create', compact('banks', 'balance', 'orderReference'));
+        $beneficiaries = \App\Models\Beneficiary::where('user_id', auth()->id())
+            ->where('is_active', true)
+            ->latest()
+            ->get();
+        return view('payouts.create', compact('banks', 'balance', 'orderReference', 'beneficiaries'));
     }
 
     public function previewPayout(\Illuminate\Http\Request $request)

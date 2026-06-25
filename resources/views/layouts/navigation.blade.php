@@ -53,6 +53,14 @@
     </li>
     @endif
 
+    <!-- Beneficiaries -->
+    <li class="menu-item {{ request()->routeIs('beneficiaries.*') ? 'active' : '' }}">
+        <a href="{{ route('beneficiaries.index') }}" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-book-open"></i>
+            <div data-i18n="Beneficiaries">Beneficiaries</div>
+        </a>
+    </li>
+
     <!-- Payout History -->
     <li class="menu-item {{ request()->routeIs('payouts.index') ? 'active' : '' }}">
         <a href="{{ route('payouts.index') }}" class="menu-link">

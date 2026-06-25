@@ -217,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     let phoneTimeout;
-    let accountTimeout;
+    let bankAccountTimeout;
     
     function updateFields() {
         const selectedType = document.querySelector('input[name="type"]:checked')?.value;
@@ -260,11 +260,24 @@ document.addEventListener('DOMContentLoaded', function() {
     accountNumberInput?.addEventListener('input', function() {
         console.log('Account number changed:', this.value);
         checkEnableVerify();
-        clearTimeout(accountTimeout);
+        clearTimeout(bankAccountTimeout);
         if (this.value && bicInput.value) {
-            accountTimeout = setTimeout(() => {
+            bankAccountTimeout = setTimeout(() => {
                 loadBankAccountName(this.value, bicInput.value);
             }, 500);
+        } else {
+            if (nameInput) nameInput.value = '';
+            if (nameError) nameError.classList.add('hidden');
+            if (verificationStatus) verificationStatus.classList.add('hidden');
+        }
+    });
+    
+    // Also add blur event for account number
+    accountNumberInput?.addEventListener('blur', function() {
+        console.log('Account number blur');
+        const currentBic = bicInput.value;
+        if (this.value && currentBic) {
+            loadBankAccountName(this.value, currentBic);
         }
     });
     
@@ -309,9 +322,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function loadMobileMoneyRecipientName(phone) {
         try {
-            nameInput.value = '';
-            nameLoader.classList.remove('hidden');
-            nameError.classList.add('hidden');
+            if (nameInput) nameInput.value = '';
+            if (nameLoader) nameLoader.classList.remove('hidden');
+            if (nameError) nameError.classList.add('hidden');
             
             const previewPayload = {
                 amount: 100,
@@ -331,22 +344,23 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             const result = await previewResponse.json();
+            console.log('Mobile money preview response:', result);
             if (result.success && result.data && result.data.receiver && result.data.receiver.accountName) {
-                nameInput.value = result.data.receiver.accountName;
+                if (nameInput) nameInput.value = result.data.receiver.accountName;
             }
         } catch (error) {
             console.error('Error retrieving recipient name:', error);
         } finally {
-            nameLoader.classList.add('hidden');
+            if (nameLoader) nameLoader.classList.add('hidden');
         }
     }
     
     async function loadBankAccountName(accountNumber, bic) {
         console.log('loadBankAccountName called', { accountNumber, bic });
         try {
-            nameInput.value = '';
-            nameLoader.classList.remove('hidden');
-            nameError.classList.add('hidden');
+            if (nameInput) nameInput.value = '';
+            if (nameLoader) nameLoader.classList.remove('hidden');
+            if (nameError) nameError.classList.add('hidden');
             if (verificationStatus) {
                 verificationStatus.classList.remove('hidden', 'text-green-600', 'text-red-500');
                 verificationStatus.classList.add('text-blue-600');
@@ -369,7 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             console.log('Verification response:', data);
             if (data.success && data.accountName) {
-                nameInput.value = data.accountName;
+                if (nameInput) nameInput.value = data.accountName;
                 if (verificationStatus) {
                     verificationStatus.classList.remove('hidden', 'text-blue-600', 'text-red-500');
                     verificationStatus.classList.add('text-green-600');
@@ -390,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 verificationStatus.textContent = 'Verification failed. Please try again.';
             }
         } finally {
-            nameLoader.classList.add('hidden');
+            if (nameLoader) nameLoader.classList.add('hidden');
             if (verifyAccountBtn) {
                 verifyAccountBtn.textContent = 'Verify';
                 checkEnableVerify();
@@ -407,15 +421,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const formattedPhone = formatPhoneNumberForApi(this.value);
                 loadMobileMoneyRecipientName(formattedPhone);
             }, 500);
+        } else {
+            if (nameInput) nameInput.value = '';
+        }
+    });
+    
+    // Phone blur listener
+    phoneInput?.addEventListener('blur', function() {
+        if (validatePhoneNumber(this.value)) {
+            const formattedPhone = formatPhoneNumberForApi(this.value);
+            loadMobileMoneyRecipientName(formattedPhone);
         }
     });
     
     checkEnableVerify();
-    
-    // Auto-verify on page load if fields are filled
-    if (bankSelect?.value && accountNumberInput?.value) {
-        loadBankAccountName(accountNumberInput.value, bicInput.value);
-    }
 });
 </script>
 @endpush

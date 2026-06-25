@@ -310,10 +310,6 @@ class PayoutController extends Controller
 
     public function previewPayout(\Illuminate\Http\Request $request)
     {
-        if (!auth()->check()) {
-            return response()->json(['success' => false, 'message' => 'You must be logged in'], 401);
-        }
-        
         try {
             $validated = $request->validate([
                 'amount' => 'required|numeric|min:100',
@@ -381,10 +377,6 @@ class PayoutController extends Controller
 
     public function lookupAccountName(\Illuminate\Http\Request $request)
     {
-        if (!auth()->check()) {
-            return response()->json(['success' => false, 'message' => 'You must be logged in'], 401);
-        }
-        
         try {
             $validated = $request->validate([
                 'bic' => 'required|string',

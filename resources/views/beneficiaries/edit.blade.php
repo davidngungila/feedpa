@@ -117,11 +117,11 @@
                                     <option value="">-- Select Bank --</option>
                                     @foreach($banks as $bank)
                                         @php
-                                            $bankName = $bank['name'] ?? $bank['bank_name'] ?? null;
-                                            $bankCode = $bank['code'] ?? $bank['bank_code'] ?? $bank['id'] ?? null;
+                                            $bankName = $bank['name'] ?? $bank['bank_name'] ?? $bank['bankName'] ?? $bank['full_name'] ?? 'Unknown Bank';
+                                            $bankCode = $bank['bic'] ?? $bank['code'] ?? $bank['bank_code'] ?? $bank['id'] ?? '';
                                         @endphp
                                         @if($bankName)
-                                            <option value="{{ $bankName }}" data-code="{{ $bankCode }}" {{ old('bank_name', $beneficiary->bank_name) === $bankName ? 'selected' : '' }}>
+                                            <option value="{{ $bankName }}" data-code="{{ $bankCode }}" data-bank-name="{{ $bankName }}" {{ old('bank_name', $beneficiary->bank_name) === $bankName ? 'selected' : '' }}>
                                                 {{ $bankName }}
                                             </option>
                                         @endif
@@ -216,6 +216,23 @@ document.addEventListener('DOMContentLoaded', function() {
         verificationStatus
     });
     
+    // Log bank options
+    if (bankSelect) {
+        console.log('Bank options:');
+        for (let i = 0; i < bankSelect.options.length; i++) {
+            const option = bankSelect.options[i];
+            console.log(`Option ${i}:`, { value: option.value, text: option.text, dataset: option.dataset });
+        }
+    }
+    
+    // Set initial bic value if a bank is already selected
+    if (bankSelect && bankSelect.value) {
+        const selectedOption = bankSelect.options[bankSelect.selectedIndex];
+        bicInput.value = selectedOption.dataset.code || '';
+        console.log('Initial bank selected:', { bankName: bankSelect.value, bic: bicInput.value });
+        checkEnableVerify();
+    }
+    
     let phoneTimeout;
     let bankAccountTimeout;
     
@@ -247,7 +264,12 @@ document.addEventListener('DOMContentLoaded', function() {
     bankSelect?.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         bicInput.value = selectedOption.dataset.code || '';
-        console.log('Bank changed:', { bankName: this.value, bic: bicInput.value });
+        console.log('Bank changed:', { 
+            bankName: this.value, 
+            bic: bicInput.value,
+            selectedOption: selectedOption,
+            dataset: selectedOption.dataset
+        });
         checkEnableVerify();
         
         // If account number is already entered, load the name

@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use PragmaRX\Google2FAQRCode\Google2FA;
 use Illuminate\Support\Str;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -164,29 +166,44 @@ class UserController extends Controller
             abort(403, 'Unauthorized');
         }
         
-        $user = User::findOrFail($id);
-        
-        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-            Storage::disk('public')->delete($user->avatar);
-        }
+        return DB::transaction(function () use ($id) {
+            $user = User::findOrFail($id);
+            
+            Log::info('Attempting to delete user', ['user_id' => $user->id, 'user_email' => $user->email]);
+            
+            if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                Storage::disk('public')->delete($user->avatar);
+            }
 
-        $deletedUserName = $user->name;
-        $deletedUserEmail = $user->email;
+            $deletedUserName = $user->name;
+            $deletedUserEmail = $user->email;
 
-        // Manually delete/update related records to avoid foreign key issues
-        \App\Models\UserSession::where('user_id', $user->id)->delete();
-        \App\Models\PasswordResetToken::where('user_id', $user->id)->delete();
-        \App\Models\PayoutOtp::where('user_id', $user->id)->delete();
-        \App\Models\PayoutNote::where('user_id', $user->id)->delete();
-        \App\Models\TransactionNote::where('user_id', $user->id)->delete();
-        \App\Models\Payout::where('user_id', $user->id)->update(['user_id' => null]);
-        \App\Models\Audit::where('user_id', $user->id)->update(['user_id' => null]);
-        
-        $user->delete();
-        
-        Audit::log('delete_user', "Deleted user: {$deletedUserName} ({$deletedUserEmail})");
-        
-        return redirect()->route('users.index')->with('success', 'User deleted successfully');
+            // Temporarily disable foreign key checks
+            DB::statement('SET FOREIGN_KEY_CHECKS = 0');
+
+            try {
+                // Manually delete/update related records
+                $userSessionCount = \App\Models\UserSession::where('user_id', $user->id)->delete();
+                Log::info('Deleted user sessions', ['count' => $userSessionCount]);
+                
+                \App\Models\PasswordResetToken::where('user_id', $user->id)->delete();
+                \App\Models\PayoutOtp::where('user_id', $user->id)->delete();
+                \App\Models\PayoutNote::where('user_id', $user->id)->delete();
+                \App\Models\TransactionNote::where('user_id', $user->id)->delete();
+                \App\Models\Payout::where('user_id', $user->id)->update(['user_id' => null]);
+                \App\Models\Audit::where('user_id', $user->id)->update(['user_id' => null]);
+                
+                $user->delete();
+                Log::info('Successfully deleted user', ['user_id' => $user->id]);
+            } finally {
+                // Re-enable foreign key checks
+                DB::statement('SET FOREIGN_KEY_CHECKS = 1');
+            }
+            
+            Audit::log('delete_user', "Deleted user: {$deletedUserName} ({$deletedUserEmail})");
+            
+            return redirect()->route('users.index')->with('success', 'User deleted successfully');
+        });
     }
     
     /**

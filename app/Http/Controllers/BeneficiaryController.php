@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Audit;
 use App\Models\Beneficiary;
 use Illuminate\Http\Request;
 
@@ -48,7 +49,9 @@ class BeneficiaryController extends Controller
         $validated['user_id'] = auth()->id();
         $validated['is_active'] = true;
 
-        Beneficiary::create($validated);
+        $beneficiary = Beneficiary::create($validated);
+        
+        Audit::log('create_beneficiary', "Created beneficiary: {$beneficiary->name} (Type: {$beneficiary->type})");
 
         return redirect()->route('beneficiaries.index')->with('success', 'Beneficiary created successfully');
     }
@@ -58,6 +61,8 @@ class BeneficiaryController extends Controller
         if ($beneficiary->user_id !== auth()->id()) {
             abort(403);
         }
+        
+        Audit::log('view_beneficiary', "Viewed beneficiary: {$beneficiary->name}");
         
         return view('beneficiaries.show', compact('beneficiary'));
     }
@@ -104,6 +109,8 @@ class BeneficiaryController extends Controller
         ]);
 
         $beneficiary->update($validated);
+        
+        Audit::log('update_beneficiary', "Updated beneficiary: {$beneficiary->name}");
 
         return redirect()->route('beneficiaries.index')->with('success', 'Beneficiary updated successfully');
     }
@@ -114,7 +121,10 @@ class BeneficiaryController extends Controller
             abort(403);
         }
 
+        $beneficiaryName = $beneficiary->name;
         $beneficiary->delete();
+        
+        Audit::log('delete_beneficiary', "Deleted beneficiary: {$beneficiaryName}");
 
         return redirect()->route('beneficiaries.index')->with('success', 'Beneficiary deleted successfully');
     }

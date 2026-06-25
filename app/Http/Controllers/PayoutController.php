@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Audit;
 use App\Models\Payout;
 use App\Models\PayoutOtp;
 use App\Services\ClickPesaAPIService;
@@ -272,6 +273,8 @@ class PayoutController extends Controller
             return redirect()->route('payouts.index')->with('error', 'You are not authorized to create payouts');
         }
         
+        Audit::log('view_payout_create', 'Viewed payout create page');
+        
         $banks = [];
         $balance = null;
         try {
@@ -479,6 +482,9 @@ class PayoutController extends Controller
                 'user_id' => auth()->id()
             ]);
 
+            // Log the payout initiation
+            Audit::log('initiate_payout', "Initiated payout {$orderReference}: {$validated['amount']} {$validated['currency']} to {$validated['recipient_name']} ({$validated['payout_type']})");
+
             // Generate and send OTP
             $otp = str_pad(rand(0, 999999), 6, '0', STR_PAD_LEFT);
             $adminPhone = auth()->user()->phone ?? '255712345678'; // Use authenticated user's phone or default
@@ -537,6 +543,8 @@ class PayoutController extends Controller
             }
 
             $otpRecord->update(['is_verified' => true]);
+            
+            Audit::log('verify_payout_otp', "Verified OTP for payout {$orderReference}");
 
             // Initiate payout via ClickPesa
             if ($payout->payout_type === 'MOBILE_MONEY') {

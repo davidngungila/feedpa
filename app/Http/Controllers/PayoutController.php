@@ -268,6 +268,10 @@ class PayoutController extends Controller
 
     public function create()
     {
+        if (!auth()->user()->can_create_payouts) {
+            return redirect()->route('payouts.index')->with('error', 'You are not authorized to create payouts');
+        }
+        
         $banks = [];
         $balance = null;
         try {
@@ -302,6 +306,10 @@ class PayoutController extends Controller
 
     public function previewPayout(\Illuminate\Http\Request $request)
     {
+        if (!auth()->user()->can_create_payouts) {
+            return response()->json(['success' => false, 'message' => 'You are not authorized to create payouts'], 403);
+        }
+        
         try {
             $validated = $request->validate([
                 'amount' => 'required|numeric|min:100',
@@ -369,6 +377,10 @@ class PayoutController extends Controller
 
     public function lookupAccountName(\Illuminate\Http\Request $request)
     {
+        if (!auth()->user()->can_create_payouts) {
+            return response()->json(['success' => false, 'message' => 'You are not authorized to create payouts'], 403);
+        }
+        
         try {
             $validated = $request->validate([
                 'bic' => 'required|string',
@@ -418,6 +430,10 @@ class PayoutController extends Controller
 
     public function store(Request $request)
     {
+        if (!auth()->user()->can_create_payouts) {
+            return redirect()->route('payouts.index')->with('error', 'You are not authorized to create payouts');
+        }
+        
         $validated = $request->validate([
             'order_reference' => 'required|string|max:255',
             'amount' => 'required|numeric|min:100',

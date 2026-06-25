@@ -79,6 +79,13 @@
                             <span class="text-[10px] font-bold text-primary-700 dark:text-primary-300 uppercase tracking-wider">Is Admin</span>
                         </label>
                     </div>
+                    <div>
+                        <label class="flex items-center gap-2">
+                            <input type="checkbox" name="can_create_payouts" value="1" {{ old('can_create_payouts', $user->can_create_payouts) ? 'checked' : '' }}
+                                   class="rounded border-primary-300 text-primary-600 focus:ring-primary-500">
+                            <span class="text-[10px] font-bold text-primary-700 dark:text-primary-300 uppercase tracking-wider">Can Create Payouts</span>
+                        </label>
+                    </div>
                 </div>
 
                 <!-- Contact & Security -->

@@ -60,6 +60,7 @@ class UserController extends Controller
             'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'is_admin' => 'nullable|boolean',
+            'can_create_payouts' => 'nullable|boolean',
         ]);
 
         $userData = [
@@ -69,6 +70,7 @@ class UserController extends Controller
             'phone' => $request->phone,
             'position' => $request->position,
             'is_admin' => $request->is_admin ?? false,
+            'can_create_payouts' => $request->can_create_payouts ?? true,
         ];
 
         if ($request->hasFile('avatar')) {
@@ -128,6 +130,7 @@ class UserController extends Controller
             'position' => 'nullable|string|max:255',
             'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'is_admin' => 'nullable|boolean',
+            'can_create_payouts' => 'nullable|boolean',
         ]);
 
         $userData = [
@@ -136,6 +139,7 @@ class UserController extends Controller
             'phone' => $request->phone,
             'position' => $request->position,
             'is_admin' => $request->is_admin ?? false,
+            'can_create_payouts' => $request->can_create_payouts ?? false,
         ];
 
         if ($request->password) {

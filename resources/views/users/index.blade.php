@@ -40,6 +40,7 @@
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Email</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Phone</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Payout Access</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider text-right">Actions</th>
                     </tr>
                 </thead>
@@ -75,6 +76,11 @@
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1.5 rounded-full text-[10px] font-bold {{ $user->is_admin ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-900 dark:text-gray-300' }}">
                                     {{ $user->is_admin ? 'Admin' : 'User' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="px-3 py-1.5 rounded-full text-[10px] font-bold {{ $user->can_create_payouts ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' }}">
+                                    {{ $user->can_create_payouts ? 'Enabled' : 'Disabled' }}
                                 </span>
                             </td>
                             <td class="px-6 py-4">

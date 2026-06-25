@@ -130,9 +130,11 @@
                         <i class="fas fa-sync-alt me-1"></i> Sync
                     </button>
                 </form>
+                @if(auth()->user()->can_create_payouts)
                 <a href="{{ route('payouts.create') }}" class="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg text-xs font-bold transition-all">
                     <i class="fas fa-plus me-1"></i> New Payout
                 </a>
+                @endif
             </div>
         </form>
     </div>

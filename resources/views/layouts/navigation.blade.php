@@ -44,12 +44,14 @@
     </li>
 
     <!-- Create Payout -->
+    @if(auth()->user()->can_create_payouts)
     <li class="menu-item {{ request()->routeIs('payouts.create') ? 'active' : '' }}">
         <a href="{{ route('payouts.create') }}" class="menu-link">
             <i class="menu-icon tf-icons bx bx-money-withdraw"></i>
             <div data-i18n="Create Payout">Create Payout</div>
         </a>
     </li>
+    @endif
 
     <!-- Payout History -->
     <li class="menu-item {{ request()->routeIs('payouts.index') ? 'active' : '' }}">

@@ -295,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chip.addEventListener('click', function () {
             akibaTypeInput.value = this.dataset.akibaType;
             document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
-            this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+            this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200');
         });
     });
 
@@ -304,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function () {
         chip.addEventListener('click', function () {
             uwekezajiTypeInput.value = this.dataset.uwekezajiType;
             document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
-            this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200'));
+            this.classList.add('ring-2', 'ring-primary-500', 'border-primary-500', 'bg-primary-50', 'dark:bg-primary-900/30', 'text-primary-700', 'dark:text-primary-200');
         });
     });
 

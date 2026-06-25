@@ -48,8 +48,8 @@
                         <label for="name" class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Beneficiary Name</label>
                         <div class="relative">
                             <div id="nameLoader" class="hidden absolute left-3 top-1/2 -translate-y-1/2">
-                                <svg class="w-4 h-4 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <svg class="w-4 h-4 animate-spin text-primary-500" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                             </div>
@@ -178,6 +178,8 @@
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Beneficiary create page loaded');
+    
     const typeInputs = document.querySelectorAll('input[name="type"]');
     const mobileFields = document.getElementById('mobile_fields');
     const bankFields = document.getElementById('bank_fields');
@@ -190,6 +192,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const nameError = document.getElementById('nameError');
     const verifyAccountBtn = document.getElementById('verify_account_btn');
     const verificationStatus = document.getElementById('verification_status');
+    
+    console.log('Elements found:', {
+        typeInputs: typeInputs.length,
+        mobileFields,
+        bankFields,
+        nameInput,
+        phoneInput,
+        bankSelect,
+        accountNumberInput,
+        bicInput,
+        nameLoader,
+        nameError,
+        verifyAccountBtn,
+        verificationStatus
+    });
     
     let phoneTimeout;
     let accountTimeout;
@@ -215,12 +232,14 @@ document.addEventListener('DOMContentLoaded', function() {
         const hasAccount = accountNumberInput?.value?.trim();
         if (verifyAccountBtn) {
             verifyAccountBtn.disabled = !(hasBank && hasAccount);
+            console.log('Check enable verify:', { hasBank, hasAccount, disabled: verifyAccountBtn.disabled });
         }
     }
     
     bankSelect?.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         bicInput.value = selectedOption.dataset.code || '';
+        console.log('Bank changed:', { bankName: this.value, bic: bicInput.value });
         checkEnableVerify();
         
         // If account number is already entered, load the name
@@ -231,6 +250,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     accountNumberInput?.addEventListener('input', function() {
+        console.log('Account number changed:', this.value);
         checkEnableVerify();
         clearTimeout(accountTimeout);
         if (this.value && bicInput.value) {
@@ -242,8 +262,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Verify button click handler
     verifyAccountBtn?.addEventListener('click', function() {
+        console.log('Verify button clicked');
         if (bicInput.value && accountNumberInput.value) {
             loadBankAccountName(accountNumberInput.value, bicInput.value);
+        } else {
+            console.log('Missing bic or account number', { bic: bicInput.value, accountNumber: accountNumberInput.value });
         }
     });
     
@@ -311,6 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     async function loadBankAccountName(accountNumber, bic) {
+        console.log('loadBankAccountName called', { accountNumber, bic });
         try {
             nameInput.value = '';
             nameLoader.classList.remove('hidden');
@@ -335,6 +359,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             const data = await response.json();
+            console.log('Verification response:', data);
             if (data.success && data.accountName) {
                 nameInput.value = data.accountName;
                 if (verificationStatus) {

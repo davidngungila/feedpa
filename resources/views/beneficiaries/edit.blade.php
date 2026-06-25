@@ -134,8 +134,16 @@
                             </div>
                             <div>
                                 <label for="account_number" class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Account Number</label>
-                                <input id="account_number" type="text" name="account_number" value="{{ old('account_number', $beneficiary->account_number) }}"
-                                       class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500">
+                                <div class="flex gap-2">
+                                    <input id="account_number" type="text" name="account_number" value="{{ old('account_number', $beneficiary->account_number) }}"
+                                           class="flex-1 bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500">
+                                    <button type="button" id="verify_account_btn"
+                                            class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl transition-all disabled:opacity-50"
+                                            disabled>
+                                        Verify
+                                    </button>
+                                </div>
+                                <p id="verification_status" class="mt-1 text-[10px] font-bold hidden"></p>
                                 @error('account_number')
                                     <p class="mt-1 text-[10px] text-red-500 font-bold">{{ $message }}</p>
                                 @enderror
@@ -188,6 +196,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const bicInput = document.getElementById('bic');
     const nameLoader = document.getElementById('nameLoader');
     const nameError = document.getElementById('nameError');
+    const verifyAccountBtn = document.getElementById('verify_account_btn');
+    const verificationStatus = document.getElementById('verification_status');
     
     let phoneTimeout;
     let accountTimeout;
@@ -207,15 +217,41 @@ document.addEventListener('DOMContentLoaded', function() {
     typeInputs.forEach(input => input.addEventListener('change', updateFields));
     updateFields();
     
-    // Update bic when bank is selected
+    // Enable/disable verify button
+    function checkEnableVerify() {
+        const hasBank = bankSelect?.value;
+        const hasAccount = accountNumberInput?.value?.trim();
+        if (verifyAccountBtn) {
+            verifyAccountBtn.disabled = !(hasBank && hasAccount);
+        }
+    }
+    
     bankSelect?.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         bicInput.value = selectedOption.dataset.code || '';
+        checkEnableVerify();
         
         // If account number is already entered, load the name
         const currentAccountNumber = accountNumberInput?.value;
         if (currentAccountNumber && bicInput.value) {
             loadBankAccountName(currentAccountNumber, bicInput.value);
+        }
+    });
+    
+    accountNumberInput?.addEventListener('input', function() {
+        checkEnableVerify();
+        clearTimeout(accountTimeout);
+        if (this.value && bicInput.value) {
+            accountTimeout = setTimeout(() => {
+                loadBankAccountName(this.value, bicInput.value);
+            }, 500);
+        }
+    });
+    
+    // Verify button click handler
+    verifyAccountBtn?.addEventListener('click', function() {
+        if (bicInput.value && accountNumberInput.value) {
+            loadBankAccountName(accountNumberInput.value, bicInput.value);
         }
     });
     
@@ -287,6 +323,15 @@ document.addEventListener('DOMContentLoaded', function() {
             nameInput.value = '';
             nameLoader.classList.remove('hidden');
             nameError.classList.add('hidden');
+            if (verificationStatus) {
+                verificationStatus.classList.remove('hidden', 'text-green-600', 'text-red-500');
+                verificationStatus.classList.add('text-blue-600');
+                verificationStatus.textContent = 'Verifying...';
+            }
+            if (verifyAccountBtn) {
+                verifyAccountBtn.disabled = true;
+                verifyAccountBtn.textContent = 'Verifying...';
+            }
             
             const response = await fetch('{{ route('payouts.lookup-account-name') }}', {
                 method: 'POST',
@@ -300,11 +345,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
             if (data.success && data.accountName) {
                 nameInput.value = data.accountName;
+                if (verificationStatus) {
+                    verificationStatus.classList.remove('hidden', 'text-blue-600', 'text-red-500');
+                    verificationStatus.classList.add('text-green-600');
+                    verificationStatus.textContent = '✓ Verified successfully!';
+                }
+            } else {
+                if (verificationStatus) {
+                    verificationStatus.classList.remove('hidden', 'text-blue-600', 'text-green-600');
+                    verificationStatus.classList.add('text-red-500');
+                    verificationStatus.textContent = 'Verification failed. Please check the account number.';
+                }
             }
         } catch (error) {
             console.error('Error in loadBankAccountName:', error);
+            if (verificationStatus) {
+                verificationStatus.classList.remove('hidden', 'text-blue-600', 'text-green-600');
+                verificationStatus.classList.add('text-red-500');
+                verificationStatus.textContent = 'Verification failed. Please try again.';
+            }
         } finally {
             nameLoader.classList.add('hidden');
+            if (verifyAccountBtn) {
+                verifyAccountBtn.textContent = 'Verify';
+                checkEnableVerify();
+            }
         }
     }
     
@@ -320,15 +385,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Account number input listener
-    accountNumberInput?.addEventListener('input', function() {
-        clearTimeout(accountTimeout);
-        if (this.value && bicInput.value) {
-            accountTimeout = setTimeout(() => {
-                loadBankAccountName(this.value, bicInput.value);
-            }, 500);
-        }
-    });
+    checkEnableVerify();
 });
 </script>
 @endpush

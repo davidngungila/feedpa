@@ -403,6 +403,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     checkEnableVerify();
+    
+    // Auto-verify on page load if fields are filled
+    if (bankSelect?.value && accountNumberInput?.value) {
+        loadBankAccountName(accountNumberInput.value, bicInput.value);
+    }
 });
 </script>
 @endpush

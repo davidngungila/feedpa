@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Transaction;
 use App\Services\ClickPesaAPIService;
+use App\Services\EcommercePaymentSyncService;
 use App\Support\TransactionFieldResolver;
 use Exception;
 use Illuminate\Http\Request;
@@ -12,10 +13,12 @@ use Illuminate\Support\Facades\Log;
 class EcommercePaymentController extends Controller
 {
     protected ClickPesaAPIService $api;
+    protected EcommercePaymentSyncService $syncService;
 
-    public function __construct(ClickPesaAPIService $api)
+    public function __construct(ClickPesaAPIService $api, EcommercePaymentSyncService $syncService)
     {
         $this->api = $api;
+        $this->syncService = $syncService;
     }
 
     /**
@@ -109,13 +112,7 @@ class EcommercePaymentController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Payment initiated successfully. USSD push sent to ' . $phoneNumber,
-                'data' => [
-                    'order_reference' => $orderReference,
-                    'transaction_id' => $payment['transactionId'] ?? null,
-                    'amount' => $amount,
-                    'phone_number' => $phoneNumber,
-                    'status' => $transaction->status,
-                ]
+                'data' => $this->buildTransactionResponseData($transaction)
             ], 200);
 
         } catch (Exception $e) {
@@ -180,22 +177,11 @@ class EcommercePaymentController extends Controller
                 }
             }
 
+            $this->syncService->syncIfEligible($transaction);
+
             return response()->json([
                 'success' => true,
-                'data' => [
-                    'order_reference' => $transaction->order_reference,
-                    'transaction_id' => $transaction->transaction_id,
-                    'status' => $transaction->status,
-                    'amount' => $transaction->amount,
-                    'currency' => $transaction->currency,
-                    'phone_number' => $transaction->phone,
-                    'payer_name' => $transaction->payer_name,
-                    'email' => $transaction->email,
-                    'description' => $transaction->description,
-                    'payment_method' => $transaction->payment_method,
-                    'created_at' => $transaction->created_at->toISOString(),
-                    'updated_at' => $transaction->updated_at->toISOString(),
-                ]
+                'data' => $this->buildTransactionResponseData($transaction)
             ], 200);
 
         } catch (Exception $e) {
@@ -245,7 +231,10 @@ class EcommercePaymentController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $transactions->items(),
+            'data' => array_map(
+                fn (Transaction $transaction) => $this->buildTransactionResponseData($transaction),
+                $transactions->items()
+            ),
             'pagination' => [
                 'current_page' => $transactions->currentPage(),
                 'per_page' => $transactions->perPage(),
@@ -253,5 +242,33 @@ class EcommercePaymentController extends Controller
                 'last_page' => $transactions->lastPage(),
             ]
         ], 200);
+    }
+
+    private function buildTransactionResponseData(Transaction $transaction): array
+    {
+        $callbackData = is_array($transaction->callback_data) ? $transaction->callback_data : [];
+        $isPaid = $this->syncService->isPaidStatus($transaction->status);
+
+        return [
+            'order_reference' => $transaction->order_reference,
+            'transaction_id' => $transaction->transaction_id,
+            'status' => $transaction->status,
+            'is_paid' => $isPaid,
+            'sync_ready' => $isPaid,
+            'payment_recorded_in_system' => true,
+            'amount' => $transaction->amount,
+            'currency' => $transaction->currency,
+            'phone_number' => $transaction->phone,
+            'payer_name' => $transaction->payer_name,
+            'email' => $transaction->email,
+            'description' => $transaction->description,
+            'payment_method' => $transaction->payment_method,
+            'callback_url' => $callbackData['callback_url'] ?? null,
+            'metadata' => $callbackData['metadata'] ?? null,
+            'commerce_sync' => $callbackData['commerce_sync'] ?? null,
+            'paid_at' => $isPaid && $transaction->updated_at ? $transaction->updated_at->toISOString() : null,
+            'created_at' => $transaction->created_at?->toISOString(),
+            'updated_at' => $transaction->updated_at?->toISOString(),
+        ];
     }
 }

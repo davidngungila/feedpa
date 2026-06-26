@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Transaction;
+use App\Services\EcommercePaymentSyncService;
 use App\Services\MessagingServiceAPI;
 use App\Services\EmailNotificationService;
 use App\Support\TransactionFieldResolver;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -13,11 +15,17 @@ class CallbackController extends Controller
 {
     protected MessagingServiceAPI $messaging;
     protected EmailNotificationService $emailNotification;
+    protected EcommercePaymentSyncService $ecommerceSyncService;
 
-    public function __construct(MessagingServiceAPI $messaging, EmailNotificationService $emailNotification)
+    public function __construct(
+        MessagingServiceAPI $messaging,
+        EmailNotificationService $emailNotification,
+        EcommercePaymentSyncService $ecommerceSyncService
+    )
     {
         $this->messaging = $messaging;
         $this->emailNotification = $emailNotification;
+        $this->ecommerceSyncService = $ecommerceSyncService;
     }
 
     /**
@@ -93,6 +101,8 @@ class CallbackController extends Controller
                     'callback_data' => $mergedCallback,
                     'callback_received_at' => now()
                 ]);
+
+                $this->ecommerceSyncService->syncIfEligible($transaction);
 
                 Log::info('Transaction updated successfully', [
                     'order_reference' => $orderReference,

@@ -25,15 +25,22 @@
     }
 
     $workflowLabels = [
-        'INITIATION_OTP' => 'Waiting For Initiation OTP',
-        'APPROVAL_PENDING' => 'Waiting For Approval',
-        'PAYMENT_AUTHORIZATION_OTP' => 'Waiting For Payment Authorization OTP',
+        'INITIATION_OTP' => 'Waiting For Initiator OTP Verification',
+        'APPROVAL_PENDING' => 'Waiting For Approval And Authorization',
+        'PAYMENT_AUTHORIZATION_OTP' => 'Waiting For Approval And Authorization',
         'PROCESSING' => 'Processing With Provider',
         'COMPLETED' => 'Completed',
         'FAILED' => 'Failed',
         'REJECTED' => 'Rejected',
     ];
     $workflowLabel = $workflowLabels[$workflowStage] ?? str_replace('_', ' ', $workflowStage);
+    $canManagePayout = auth()->check() && auth()->user()->can_create_payouts;
+    $initiatorId = (int) ($payout['initiated_by'] ?? 0);
+    $currentUserId = auth()->id() ? (int) auth()->id() : 0;
+    $isInitiator = $initiatorId !== 0 && $initiatorId === $currentUserId;
+    $canApproveAndAuthorize = $canManagePayout
+        && in_array($payout['workflow_stage'] ?? '', ['APPROVAL_PENDING', 'PAYMENT_AUTHORIZATION_OTP'], true)
+        && !$isInitiator;
 @endphp
 
 <div class="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -246,7 +253,7 @@
             @endif
         </div>
 
-        @if(auth()->check() && auth()->user()->can_create_payouts && !in_array($payout['workflow_stage'] ?? '', ['COMPLETED', 'FAILED', 'REJECTED']) && !$isSuccessful)
+        @if($canManagePayout && !in_array($payout['workflow_stage'] ?? '', ['COMPLETED', 'FAILED', 'REJECTED']) && !$isSuccessful)
             <div class="card p-6">
                 <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 mb-3 flex items-center gap-2">
                     <i class="fas fa-ban"></i> Reject Payout
@@ -307,20 +314,20 @@
 
         <!-- Action Buttons -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            @if(auth()->check() && auth()->user()->can_create_payouts && in_array($payout['workflow_stage'] ?? '', ['INITIATION_OTP', 'PAYMENT_AUTHORIZATION_OTP']))
+            @if($canManagePayout && ($payout['workflow_stage'] ?? '') === 'INITIATION_OTP' && $isInitiator)
                 <a href="{{ route('payouts.verify-otp', $orderReference) }}"
                    class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-900/20 transition-all">
                     <i class="fas fa-shield-alt"></i>
-                    {{ ($payout['workflow_stage'] ?? '') === 'PAYMENT_AUTHORIZATION_OTP' ? 'Authorize Payment' : 'Verify OTP' }}
+                    Verify Initiation OTP
                 </a>
             @endif
 
-            @if(auth()->check() && auth()->user()->can_create_payouts && ($payout['workflow_stage'] ?? '') === 'APPROVAL_PENDING')
+            @if($canApproveAndAuthorize)
                 <form action="{{ route('payouts.approve', $orderReference) }}" method="POST">
                     @csrf
                     <button type="submit"
                             class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-900/20 transition-all w-full">
-                        <i class="fas fa-check"></i> Approve
+                        <i class="fas fa-check"></i> Approve And Authorize
                     </button>
                 </form>
             @endif

@@ -383,7 +383,7 @@
                 
                 <!-- Connection Status -->
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-50">
+                    <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-50">
                         <div class="relative">
                             @if(cache()->get('api_status', 'connected') === 'connected')
                                 <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>

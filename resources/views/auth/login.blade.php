@@ -107,7 +107,7 @@
                     <p class="text-sm mt-1 text-primary-600">Payment System</p>
                 </div>
 
-                <form id="loginForm" method="POST" action="{{ route('login') }}" @submit.prevent="submitLogin()">
+                <form id="loginForm" method="POST" action="{{ route('login.attempt') }}" @submit.prevent="submitLogin()">
                     @csrf
 
                     <!-- Email -->

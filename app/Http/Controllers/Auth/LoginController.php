@@ -7,19 +7,92 @@ use App\Models\Audit;
 use App\Models\UserSession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 use PragmaRX\Google2FAQRCode\Google2FA;
 
 class LoginController extends Controller
 {
+    private const ENTRY_SESSION_KEY = 'secure_login_entry';
+    private const ENTRY_TTL_MINUTES = 5;
+
+    public function issueEntry(Request $request)
+    {
+        if (Auth::check()) {
+            return redirect()->intended('/dashboard');
+        }
+
+        $nonce = (string) Str::uuid();
+
+        Cache::put($this->entryCacheKey($nonce), [
+            'user_agent_hash' => sha1((string) $request->userAgent()),
+            'created_at' => now()->toIso8601String(),
+        ], now()->addMinutes(self::ENTRY_TTL_MINUTES));
+
+        $token = Crypt::encryptString(json_encode([
+            'nonce' => $nonce,
+        ]));
+
+        $link = URL::temporarySignedRoute(
+            'login.unlock',
+            now()->addMinutes(self::ENTRY_TTL_MINUTES),
+            ['token' => $token]
+        );
+
+        return redirect()->to($link);
+    }
+
+    public function unlockEntry(Request $request)
+    {
+        if (Auth::check()) {
+            return redirect()->intended('/dashboard');
+        }
+
+        try {
+            $token = (string) $request->query('token', '');
+            $payload = json_decode(Crypt::decryptString($token), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $e) {
+            return redirect('/');
+        }
+
+        $nonce = $payload['nonce'] ?? null;
+
+        if (!$nonce) {
+            return redirect('/');
+        }
+
+        $entry = Cache::pull($this->entryCacheKey($nonce));
+
+        if (!is_array($entry)) {
+            return redirect('/');
+        }
+
+        if (($entry['user_agent_hash'] ?? null) !== sha1((string) $request->userAgent())) {
+            return redirect('/');
+        }
+
+        $request->session()->put(self::ENTRY_SESSION_KEY, [
+            'nonce' => $nonce,
+            'granted_at' => now()->timestamp,
+        ]);
+
+        return redirect()->route('login.form');
+    }
+
     /**
      * Show the application's login form.
      *
      * @return \Illuminate\View\View
      */
-    public function showLoginForm()
+    public function showLoginForm(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         return view('auth.login');
     }
 
@@ -31,6 +104,10 @@ class LoginController extends Controller
      */
     public function login(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
@@ -56,6 +133,7 @@ class LoginController extends Controller
             // If 2FA not enabled, log them in directly
             Auth::login($user, $request->boolean('remember'));
             $request->session()->regenerate();
+            $this->clearEntryAccess($request);
             $currentSessionId = Session::getId();
             
             // Try to create new session, if fails fall back to updateOrCreate
@@ -96,8 +174,8 @@ class LoginController extends Controller
      */
     public function showTwoFactorLoginForm()
     {
-        if (!Session::has('two_factor_login_id')) {
-            return redirect()->route('login');
+        if (!Session::has('two_factor_login_id') || !$this->hasEntryAccess(request())) {
+            return redirect('/');
         }
         
         return view('auth.two-factor-login');
@@ -108,12 +186,16 @@ class LoginController extends Controller
      */
     public function verifyTwoFactor(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         $request->validate([
             'code' => 'required|string',
         ]);
         
         if (!Session::has('two_factor_login_id')) {
-            return redirect()->route('login');
+            return redirect('/');
         }
         
         $user = \App\Models\User::findOrFail(Session::get('two_factor_login_id'));
@@ -148,6 +230,7 @@ class LoginController extends Controller
         // Log the user in
         Auth::login($user, Session::get('two_factor_remember', false));
         $request->session()->regenerate();
+        $this->clearEntryAccess($request);
         $currentSessionId = Session::getId();
         
         // Try to create new session, if fails fall back to updateOrCreate
@@ -201,6 +284,27 @@ class LoginController extends Controller
 
         $request->session()->regenerateToken();
 
-        return redirect('/login');
+        return redirect('/');
+    }
+
+    private function hasEntryAccess(Request $request): bool
+    {
+        $entry = $request->session()->get(self::ENTRY_SESSION_KEY);
+
+        if (!is_array($entry) || empty($entry['granted_at'])) {
+            return false;
+        }
+
+        return (now()->timestamp - (int) $entry['granted_at']) <= (self::ENTRY_TTL_MINUTES * 60);
+    }
+
+    private function clearEntryAccess(Request $request): void
+    {
+        $request->session()->forget(self::ENTRY_SESSION_KEY);
+    }
+
+    private function entryCacheKey(string $nonce): string
+    {
+        return 'secure_login_entry:' . $nonce;
     }
 }

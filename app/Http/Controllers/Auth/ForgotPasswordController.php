@@ -14,11 +14,18 @@ use Illuminate\Support\Str;
 
 class ForgotPasswordController extends Controller
 {
+    private const ENTRY_SESSION_KEY = 'secure_login_entry';
+    private const ENTRY_TTL_MINUTES = 5;
+
     /**
      * Show form to request password reset (enter email)
      */
-    public function showLinkRequestForm()
+    public function showLinkRequestForm(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         return view('auth.forgot-password');
     }
 
@@ -27,6 +34,10 @@ class ForgotPasswordController extends Controller
      */
     public function sendResetLinkEmail(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         $request->validate([
             'email' => 'required|email|exists:users,email',
         ]);
@@ -82,10 +93,14 @@ class ForgotPasswordController extends Controller
     /**
      * Show OTP verification form
      */
-    public function showOtpForm()
+    public function showOtpForm(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         if (!session()->has('password_reset_email')) {
-            return redirect()->route('password.request');
+            return redirect('/');
         }
         return view('auth.forgot-password-otp');
     }
@@ -95,6 +110,10 @@ class ForgotPasswordController extends Controller
      */
     public function verifyOtp(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         $request->validate([
             'otp' => 'required|numeric|digits:6',
         ]);
@@ -102,7 +121,7 @@ class ForgotPasswordController extends Controller
         $email = session()->get('password_reset_email');
 
         if (!$email) {
-            return redirect()->route('password.request');
+            return redirect('/');
         }
 
         // Find valid token
@@ -123,10 +142,14 @@ class ForgotPasswordController extends Controller
     /**
      * Show reset password form
      */
-    public function showResetPasswordForm()
+    public function showResetPasswordForm(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         if (!session()->has('password_reset_token')) {
-            return redirect()->route('password.request');
+            return redirect('/');
         }
 
         $token = PasswordResetToken::find(session()->get('password_reset_token'));
@@ -143,6 +166,10 @@ class ForgotPasswordController extends Controller
      */
     public function resetPassword(Request $request)
     {
+        if (!$this->hasEntryAccess($request)) {
+            return redirect('/');
+        }
+
         $request->validate([
             'password' => 'required|min:6|confirmed',
         ]);
@@ -229,5 +256,16 @@ class ForgotPasswordController extends Controller
 </body>
 </html>
 HTML;
+    }
+
+    private function hasEntryAccess(Request $request): bool
+    {
+        $entry = $request->session()->get(self::ENTRY_SESSION_KEY);
+
+        if (!is_array($entry) || empty($entry['granted_at'])) {
+            return false;
+        }
+
+        return (now()->timestamp - (int) $entry['granted_at']) <= (self::ENTRY_TTL_MINUTES * 60);
     }
 }

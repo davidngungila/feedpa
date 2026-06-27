@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PaymentController;
@@ -14,6 +13,8 @@ use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\BeneficiaryController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\LoginController;
 
 /*
 |--------------------------------------------------------------------------
@@ -195,8 +196,6 @@ Route::prefix('webhooks')->name('webhooks.')->group(function () {
     Route::post('/clickpesa/test', [CallbackController::class, 'test'])->name('clickpesa.test')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 });
 
-use App\Http\Controllers\Auth\ForgotPasswordController;
-
 // Forgot Password Routes
 Route::prefix('password')->name('password.')->group(function () {
     Route::get('/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('request');
@@ -207,9 +206,21 @@ Route::prefix('password')->name('password.')->group(function () {
     Route::post('/reset-password', [ForgotPasswordController::class, 'resetPassword'])->name('update');
 });
 
-// Authentication Routes (if needed)
-Auth::routes(['reset' => false, 'confirm' => false, 'verify' => false]);
+// Secure Authentication Routes
+Route::middleware('guest')->group(function () {
+    Route::get('/entry', [LoginController::class, 'issueEntry'])->name('login');
+    Route::get('/auth/unlock', [LoginController::class, 'unlockEntry'])
+        ->middleware('signed')
+        ->name('login.unlock');
+    Route::get('/auth/access', [LoginController::class, 'showLoginForm'])->name('login.form');
+    Route::post('/auth/access', [LoginController::class, 'login'])->name('login.attempt');
+
+    Route::match(['get', 'post'], '/login', fn () => redirect('/'));
+    Route::match(['get', 'post'], '/register', fn () => redirect('/'));
+});
+
+Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
 // Two-Factor Authentication Routes
-Route::get('/two-factor', [\App\Http\Controllers\Auth\LoginController::class, 'showTwoFactorLoginForm'])->name('two-factor.login');
-Route::post('/two-factor', [\App\Http\Controllers\Auth\LoginController::class, 'verifyTwoFactor'])->name('two-factor.verify');
+Route::get('/two-factor', [LoginController::class, 'showTwoFactorLoginForm'])->name('two-factor.login');
+Route::post('/two-factor', [LoginController::class, 'verifyTwoFactor'])->name('two-factor.verify');

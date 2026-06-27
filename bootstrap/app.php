@@ -40,6 +40,6 @@ return Application::configure(basePath: dirname(__DIR__))
             }
 
             return redirect('/')
-                ->with('warning', 'Session required. Please use /entry if you need secure access.');
+                ->with('warning', 'Session required. Redirecting to home.');
         });
     })->create();

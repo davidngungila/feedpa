@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Http\Request;
 
 class Audit extends Model
 {
@@ -125,6 +126,26 @@ class Audit extends Model
         ];
     }
 
+    private static function normalizeAuditUrl(Request $request): ?string
+    {
+        $route = $request->route();
+        $routeName = $route?->getName();
+
+        // Never persist the one-time secure entry token in audit logs.
+        if (in_array($routeName, ['login.form', 'login.attempt'], true) || $route?->parameter('entryToken')) {
+            return rtrim($request->getSchemeAndHttpHost(), '/') . '/[secure-entry]';
+        }
+
+        $url = $request->fullUrl();
+
+        if ($url === '') {
+            return null;
+        }
+
+        // The audits.url column is VARCHAR(255), so keep it within a safe bound.
+        return mb_strimwidth($url, 0, 250, '...');
+    }
+
     // Helper method to log audit entries
     public static function log(string $action, ?string $details = null): self
     {
@@ -141,7 +162,7 @@ class Audit extends Model
             'details' => $details,
             'ip_address' => $ip,
             'user_agent' => $userAgent,
-            'url' => $request->fullUrl(),
+            'url' => self::normalizeAuditUrl($request),
             'method' => $request->method(),
             'country' => $locationInfo['country'],
             'city' => $locationInfo['city'],

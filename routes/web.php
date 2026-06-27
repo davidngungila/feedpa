@@ -209,12 +209,6 @@ Route::prefix('password')->name('password.')->group(function () {
 // Secure Authentication Routes
 Route::middleware('guest')->group(function () {
     Route::get('/entry', [LoginController::class, 'issueEntry'])->name('login');
-    Route::get('/auth/unlock', [LoginController::class, 'unlockEntry'])
-        ->middleware('signed')
-        ->name('login.unlock');
-    Route::get('/auth/access', [LoginController::class, 'showLoginForm'])->name('login.form');
-    Route::post('/auth/access', [LoginController::class, 'login'])->name('login.attempt');
-
     Route::match(['get', 'post'], '/login', fn () => redirect('/'));
     Route::match(['get', 'post'], '/register', fn () => redirect('/'));
 });
@@ -224,3 +218,12 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 // Two-Factor Authentication Routes
 Route::get('/two-factor', [LoginController::class, 'showTwoFactorLoginForm'])->name('two-factor.login');
 Route::post('/two-factor', [LoginController::class, 'verifyTwoFactor'])->name('two-factor.verify');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/{entryToken}', [LoginController::class, 'showLoginForm'])
+        ->where('entryToken', '[A-Za-z0-9\-_]{40,}')
+        ->name('login.form');
+    Route::post('/{entryToken}', [LoginController::class, 'login'])
+        ->where('entryToken', '[A-Za-z0-9\-_]{40,}')
+        ->name('login.attempt');
+});

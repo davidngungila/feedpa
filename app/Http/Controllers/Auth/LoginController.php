@@ -10,7 +10,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Session;
-use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use PragmaRX\Google2FAQRCode\Google2FA;
 
@@ -32,64 +31,20 @@ class LoginController extends Controller
             'created_at' => now()->toIso8601String(),
         ], now()->addMinutes(self::ENTRY_TTL_MINUTES));
 
-        $token = Crypt::encryptString(json_encode([
+        $token = $this->encodePathToken(Crypt::encryptString(json_encode([
             'nonce' => $nonce,
-        ]));
+        ])));
 
-        $link = URL::temporarySignedRoute(
-            'login.unlock',
-            now()->addMinutes(self::ENTRY_TTL_MINUTES),
-            ['token' => $token]
-        );
-
-        return redirect()->to($link);
+        return redirect('/' . $token);
     }
 
-    public function unlockEntry(Request $request)
+    public function showLoginForm(Request $request, string $entryToken)
     {
         if (Auth::check()) {
             return redirect()->intended('/dashboard');
         }
 
-        try {
-            $token = (string) $request->query('token', '');
-            $payload = json_decode(Crypt::decryptString($token), true, 512, JSON_THROW_ON_ERROR);
-        } catch (\Throwable $e) {
-            return redirect('/');
-        }
-
-        $nonce = $payload['nonce'] ?? null;
-
-        if (!$nonce) {
-            return redirect('/');
-        }
-
-        $entry = Cache::pull($this->entryCacheKey($nonce));
-
-        if (!is_array($entry)) {
-            return redirect('/');
-        }
-
-        if (($entry['user_agent_hash'] ?? null) !== sha1((string) $request->userAgent())) {
-            return redirect('/');
-        }
-
-        $request->session()->put(self::ENTRY_SESSION_KEY, [
-            'nonce' => $nonce,
-            'granted_at' => now()->timestamp,
-        ]);
-
-        return redirect()->route('login.form');
-    }
-
-    /**
-     * Show the application's login form.
-     *
-     * @return \Illuminate\View\View
-     */
-    public function showLoginForm(Request $request)
-    {
-        if (!$this->hasEntryAccess($request)) {
+        if (!$this->grantEntryAccess($request, $entryToken)) {
             return redirect('/');
         }
 
@@ -102,9 +57,9 @@ class LoginController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response
      */
-    public function login(Request $request)
+    public function login(Request $request, string $entryToken)
     {
-        if (!$this->hasEntryAccess($request)) {
+        if (!$this->hasEntryAccess($request, $entryToken)) {
             return redirect('/');
         }
 
@@ -172,9 +127,9 @@ class LoginController extends Controller
     /**
      * Show two-factor authentication login form.
      */
-    public function showTwoFactorLoginForm()
+    public function showTwoFactorLoginForm(Request $request)
     {
-        if (!Session::has('two_factor_login_id') || !$this->hasEntryAccess(request())) {
+        if (!Session::has('two_factor_login_id') || !$this->hasEntryAccess($request)) {
             return redirect('/');
         }
         
@@ -287,7 +242,49 @@ class LoginController extends Controller
         return redirect('/');
     }
 
-    private function hasEntryAccess(Request $request): bool
+    private function grantEntryAccess(Request $request, string $entryToken): bool
+    {
+        if ($this->hasEntryAccess($request, $entryToken)) {
+            return true;
+        }
+
+        try {
+            $payload = json_decode(
+                Crypt::decryptString($this->decodePathToken($entryToken)),
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        $nonce = $payload['nonce'] ?? null;
+
+        if (!$nonce) {
+            return false;
+        }
+
+        $entry = Cache::pull($this->entryCacheKey($nonce));
+
+        if (!is_array($entry)) {
+            return false;
+        }
+
+        if (($entry['user_agent_hash'] ?? null) !== sha1((string) $request->userAgent())) {
+            return false;
+        }
+
+        $request->session()->put(self::ENTRY_SESSION_KEY, [
+            'nonce' => $nonce,
+            'path_token' => $entryToken,
+            'granted_at' => now()->timestamp,
+        ]);
+
+        return true;
+    }
+
+    private function hasEntryAccess(Request $request, ?string $entryToken = null): bool
     {
         $entry = $request->session()->get(self::ENTRY_SESSION_KEY);
 
@@ -295,7 +292,15 @@ class LoginController extends Controller
             return false;
         }
 
-        return (now()->timestamp - (int) $entry['granted_at']) <= (self::ENTRY_TTL_MINUTES * 60);
+        if ((now()->timestamp - (int) $entry['granted_at']) > (self::ENTRY_TTL_MINUTES * 60)) {
+            return false;
+        }
+
+        if ($entryToken !== null && ($entry['path_token'] ?? null) !== $entryToken) {
+            return false;
+        }
+
+        return true;
     }
 
     private function clearEntryAccess(Request $request): void
@@ -306,5 +311,21 @@ class LoginController extends Controller
     private function entryCacheKey(string $nonce): string
     {
         return 'secure_login_entry:' . $nonce;
+    }
+
+    private function encodePathToken(string $value): string
+    {
+        return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+    }
+
+    private function decodePathToken(string $value): string
+    {
+        $decoded = base64_decode(strtr($value, '-_', '+/') . str_repeat('=', (4 - strlen($value) % 4) % 4), true);
+
+        if ($decoded === false) {
+            throw new \RuntimeException('Invalid secure token.');
+        }
+
+        return $decoded;
     }
 }

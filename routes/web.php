@@ -9,6 +9,7 @@ use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\AppNotificationController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
@@ -68,6 +69,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{orderReference}/verify', [PayoutController::class, 'showVerifyOtp'])->name('verify-otp');
         Route::post('/{orderReference}/verify', [PayoutController::class, 'verifyOtp'])->name('verify');
         Route::post('/{orderReference}/resend-otp', [PayoutController::class, 'resendOtp'])->name('resend-otp');
+        Route::post('/{orderReference}/approve', [PayoutController::class, 'approve'])->name('approve');
+        Route::post('/{orderReference}/reject', [PayoutController::class, 'reject'])->name('reject');
         Route::get('/{orderReference}', [PayoutController::class, 'show'])->name('status');
         Route::post('/{orderReference}/refresh', [PayoutController::class, 'refreshStatus'])->name('refresh');
         Route::post('/{orderReference}/notes', [PayoutController::class, 'addNote'])->name('notes.add');
@@ -116,6 +119,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('audits/export/pdf', [AuditController::class, 'exportPdf'])->name('audits.export.pdf');
     Route::delete('audits/{audit}', [AuditController::class, 'destroy'])->name('audits.destroy');
     Route::delete('audits/bulk/destroy', [AuditController::class, 'bulkDestroy'])->name('audits.bulk-destroy');
+
+    // In-app notification routes
+    Route::get('notifications', [AppNotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/mark-all-read', [AppNotificationController::class, 'markAllRead'])->name('notifications.mark-all-read');
+    Route::get('notifications/{notification}', [AppNotificationController::class, 'open'])->name('notifications.open');
     
     // Financial Reports Routes
     Route::prefix('reports')->name('reports.')->group(function () {

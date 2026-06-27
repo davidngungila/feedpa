@@ -59,7 +59,7 @@ class EmailNotificationService
      */
     private function buildProfessionalEmailTemplate(array $paymentData): array
     {
-        $name = $paymentData['customer']['customerName'] ?? 'Mteja Mwenye Heshima';
+        $name = $paymentData['customer']['customerName'] ?? 'Valued Customer';
         $amount = number_format($paymentData['collectedAmount'] ?? 0, 2);
         $customerPhone = $paymentData['customer']['customerPhoneNumber'] ?? '255712345678';
         $paymentMethod = $paymentData['channel'] ?? 'Mobile Money';
@@ -69,7 +69,7 @@ class EmailNotificationService
         $period = \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('F Y');
         $pdfLink = "https://www.feedtancmg.org/statements/{$transactionId}.pdf";
         
-        $subject = "Malipo Yamefanikiwa - {$name} - {$period}";
+        $subject = "Payment Confirmation - {$name} - {$period}";
         
         $htmlBody = "<!DOCTYPE html>
 <html lang=\"en\">
@@ -79,122 +79,141 @@ class EmailNotificationService
     <title>Your Payment Confirmation - FeedTan CMG</title>
     <link href=\"https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap\" rel=\"stylesheet\">
     <style>
-        body { margin: 0; padding: 0; background-color: #f0f4f8; font-family: 'Poppins', sans-serif; color: #333; line-height: 1.6; }
-        .email-container { max-width: 600px; margin: 30px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08); border: 1px solid #e2e8f0; }
-        .header { background: #006400; padding: 30px 25px; text-align: center; color: white; }
-        .header .title { font-size: 26px; font-weight: 700; margin-bottom: 5px; }
-        .header .sub-title { font-size: 14px; opacity: 0.9; }
-        .content { padding: 30px 25px; }
-        .greeting { font-size: 18px; font-weight: 600; color: #2d3748; margin-bottom: 15px; }
-        
-        .card { background-color: #f7fafc; border: 1px solid #edf2f7; border-radius: 8px; padding: 20px; margin-bottom: 25px; }
+        body { margin: 0; padding: 0; background-color: #f3f7f5; font-family: 'Poppins', sans-serif; color: #1f2937; line-height: 1.6; }
+        .email-container { max-width: 680px; margin: 30px auto; background: #ffffff; border-radius: 18px; overflow: hidden; box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08); border: 1px solid #d8e8df; }
+        .header { background: linear-gradient(135deg, #064e3b 0%, #0f766e 100%); padding: 34px 28px; color: white; }
+        .header .eyebrow { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.85; }
+        .header .title { font-size: 28px; font-weight: 700; margin: 10px 0 6px; }
+        .header .sub-title { font-size: 14px; opacity: 0.86; max-width: 520px; }
+        .content { padding: 30px 28px; }
+        .greeting { font-size: 20px; font-weight: 600; color: #0f172a; margin-bottom: 14px; }
+        .lead { font-size: 14px; color: #475569; margin-bottom: 22px; }
+        .highlight-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; margin-bottom: 24px; }
+        .highlight-card { background: #f8fcfa; border: 1px solid #e3f1ea; border-radius: 14px; padding: 18px; }
+        .highlight-label { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #64748b; }
+        .highlight-value { margin-top: 8px; font-size: 20px; font-weight: 700; color: #0f172a; }
+        .card { background-color: #ffffff; border: 1px solid #e5efe9; border-radius: 14px; padding: 22px; margin-bottom: 22px; }
         .card-header { display: flex; align-items: center; margin-bottom: 15px; }
-        .card-header .icon { font-size: 24px; margin-right: 12px; color: #4CAF50; }
+        .card-header .icon { font-size: 24px; margin-right: 12px; color: #059669; }
         .card-header h4 { margin: 0; font-size: 16px; font-weight: 600; color: #2d3748; }
 
         .button-container { text-align: center; margin: 30px 0; }
-        .download-button { display: inline-block; padding: 12px 25px; background-color: #438a5e; color: white !important; font-weight: 600; border-radius: 6px; text-decoration: none; transition: background-color 0.3s ease; }
-        .download-button:hover { background-color: #2e7d32; }
+        .download-button { display: inline-block; padding: 14px 24px; background: linear-gradient(135deg, #059669 0%, #0f766e 100%); color: white !important; font-weight: 700; border-radius: 10px; text-decoration: none; }
         
-        .special-section { background-color: #fff8e1; border-left: 5px solid #FFC107; padding: 25px; border-radius: 8px; margin: 25px 0; }
-        .special-section h4 { margin-top: 0; font-size: 18px; display: flex; align-items: center; color: #c09e4f; font-weight: 600; }
-        .special-section .icon { font-size: 24px; margin-right: 10px; color: #c09e4f; }
+        .special-section { background-color: #f8fcfa; border: 1px solid #dceee3; padding: 24px; border-radius: 14px; margin: 25px 0; }
+        .special-section h4 { margin-top: 0; font-size: 18px; display: flex; align-items: center; color: #065f46; font-weight: 700; }
+        .special-section .icon { font-size: 24px; margin-right: 10px; color: #065f46; }
         .special-section p { margin: 10px 0; font-size: 14px; }
         
-        .invest-button { display: inline-block; padding: 12px 25px; background-color: #006400; color: white !important; font-weight: 600; border-radius: 6px; text-decoration: none; transition: background-color 0.3s ease; margin-top: 15px; }
-        .invest-button:hover { background-color: #2e7d32; }
+        .invest-button { display: inline-block; padding: 12px 22px; background-color: #065f46; color: white !important; font-weight: 700; border-radius: 10px; text-decoration: none; margin-top: 15px; }
 
         .signature { margin-top: 40px; font-size: 14px; color: #4a5568; }
-        .footer { background-color: #006400; color: white; text-align: center; padding: 15px; font-size: 12px; letter-spacing: 0.5px; opacity: 0.8; }
+        .footer { background-color: #f8fbf9; color: #64748b; text-align: center; padding: 18px; font-size: 12px; letter-spacing: 0.3px; border-top: 1px solid #e6efe9; }
         
-        .transaction-details { background-color: #f0fff4; border: 1px solid #c6f6d5; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .transaction-details { background-color: #f8fcfa; border: 1px solid #dceee3; border-radius: 12px; padding: 20px; margin: 20px 0; }
         .transaction-details h4 { color: #2f855a; margin-bottom: 15px; font-size: 16px; }
         .transaction-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
         .transaction-row:last-child { border-bottom: none; }
         .transaction-label { color: #4a5568; font-weight: 500; }
         .transaction-value { color: #2d3748; font-weight: 600; }
-        .amount-value { color: #006400; font-weight: 700; font-size: 16px; }
+        .amount-value { color: #065f46; font-weight: 700; font-size: 16px; }
     </style>
 </head>
 <body>
     <div class=\"email-container\">
         <div class=\"header\">
-            <div class=\"title\">FeedTan Community Microfinance Group</div>
-            <div class=\"sub-title\">P.O.Box 7744, Ushirika Sokoine Road, Moshi, Kilimanjaro, Tanzania</div>
+            <div class=\"eyebrow\">Payment Confirmation</div>
+            <div class=\"title\">Your payment was received successfully</div>
+            <div class=\"sub-title\">Thank you for your payment. This message confirms that your transaction has been recorded and processed by FeedTan.</div>
         </div>
         <div class=\"content\">
-            <p class=\"greeting\">Habari {$name},</p>
-            <p style=\"font-size: 14px; color: #4a5568;\">Tunatumia ujumbe huu kukuarifu kuwa malipo yako yamefanikiwa. Tunashukuru kwa kuendelea kutuamini kama mteja wetu wa kudumu.</p>
+            <p class=\"greeting\">Hello {$name},</p>
+            <p class=\"lead\">We are pleased to confirm that your payment has been completed successfully. A summary of the transaction is provided below for your records.</p>
+
+            <div class=\"highlight-grid\">
+                <div class=\"highlight-card\">
+                    <div class=\"highlight-label\">Amount</div>
+                    <div class=\"highlight-value\">TZS {$amount}</div>
+                </div>
+                <div class=\"highlight-card\">
+                    <div class=\"highlight-label\">Reference</div>
+                    <div class=\"highlight-value\" style=\"font-size:16px;\">{$reference}</div>
+                </div>
+                <div class=\"highlight-card\">
+                    <div class=\"highlight-label\">Paid On</div>
+                    <div class=\"highlight-value\" style=\"font-size:16px;\">{$date}</div>
+                </div>
+            </div>
 
             <div class=\"card\">
                 <div class=\"card-header\">
                     <span class=\"icon\">&#x2705;</span>
-                    <h4>Thibitisho la Malipo</h4>
+                    <h4>Payment Summary</h4>
                 </div>
-                <p style=\"font-size: 14px; color: #4a5568;\">Malipo yako ya <strong>TZS {$amount}</strong> kupitia <strong>{$paymentMethod}</strong> yamepokelewa kikamilifu tarehe <strong>{$date}</strong>.</p>
+                <p style=\"font-size: 14px; color: #4a5568;\">Your payment of <strong>TZS {$amount}</strong> via <strong>{$paymentMethod}</strong> was received and recorded on <strong>{$date}</strong>.</p>
                 
                 <div class=\"transaction-details\">
-                    <h4>&#128196; Maelezo ya Muamala</h4>
+                    <h4>&#128196; Transaction Details</h4>
                     <div class=\"transaction-row\">
-                        <span class=\"transaction-label\">Kumbukumbu ya Muamala:</span>
+                        <span class=\"transaction-label\">Transaction ID:</span>
                         <span class=\"transaction-value\">{$transactionId}</span>
                     </div>
                     <div class=\"transaction-row\">
-                        <span class=\"transaction-label\">Namba ya Rejea:</span>
+                        <span class=\"transaction-label\">Reference:</span>
                         <span class=\"transaction-value\">{$reference}</span>
                     </div>
                     <div class=\"transaction-row\">
-                        <span class=\"transaction-label\">Kiasi:</span>
+                        <span class=\"transaction-label\">Amount:</span>
                         <span class=\"transaction-value amount-value\">TZS {$amount}</span>
                     </div>
                     <div class=\"transaction-row\">
-                        <span class=\"transaction-label\">Njia ya Malipo:</span>
+                        <span class=\"transaction-label\">Payment Method:</span>
                         <span class=\"transaction-value\">{$paymentMethod}</span>
                     </div>
                     <div class=\"transaction-row\">
-                        <span class=\"transaction-label\">Tarehe:</span>
+                        <span class=\"transaction-label\">Date:</span>
                         <span class=\"transaction-value\">{$date}</span>
                     </div>
                     <div class=\"transaction-row\">
-                        <span class=\"transaction-label\">Namba ya Simu:</span>
+                        <span class=\"transaction-label\">Phone Number:</span>
                         <span class=\"transaction-value\">{$customerPhone}</span>
                     </div>
                 </div>
                 
                 <div class=\"button-container\">
-                    <a href=\"{$pdfLink}\" class=\"download-button\" target=\"_blank\">Pakua Risiti ya Malipo</a>
+                    <a href=\"{$pdfLink}\" class=\"download-button\" target=\"_blank\">Download Payment Receipt</a>
                 </div>
             </div>
 
             <div class=\"savings-tips\" style=\"margin-top: 25px; background-color: #f7fafc; padding: 15px; border-left: 5px solid #38a169; border-radius: 10px;\">
-                <h4 style=\"color: #2f855a; margin-bottom: 10px;\">&#128184; Vidokezo vya Akiba (Savings Tips)</h4>
+                <h4 style=\"color: #2f855a; margin-bottom: 10px;\">&#128184; Smart Savings Tips</h4>
                 <ul style=\"font-size: 14px; color: #4a5568; line-height: 1.6; margin-left: 20px;\">
-                    <li>&#128161; Weka akiba angalau <strong>10%</strong> ya kipato chako kila mwezi.</li>
-                    <li>&#128197; Tumia kanuni ya <strong>\"Jilippe Kwanza\"</strong> — weka akiba kabla ya matumizi.</li>
-                    <li>&#127919; Weka malengo maalum ya kifedha (mfano: gawio, biashara, au nyumba).</li>
-                    <li>&#128201; Epuka madeni yasiyo ya lazima — deni ni adui wa uhuru wa kifedha.</li>
-                    <li>&#127793; Wekeza sehemu ya akiba yako kwenye miradi yenye tija kama FIA.</li>
+                    <li>&#128161; Set aside at least <strong>10%</strong> of your income every month.</li>
+                    <li>&#128197; Pay yourself first by saving before spending.</li>
+                    <li>&#127919; Create clear financial goals for business, education, housing, or investments.</li>
+                    <li>&#128201; Limit unnecessary debt and track your cash flow consistently.</li>
+                    <li>&#127793; Explore disciplined long-term investment opportunities that match your goals.</li>
                 </ul>
                 <p style=\"font-size: 13px; color: #2f855a; font-style: italic; margin-top: 10px;\">
-                    \"Uchumi wa kweli huanza na nidhamu ya akiba.\" &#128181;
+                    \"Long-term financial strength begins with disciplined saving.\" &#128181;
                 </p>
             </div>
 
             <div class=\"special-section\">
-                <h4><span class=\"icon\">&#128200;</span>Wekeza Nasi</h4>
-                <p>Je, ungetaka kuwekeza kwenye miradi yetu ya kijamii? Tunatoa fursa za kuwekeza zenye tija kubwa.</p>
-                <a href=\"https://www.feedtancmg.org/invest\" class=\"invest-button\" target=\"_blank\">Jifunne Zaidi</a>
+                <h4><span class=\"icon\">&#128200;</span>Explore Growth Opportunities</h4>
+                <p>If you are interested in community-focused investment opportunities, our team can help you learn more about available programs and participation options.</p>
+                <a href=\"https://www.feedtancmg.org/invest\" class=\"invest-button\" target=\"_blank\">Learn More</a>
             </div>
             
-            <p style=\"font-size: 14px; color: #4a5568;\">Usisite kuwasiliana nasi kwa simu au email endapo utakuwa na swali lolote kuhusu malipo yako.</p>
+            <p style=\"font-size: 14px; color: #4a5568;\">If you have any questions about this payment, please contact our support team and keep this email for your records.</p>
 
             <div class=\"signature\">
-                <p>Wapendwa,<br><strong>Timu ya FeedTan CMG</strong></p>
+                <p>Kind regards,<br><strong>FeedTan CMG Team</strong></p>
                 <p style=\"font-weight: 600; color: #006400;\">Let's Grow Together! &#x1F91D;</p>
             </div>
         </div>
         <div class=\"footer\">
-            FeedTan CMG Payment System V1.1.0.2026
+            FeedTan CMG Payment System
         </div>
     </div>
 </body>
@@ -212,37 +231,36 @@ class EmailNotificationService
     private function buildEmailContent(array $paymentData): string
     {
         $amount = number_format($paymentData['collectedAmount'] ?? 0, 2);
-        $customerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? '[Jina la Mteja]';
+        $customerName = $paymentData['customer']['customerName'] ?? $paymentData['payer_name'] ?? 'Customer';
         $paymentMethod = $paymentData['channel'] ?? 'Mobile Money';
         $date = \Carbon\Carbon::parse($paymentData['createdAt'] ?? now())->format('d M Y, H:i');
         $transactionId = $paymentData['id'] ?? 'N/A';
         $reference = $paymentData['orderReference'] ?? $paymentData['reference'] ?? 'N/A';
         
         return "FEEDTAN COMMUNITY MICROFINANCE GROUP
-TAARIFA YA MALIPO
+PAYMENT CONFIRMATION
 
-Malipo yamefanikiwa. Tumepokea kiasi cha TZS {$amount} kutoka kwa {$customerName} kupitia {$paymentMethod} tarehe {$date}. Kumbukumbu ya muamala: {$transactionId}, Rejea: {$reference}. Asante kwa kutumia huduma zetu.
-
-========================================
-Maelezo ya Muamala:
-========================================
-
-Kumbukumbu ya Muamala: {$transactionId}
-Namba ya Rejea: {$reference}
-Kiasi: TZS {$amount}
-Njia ya Malipo: {$paymentMethod}
-Tarehe: {$date}
-Mteja: {$customerName}
+Your payment was completed successfully. We received TZS {$amount} from {$customerName} via {$paymentMethod} on {$date}. Transaction ID: {$transactionId}. Reference: {$reference}.
 
 ========================================
-Hii ni taarifa ya otomatiki ya malipo yaliyopokelewa kupitia mfumo wa malipo wa FeedTan Community Microfinance Group.
+Transaction Details
+========================================
 
-Kwa maelezo zaidi, tafadhali wasiliana nasi: service@feedtancmg.org
+Transaction ID: {$transactionId}
+Reference: {$reference}
+Amount: TZS {$amount}
+Payment Method: {$paymentMethod}
+Date: {$date}
+Customer: {$customerName}
+
+========================================
+This is an automated payment confirmation generated by the FeedTan Community Microfinance Group payment system.
+
+For support, please contact: service@feedtancmg.org
 
 ========================================
 FeedTan Community Microfinance Group
 Let's Grow Together
-Pamoja Tunakua
 ========================================";
     }
 }

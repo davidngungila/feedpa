@@ -2,9 +2,11 @@
 
 namespace App\Observers;
 
+use App\Models\AppNotification;
 use App\Models\Transaction;
 use App\Models\SystemSetting;
 use App\Services\EmailConfigService;
+use App\Services\AppNotificationService;
 use App\Services\MessagingServiceAPI;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -12,22 +14,26 @@ use Illuminate\Support\Facades\Mail;
 class TransactionObserver
 {
     protected $messagingService;
+    protected $notificationService;
 
-    public function __construct(MessagingServiceAPI $messagingService)
+    public function __construct(MessagingServiceAPI $messagingService, AppNotificationService $notificationService)
     {
         $this->messagingService = $messagingService;
+        $this->notificationService = $notificationService;
     }
 
     public function created(Transaction $transaction)
     {
         $this->trySendEmail($transaction);
         $this->trySendSMS($transaction);
+        $this->tryCreateInAppNotification($transaction);
     }
 
     public function updated(Transaction $transaction)
     {
         $this->trySendEmail($transaction);
         $this->trySendSMS($transaction);
+        $this->tryCreateInAppNotification($transaction);
     }
 
     private function trySendEmail(Transaction $transaction)
@@ -191,210 +197,281 @@ class TransactionObserver
         }
     }
 
+    private function tryCreateInAppNotification(Transaction $transaction): void
+    {
+        $status = strtolower($transaction->status ?? '');
+        $allowedStatuses = ['settled', 'completed', 'success', 'successful'];
+
+        if (!in_array($status, $allowedStatuses, true)) {
+            return;
+        }
+
+        if (AppNotification::query()->where('event_key', 'payment:' . $transaction->id . ':success')->exists()) {
+            return;
+        }
+
+        $this->notificationService->notifyPaymentOfficers($transaction);
+    }
+
     private function buildTransactionEmailTemplate(Transaction $transaction, $officer): array
     {
-        $subject = "🔔 Arifa ya Malipo Mapya - {$transaction->order_reference}";
-        
-        $memberName = $transaction->customer_name ?? 'Haujulikani';
+        $subject = "New Transaction Received - {$transaction->order_reference}";
+
+        $memberName = $transaction->customer_name ?? 'Unknown customer';
         $actualPayer = $transaction->payer_name ?? $memberName;
-        $phone = $transaction->phone ?? 'Haiyupo';
+        $phone = $transaction->phone ?? 'Not provided';
         $amount = number_format($transaction->collected_amount ?? $transaction->amount ?? 0, 0);
         $currency = $transaction->currency ?? 'TZS';
-        $status = $transaction->status ?? 'HAIJUIKANI';
-        $reference = $transaction->order_reference ?? 'Haiyupo';
-        $transactionId = $transaction->transaction_id ?? 'Haiyupo';
-        $paymentMethod = $transaction->payment_method ?? 'Haujulikani';
+        $status = strtoupper($transaction->status ?? 'UNKNOWN');
+        $reference = $transaction->order_reference ?? 'N/A';
+        $transactionId = $transaction->transaction_id ?? 'N/A';
+        $paymentMethod = $transaction->payment_method ?? 'Not specified';
         $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
-        $description = $transaction->description ?? $transaction->resolved_description ?? 'Malipo yamepokelewa';
-        
+        $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment successfully received';
+        $safeDescription = e($description);
+        $statusColor = match (strtolower($status)) {
+            'settled', 'completed', 'success', 'successful' => '#047857',
+            'failed', 'error', 'cancelled' => '#b91c1c',
+            default => '#b45309',
+        };
+
         $html = <<<HTML
 <!DOCTYPE html>
-<html lang="sw">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{$subject}</title>
     <style>
         body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #1f2937;
             margin: 0;
             padding: 0;
-            background: #f3f4f6;
+            background: #f3f7f5;
         }
         .container {
-            max-width: 650px;
-            margin: 30px auto;
-            padding: 0;
+            max-width: 760px;
+            margin: 28px auto;
             background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            border-radius: 18px;
+            overflow: hidden;
+            border: 1px solid #d8e8df;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
         }
         .header {
-            text-align: center;
-            padding: 30px 20px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 28px 32px;
+            background: linear-gradient(135deg, #064e3b 0%, #0f766e 100%);
             color: white;
-            border-radius: 16px 16px 0 0;
+        }
+        .eyebrow {
+            font-size: 12px;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            opacity: 0.88;
         }
         .header h1 {
-            margin: 0 0 10px 0;
+            margin: 10px 0 0;
             font-size: 28px;
+            line-height: 1.25;
         }
-        .status-badge {
-            display: inline-block;
-            padding: 10px 24px;
-            border-radius: 30px;
+        .header p {
+            margin: 10px 0 0;
+            max-width: 560px;
+            color: rgba(255,255,255,0.86);
             font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
         }
-        .status-settled, .status-completed {
-            background-color: rgba(255,255,255,0.2);
-            border: 2px solid white;
+        .status-chip {
+            display: inline-block;
+            margin-top: 18px;
+            padding: 8px 14px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.24);
         }
         .content {
-            padding: 30px;
+            padding: 32px;
+        }
+        .intro {
+            margin: 0 0 24px;
+            font-size: 15px;
+            color: #475569;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .summary-card {
+            border: 1px solid #e2efe8;
+            border-radius: 14px;
+            background: #f8fcfa;
+            padding: 18px;
+        }
+        .summary-label {
+            font-size: 11px;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #64748b;
+            font-weight: 700;
+        }
+        .summary-value {
+            margin-top: 8px;
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .section {
+            margin-top: 24px;
         }
         .section-title {
-            font-size: 18px;
+            margin: 0 0 14px;
+            font-size: 15px;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border: 1px solid #e2efe8;
+            border-radius: 14px;
+            background: #ffffff;
+        }
+        .details-table td {
+            padding: 13px 16px;
+            border-bottom: 1px solid #edf4ef;
+            vertical-align: top;
+        }
+        .details-table tr:last-child td {
+            border-bottom: none;
+        }
+        .details-label {
+            width: 210px;
+            color: #64748b;
+            font-size: 13px;
             font-weight: 700;
-            color: #1f2937;
-            margin: 25px 0 15px 0;
-            padding-bottom: 8px;
-            border-bottom: 3px solid #10b981;
         }
-        .section-title:first-child {
-            margin-top: 0;
-        }
-        .details-grid {
-            display: grid;
-            gap: 15px;
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 16px;
-            background: #f9fafb;
-            border-radius: 10px;
-        }
-        .detail-label {
-            font-weight: 600;
-            color: #4b5563;
+        .details-value {
+            color: #0f172a;
             font-size: 14px;
-        }
-        .detail-value {
-            color: #1f2937;
             font-weight: 600;
-            font-size: 14px;
         }
-        .alert {
-            background: #fef3c7;
-            border-left: 5px solid #f59e0b;
-            padding: 20px;
-            border-radius: 0 12px 12px 0;
-            margin: 25px 0;
+        .notice {
+            margin-top: 24px;
+            padding: 18px 20px;
+            border-radius: 14px;
+            background: #effaf5;
+            border: 1px solid #d7efe2;
+            color: #14532d;
         }
-        .alert strong {
-            color: #92400e;
+        .button-wrap {
+            margin-top: 26px;
+            text-align: center;
         }
         .button {
-            display: block;
-            width: 100%;
-            text-align: center;
-            padding: 16px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white !important;
+            display: inline-block;
+            padding: 14px 22px;
+            background: linear-gradient(135deg, #059669 0%, #0f766e 100%);
+            color: #ffffff !important;
             text-decoration: none;
             border-radius: 12px;
-            font-weight: 700;
-            font-size: 16px;
-            margin: 25px 0;
-            transition: transform 0.2s;
-        }
-        .button:hover {
-            transform: translateY(-2px);
+            font-size: 14px;
+            font-weight: 800;
         }
         .footer {
-            text-align: center;
-            padding: 25px;
-            background: #f9fafb;
-            color: #6b7280;
-            font-size: 13px;
-            border-radius: 0 0 16px 16px;
+            padding: 22px 32px 28px;
+            color: #64748b;
+            font-size: 12px;
+            background: #f8fbf9;
+            border-top: 1px solid #e5efe9;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🔔 Malipo Mapya Yamepokelewa!</h1>
-            <div class="status-badge status-{$this->getCssStatus($status)}">{$status}</div>
+            <div class="eyebrow">FeedTan Officer Alert</div>
+            <h1>New Transaction Received</h1>
+            <p>A new payment has been captured successfully and is ready for officer review, reconciliation, and internal follow-up.</p>
+            <div class="status-chip" style="color:#ffffff;border-color:rgba(255,255,255,0.2);">Status: {$status}</div>
         </div>
-        
+
         <div class="content">
-            <p style="font-size: 16px; color: #374151;">Mambo vema Afisa,</p>
-            <p style="font-size: 16px; color: #374151;">Malipo mapya yamefanikiwa. Tafadhali ingia kwenye mfumo ili kurekodi muamala huu kwenye rekodi zetu.</p>
-            
-            <div class="section-title">📊 Maelezo ya Malipo</div>
-            <div class="details-grid">
-                <div class="detail-row">
-                    <span class="detail-label">Rejea</span>
-                    <span class="detail-value">{$reference}</span>
+            <p class="intro">Hello {$officer->name}, a newly received transaction requires visibility inside the platform. The key details are summarized below for immediate action.</p>
+
+            <div class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-label">Amount</div>
+                    <div class="summary-value">{$currency} {$amount}</div>
                 </div>
-                <div class="detail-row">
-                    <span class="detail-label">Kiasi</span>
-                    <span class="detail-value">{$currency} {$amount}</span>
+                <div class="summary-card">
+                    <div class="summary-label">Reference</div>
+                    <div class="summary-value" style="font-size:16px;">{$reference}</div>
                 </div>
-            </div>
-            
-            <div class="section-title">👤 Maelezo ya Mwanachama</div>
-            <div class="details-grid">
-                <div class="detail-row">
-                    <span class="detail-label">Jina la Mwanachama</span>
-                    <span class="detail-value">{$memberName}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Mwenyeji wa Malipo</span>
-                    <span class="detail-value">{$actualPayer}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Simu</span>
-                    <span class="detail-value">{$phone}</span>
+                <div class="summary-card">
+                    <div class="summary-label">Recorded At</div>
+                    <div class="summary-value" style="font-size:16px;">{$date}</div>
                 </div>
             </div>
-            
-            <div class="section-title">📝 Maelezo ya Muamala</div>
-            <div class="details-grid">
-                <div class="detail-row">
-                    <span class="detail-label">ID ya Muamala</span>
-                    <span class="detail-value">{$transactionId}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Njia ya Malipo</span>
-                    <span class="detail-value">{$paymentMethod}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Tarehe & Muda</span>
-                    <span class="detail-value">{$date}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Nia / Maelezo</span>
-                    <span class="detail-value">{$description}</span>
-                </div>
+
+            <div class="section">
+                <h2 class="section-title">Transaction Summary</h2>
+                <table class="details-table">
+                    <tr>
+                        <td class="details-label">Transaction ID</td>
+                        <td class="details-value">{$transactionId}</td>
+                    </tr>
+                    <tr>
+                        <td class="details-label">Payment Method</td>
+                        <td class="details-value">{$paymentMethod}</td>
+                    </tr>
+                    <tr>
+                        <td class="details-label">Status</td>
+                        <td class="details-value" style="color: {$statusColor};">{$status}</td>
+                    </tr>
+                    <tr>
+                        <td class="details-label">Description</td>
+                        <td class="details-value">{$safeDescription}</td>
+                    </tr>
+                </table>
             </div>
-            
-            <div class="alert">
-                <strong>⚠️ Hatua Inahitajika:</strong> Tafadhali ingia kwenye mfumo ili kurekodi muamala huu wa malipo kwenye rekodi zetu.
+
+            <div class="section">
+                <h2 class="section-title">Payer Information</h2>
+                <table class="details-table">
+                    <tr>
+                        <td class="details-label">Customer Name</td>
+                        <td class="details-value">{$memberName}</td>
+                    </tr>
+                    <tr>
+                        <td class="details-label">Actual Payer</td>
+                        <td class="details-value">{$actualPayer}</td>
+                    </tr>
+                    <tr>
+                        <td class="details-label">Phone Number</td>
+                        <td class="details-value">{$phone}</td>
+                    </tr>
+                </table>
             </div>
-            
-            <a href="{$this->getLoginUrl()}" class="button">🔑 Ingia kwenye Mfumo</a>
+
+            <div class="notice">
+                Please review this transaction in the officer portal and confirm it is properly reflected in the system records and downstream reporting.
+            </div>
+
+            <div class="button-wrap">
+                <a href="{$this->getLoginUrl()}" class="button">Open Officer Portal</a>
+            </div>
         </div>
-        
+
         <div class="footer">
-            <p><strong>FeedTan Community Microfinance Group</strong><br>
-            "Tufanye Kazi Pamoja"</p>
+            <strong>FeedTan Community Microfinance Group</strong><br>
+            Automated transaction alert for authorized officers only.
         </div>
     </div>
 </body>
@@ -414,6 +491,6 @@ HTML;
 
     private function getLoginUrl(): string
     {
-        return 'https://pay.feedtancmg.org/login';
+        return 'https://pay.feedtancmg.org/entry';
     }
 }

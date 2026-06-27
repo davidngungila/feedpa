@@ -11,6 +11,7 @@ class PayoutOtp extends Model
         'user_id',
         'otp',
         'phone',
+        'purpose',
         'is_verified',
         'expires_at',
     ];

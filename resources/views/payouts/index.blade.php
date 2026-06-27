@@ -290,12 +290,21 @@
                                        title="View details">
                                         <i class="fas fa-external-link-alt text-xs"></i>
                                     </a>
-                                    @if($payout->status === 'PENDING_VERIFICATION')
+                                    @if(in_array($payout->workflow_stage ?? '', ['INITIATION_OTP', 'PAYMENT_AUTHORIZATION_OTP']))
                                         <a href="{{ route('payouts.verify-otp', $payout->order_reference) }}"
                                            class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center hover:bg-purple-600 hover:text-white transition-all"
-                                           title="Verify OTP">
+                                           title="{{ ($payout->workflow_stage ?? '') === 'PAYMENT_AUTHORIZATION_OTP' ? 'Authorize payment OTP' : 'Verify initiation OTP' }}">
                                             <i class="fas fa-shield-alt text-xs"></i>
                                         </a>
+                                    @elseif(($payout->workflow_stage ?? '') === 'APPROVAL_PENDING' && auth()->check() && auth()->user()->can_create_payouts)
+                                        <form action="{{ route('payouts.approve', $payout->order_reference) }}" method="POST" class="contents">
+                                            @csrf
+                                            <button type="submit"
+                                                    class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all"
+                                                    title="Approve payout">
+                                                <i class="fas fa-check text-xs"></i>
+                                            </button>
+                                        </form>
                                     @endif
                                 </div>
                             </td>

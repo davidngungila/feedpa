@@ -7,6 +7,7 @@
     $payout = $payoutData;
     $isSuccessful = in_array($payout['status'] ?? '', ['SUCCESS', 'SETTLED']);
     $isFailed = in_array($payout['status'] ?? '', ['FAILED', 'CANCELLED', 'ERROR']);
+    $workflowStage = $payout['workflow_stage'] ?? 'UNKNOWN';
     
     $statusText = $payout['status'] ?? 'UNKNOWN';
     $statusIcon = 'fa-clock';
@@ -21,6 +22,17 @@
         $statusIcon = 'fa-times-circle';
         $statusColor = 'badge-red';
     }
+
+    $workflowLabels = [
+        'INITIATION_OTP' => 'Waiting For Initiation OTP',
+        'APPROVAL_PENDING' => 'Waiting For Approval',
+        'PAYMENT_AUTHORIZATION_OTP' => 'Waiting For Payment Authorization OTP',
+        'PROCESSING' => 'Processing With Provider',
+        'COMPLETED' => 'Completed',
+        'FAILED' => 'Failed',
+        'REJECTED' => 'Rejected',
+    ];
+    $workflowLabel = $workflowLabels[$workflowStage] ?? str_replace('_', ' ', $workflowStage);
 @endphp
 
 <div class="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -192,6 +204,65 @@
             </div>
         </div>
 
+        <div class="card p-6 space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                    <i class="fas fa-diagram-project"></i> Workflow
+                </h3>
+                <span class="badge {{ $workflowStage === 'REJECTED' || $isFailed ? 'badge-red' : ($workflowStage === 'COMPLETED' || $isSuccessful ? 'badge-green' : 'badge-yellow') }}">
+                    {{ $workflowLabel }}
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="p-4 rounded-xl bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary-500">Initiated By</div>
+                    <div class="mt-1 text-sm font-bold text-primary-900 dark:text-white">{{ $payout['initiator_name'] ?? 'N/A' }}</div>
+                    <div class="text-xs text-primary-500 mt-1">{{ isset($payout['initiated_at']) && $payout['initiated_at'] ? \Carbon\Carbon::parse($payout['initiated_at'])->format('d M Y, H:i') : 'Pending' }}</div>
+                </div>
+                <div class="p-4 rounded-xl bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary-500">Initiation Verified By</div>
+                    <div class="mt-1 text-sm font-bold text-primary-900 dark:text-white">{{ $payout['initiation_verifier_name'] ?? 'Pending' }}</div>
+                    <div class="text-xs text-primary-500 mt-1">{{ isset($payout['initiation_verified_at']) && $payout['initiation_verified_at'] ? \Carbon\Carbon::parse($payout['initiation_verified_at'])->format('d M Y, H:i') : 'Waiting' }}</div>
+                </div>
+                <div class="p-4 rounded-xl bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary-500">Approved By</div>
+                    <div class="mt-1 text-sm font-bold text-primary-900 dark:text-white">{{ $payout['approver_name'] ?? 'Pending' }}</div>
+                    <div class="text-xs text-primary-500 mt-1">{{ isset($payout['approved_at']) && $payout['approved_at'] ? \Carbon\Carbon::parse($payout['approved_at'])->format('d M Y, H:i') : 'Waiting' }}</div>
+                </div>
+                <div class="p-4 rounded-xl bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border">
+                    <div class="text-[10px] uppercase font-bold tracking-widest text-primary-500">Payment Authorized By</div>
+                    <div class="mt-1 text-sm font-bold text-primary-900 dark:text-white">{{ $payout['payment_authorizer_name'] ?? 'Pending' }}</div>
+                    <div class="text-xs text-primary-500 mt-1">{{ isset($payout['payment_authorized_at']) && $payout['payment_authorized_at'] ? \Carbon\Carbon::parse($payout['payment_authorized_at'])->format('d M Y, H:i') : 'Waiting' }}</div>
+                </div>
+            </div>
+
+            @if(($payout['workflow_stage'] ?? '') === 'REJECTED')
+                <div class="p-4 rounded-xl bg-red-50 border border-red-100 text-red-700">
+                    <div class="text-xs font-bold">Rejected By {{ $payout['rejector_name'] ?? 'Unknown Officer' }}</div>
+                    <div class="text-sm mt-2">{{ $payout['rejection_reason'] ?? 'No reason provided.' }}</div>
+                </div>
+            @endif
+        </div>
+
+        @if(auth()->check() && auth()->user()->can_create_payouts && !in_array($payout['workflow_stage'] ?? '', ['COMPLETED', 'FAILED', 'REJECTED']) && !$isSuccessful)
+            <div class="card p-6">
+                <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 mb-3 flex items-center gap-2">
+                    <i class="fas fa-ban"></i> Reject Payout
+                </h3>
+                <form action="{{ route('payouts.reject', $orderReference) }}" method="POST" class="space-y-3">
+                    @csrf
+                    <textarea name="rejection_reason" rows="3" required maxlength="1000"
+                              class="w-full rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3 text-sm text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-400"
+                              placeholder="Enter the reason for rejecting this payout..."></textarea>
+                    <button type="submit"
+                            class="inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold shadow-lg shadow-red-900/20 transition-all">
+                        <i class="fas fa-ban"></i> Reject Payout
+                    </button>
+                </form>
+            </div>
+        @endif
+
         <!-- Notes Card -->
         <div class="card p-6">
             <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 mb-3 flex items-center gap-2">
@@ -234,7 +305,25 @@
         </div>
 
         <!-- Action Buttons -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            @if(auth()->check() && auth()->user()->can_create_payouts && in_array($payout['workflow_stage'] ?? '', ['INITIATION_OTP', 'PAYMENT_AUTHORIZATION_OTP']))
+                <a href="{{ route('payouts.verify-otp', $orderReference) }}"
+                   class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-lg shadow-purple-900/20 transition-all">
+                    <i class="fas fa-shield-alt"></i>
+                    {{ ($payout['workflow_stage'] ?? '') === 'PAYMENT_AUTHORIZATION_OTP' ? 'Authorize Payment' : 'Verify OTP' }}
+                </a>
+            @endif
+
+            @if(auth()->check() && auth()->user()->can_create_payouts && ($payout['workflow_stage'] ?? '') === 'APPROVAL_PENDING')
+                <form action="{{ route('payouts.approve', $orderReference) }}" method="POST">
+                    @csrf
+                    <button type="submit"
+                            class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-900/20 transition-all w-full">
+                        <i class="fas fa-check"></i> Approve
+                    </button>
+                </form>
+            @endif
+
             @if(in_array($payout['status'] ?? '', ['SUCCESS', 'SETTLED']))
                 <a href="{{ route('payouts.receipt', $orderReference) }}" target="_blank"
                    class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">

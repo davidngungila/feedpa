@@ -97,7 +97,7 @@
     
     @stack('styles')
 </head>
-<body class="h-full main-bg" x-data="{ sidebarOpen: false, openDropdowns: [], profileDropdownOpen: false, isLoading: true }" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300);">
+<body class="h-full main-bg" x-data="{ sidebarOpen: false, openDropdowns: [], profileDropdownOpen: false, notificationDropdownOpen: false, isLoading: true }" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300);">
     
     <!-- Loading Overlay -->
     <div x-show="isLoading"
@@ -362,6 +362,16 @@
         <div class="flex-1 flex flex-col overflow-hidden">
             <!-- Top Navbar -->
             <header class="navbar-bg flex items-center justify-between px-6 h-16 flex-shrink-0">
+                @php
+                    $headerNotifications = auth()->user()
+                        ->appNotifications()
+                        ->take(8)
+                        ->get();
+                    $unreadNotificationCount = auth()->user()
+                        ->appNotifications()
+                        ->where('is_read', false)
+                        ->count();
+                @endphp
                 <div class="flex items-center gap-4">
                     <button @click="sidebarOpen = !sidebarOpen" class="lg:hidden p-2 rounded-lg text-primary-600 hover:bg-primary-50">
                         <i class="fa-solid fa-bars"></i>
@@ -388,7 +398,74 @@
                     </div>
 
                 <div class="relative">
-                    <button @click="profileDropdownOpen = !profileDropdownOpen" class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-primary-50 transition-all">
+                    <button @click="notificationDropdownOpen = !notificationDropdownOpen; if (notificationDropdownOpen) profileDropdownOpen = false"
+                            class="relative flex items-center justify-center w-11 h-11 rounded-xl border border-primary-100 bg-white hover:bg-primary-50 transition-all text-primary-600">
+                        <i class="fas fa-bell text-sm"></i>
+                        @if($unreadNotificationCount > 0)
+                            <span class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                                {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
+                            </span>
+                        @endif
+                    </button>
+
+                    <div x-show="notificationDropdownOpen"
+                         x-transition:enter="transition ease-out duration-100"
+                         x-transition:enter-start="opacity-0 transform scale-95"
+                         x-transition:enter-end="opacity-100 transform scale-100"
+                         x-transition:leave="transition ease-in duration-75"
+                         x-transition:leave-start="opacity-100 transform scale-100"
+                         x-transition:leave-end="opacity-0 transform scale-95"
+                         @click.outside="notificationDropdownOpen = false"
+                         class="absolute right-0 mt-2 w-[360px] max-w-[90vw] z-50 rounded-xl shadow-xl bg-white border border-primary-100 overflow-hidden">
+                        <div class="p-4 border-b border-primary-100 bg-primary-50 flex items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-primary-900">Notifications</p>
+                                <p class="text-[10px] text-primary-500">{{ $unreadNotificationCount }} unread</p>
+                            </div>
+                            <form method="POST" action="{{ route('notifications.mark-all-read') }}">
+                                @csrf
+                                <button type="submit" class="text-[10px] font-bold text-primary-600 hover:underline">
+                                    Mark all read
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="max-h-[420px] overflow-y-auto divide-y divide-primary-50">
+                            @forelse($headerNotifications as $notification)
+                                <a href="{{ route('notifications.open', $notification) }}"
+                                   class="block px-4 py-3 hover:bg-primary-50 transition-all {{ $notification->is_read ? 'bg-white' : 'bg-primary-50/50' }}">
+                                    <div class="flex items-start gap-3">
+                                        <div class="mt-1 w-2.5 h-2.5 rounded-full {{ $notification->is_read ? 'bg-primary-200' : 'bg-primary-500' }}"></div>
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="text-xs font-bold text-primary-900 truncate">{{ $notification->title }}</p>
+                                                <span class="text-[10px] text-primary-400 whitespace-nowrap">{{ $notification->created_at->diffForHumans() }}</span>
+                                            </div>
+                                            <p class="text-xs text-primary-600 mt-1 line-clamp-3">{{ $notification->message }}</p>
+                                        </div>
+                                    </div>
+                                </a>
+                            @empty
+                                <div class="px-4 py-8 text-center">
+                                    <i class="fas fa-bell-slash text-2xl text-primary-200"></i>
+                                    <p class="mt-3 text-sm font-bold text-primary-700">No notifications yet</p>
+                                    <p class="text-xs text-primary-500">New payments and payout actions will appear here.</p>
+                                </div>
+                            @endforelse
+                        </div>
+
+                        <div class="p-3 border-t border-primary-100 bg-white">
+                            <a href="{{ route('notifications.index') }}"
+                               class="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
+                                <i class="fas fa-list"></i>
+                                <span>View All Notifications</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="relative">
+                    <button @click="profileDropdownOpen = !profileDropdownOpen; if (profileDropdownOpen) notificationDropdownOpen = false" class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-primary-50 transition-all">
                         <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center overflow-hidden border-2 border-green-500">
                             @if(auth()->user()->avatar)
                                 <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="{{ auth()->user()->name }}" class="w-full h-full object-cover">

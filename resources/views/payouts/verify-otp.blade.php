@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Verify Payout OTP')
+@section('title', $otpPurpose ?? 'Verify Payout OTP')
 
 @section('content')
 @php
@@ -140,21 +140,38 @@
     <!-- OTP Form -->
     <div class="card p-6">
         <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 mb-4 flex items-center gap-2">
-            <i class="fas fa-lock"></i> Verify Payout OTP
+            <i class="fas fa-lock"></i> {{ $otpPurpose ?? 'Verify Payout OTP' }}
         </h3>
+
+        <div class="mb-5 p-4 rounded-xl bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border">
+            <p class="text-xs font-bold text-primary-700 dark:text-primary-300">
+                @if(($pendingOtp->purpose ?? 'initiation') === 'payment_authorization')
+                    This OTP authorizes the actual payment release after approval.
+                @else
+                    This OTP confirms the payout initiation before approval.
+                @endif
+            </p>
+            <p class="mt-2 text-xs text-primary-500">
+                Sent to {{ $pendingOtp->phone ?? (auth()->user()->phone ?? 'your phone') }}
+                @if(isset($pendingOtp) && $pendingOtp->expires_at)
+                    and expires at {{ $pendingOtp->expires_at->format('H:i') }}.
+                @endif
+            </p>
+        </div>
 
         <form action="{{ route('payouts.verify', $payout->order_reference) }}" method="POST">
             @csrf
             <div class="mb-6">
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">
-                    Enter OTP (sent to {{ auth()->user()->phone ?? 'your phone' }}
+                    Enter OTP (sent to {{ $pendingOtp->phone ?? (auth()->user()->phone ?? 'your phone') }})
                 </label>
                 <input type="text" name="otp" maxlength="6" placeholder="000000" required
                        class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-xl px-4 py-4 text-3xl font-mono text-center tracking-[0.5em] font-black text-primary-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500">
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button type="submit" class="px-4 py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
-                    <i class="fas fa-check-circle me-2"></i> Verify Payout
+                    <i class="fas fa-check-circle me-2"></i>
+                    {{ ($pendingOtp->purpose ?? 'initiation') === 'payment_authorization' ? 'Authorize Payment' : 'Verify Initiation' }}
                 </button>
                 <button type="button" id="resendOtpBtn"
                         class="flex items-center justify-center px-4 py-3 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 dark:hover:bg-dark-800 transition-all">

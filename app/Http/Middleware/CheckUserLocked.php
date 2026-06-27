@@ -17,7 +17,7 @@ class CheckUserLocked
     {
         if ($request->user() && $request->user()->is_locked) {
             auth()->logout();
-            return redirect()->route('login')->with('error', 'Your account has been locked. Please contact an administrator.');
+            return redirect('/')->with('error', 'Your account has been locked. Please contact an administrator.');
         }
         
         return $next($request);

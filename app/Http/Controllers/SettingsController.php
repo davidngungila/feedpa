@@ -16,7 +16,7 @@ class SettingsController extends Controller
     private function checkAdmin()
     {
         if (!auth()->check()) {
-            return redirect()->route('login');
+            return redirect('/');
         }
         if (!auth()->user()->is_admin) {
             abort(403, 'Unauthorized');

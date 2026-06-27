@@ -77,6 +77,20 @@
 </head>
 <body class="mesh-bg min-h-screen text-slate-800 antialiased">
 
+    <div id="globalNotice"
+         class="fixed top-4 left-1/2 -translate-x-1/2 z-50 hidden w-[min(92vw,680px)] rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur bg-white/95">
+        <div class="flex items-start gap-3">
+            <div id="globalNoticeIcon" class="mt-0.5 text-sm"></div>
+            <div class="min-w-0 flex-1">
+                <p id="globalNoticeTitle" class="text-sm font-bold"></p>
+                <p id="globalNoticeMessage" class="text-sm text-slate-600"></p>
+            </div>
+            <button type="button" id="globalNoticeClose" class="text-slate-400 hover:text-slate-600">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
     <div class="min-h-screen flex flex-col">
         <!-- Top bar -->
         <header class="w-full border-b border-brand-100/80 bg-white/70 backdrop-blur-md sticky top-0 z-30">
@@ -286,6 +300,65 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const noticeEl = document.getElementById('globalNotice');
+        const noticeTitleEl = document.getElementById('globalNoticeTitle');
+        const noticeMessageEl = document.getElementById('globalNoticeMessage');
+        const noticeIconEl = document.getElementById('globalNoticeIcon');
+        const noticeCloseEl = document.getElementById('globalNoticeClose');
+
+        function showGlobalNotice(type, title, message) {
+            const styles = {
+                warning: {
+                    box: 'border-amber-200 bg-amber-50/95',
+                    icon: '<i class="fas fa-triangle-exclamation text-amber-600"></i>',
+                    title: 'text-amber-900',
+                },
+                error: {
+                    box: 'border-red-200 bg-red-50/95',
+                    icon: '<i class="fas fa-circle-xmark text-red-600"></i>',
+                    title: 'text-red-900',
+                },
+                info: {
+                    box: 'border-sky-200 bg-sky-50/95',
+                    icon: '<i class="fas fa-circle-info text-sky-600"></i>',
+                    title: 'text-sky-900',
+                },
+                success: {
+                    box: 'border-emerald-200 bg-emerald-50/95',
+                    icon: '<i class="fas fa-circle-check text-emerald-600"></i>',
+                    title: 'text-emerald-900',
+                }
+            };
+
+            const selected = styles[type] || styles.info;
+
+            noticeEl.className = `fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[min(92vw,680px)] rounded-2xl border px-4 py-3 shadow-2xl backdrop-blur ${selected.box}`;
+            noticeEl.classList.remove('hidden');
+            noticeTitleEl.className = `text-sm font-bold ${selected.title}`;
+            noticeTitleEl.textContent = title;
+            noticeMessageEl.textContent = message;
+            noticeIconEl.innerHTML = selected.icon;
+
+            window.clearTimeout(window.__globalNoticeTimeout);
+            window.__globalNoticeTimeout = window.setTimeout(() => {
+                noticeEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        noticeCloseEl.addEventListener('click', function () {
+            noticeEl.classList.add('hidden');
+        });
+
+        @if(session('warning'))
+            showGlobalNotice('warning', 'Not Found', @json(session('warning')));
+        @elseif(session('error'))
+            showGlobalNotice('error', 'Notice', @json(session('error')));
+        @elseif(session('info'))
+            showGlobalNotice('info', 'Information', @json(session('info')));
+        @elseif(session('success'))
+            showGlobalNotice('success', 'Success', @json(session('success')));
+        @endif
+
         const form = document.getElementById('paymentForm');
         const submitBtn = document.getElementById('submitBtn');
         const amountInput = document.getElementById('amount');

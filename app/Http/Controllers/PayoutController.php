@@ -751,6 +751,7 @@ class PayoutController extends Controller
             'beneficiaryMobileNumber' => $payout->beneficiary_mobile ?? $payout->recipient_phone,
             'beneficiaryEmail' => $payout->beneficiary_email
         ];
+        $payoutData['display_description'] = $payout->resolvedDescription();
         $payoutData['workflow_stage'] = $payout->workflow_stage;
         $payoutData['initiator_name'] = $payout->initiator?->name;
         $payoutData['initiation_verifier_name'] = $payout->initiationVerifier?->name;
@@ -763,6 +764,7 @@ class PayoutController extends Controller
         $payoutData['rejected_at'] = $payout->rejected_at;
         $payoutData['rejection_reason'] = $payout->rejection_reason;
         $payoutData['payment_authorized_at'] = $payout->payment_authorized_at;
+        unset($payoutData['notes']);
 
         // Get notes
         $notes = $payout->notes;

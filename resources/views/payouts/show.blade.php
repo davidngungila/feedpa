@@ -8,6 +8,7 @@
     $isSuccessful = in_array($payout['status'] ?? '', ['SUCCESS', 'SETTLED']);
     $isFailed = in_array($payout['status'] ?? '', ['FAILED', 'CANCELLED', 'ERROR']);
     $workflowStage = $payout['workflow_stage'] ?? 'UNKNOWN';
+    $displayDescription = $payout['display_description'] ?? $payout['description'] ?? 'N/A';
     
     $statusText = $payout['status'] ?? 'UNKNOWN';
     $statusIcon = 'fa-clock';
@@ -77,7 +78,7 @@
                                        "Beneficiary: " . ($payout['beneficiary']['accountName'] ?? $payout['recipient_name'] ?? $payout['beneficiary_account_name'] ?? 'N/A') . "\n" .
                                        "Phone: " . ($payout['beneficiary']['beneficiaryMobileNumber'] ?? $payout['recipient_phone'] ?? $payout['beneficiary_mobile'] ?? 'N/A') . "\n" .
                                        "Channel: " . ($payout['channel'] ?? $payout['payout_type'] ?? 'N/A') . "\n" .
-                                       "Description: " . ($payout['description'] ?? $payout['notes'] ?? 'N/A') . "\n" .
+                                       "Description: " . $displayDescription . "\n" .
                                        "Date: " . (isset($payout['createdAt']) ? \Carbon\Carbon::parse($payout['createdAt'])->format('Y-m-d H:i:s') : (isset($payout['created_at']) ? \Carbon\Carbon::parse($payout['created_at'])->format('Y-m-d H:i:s') : 'N/A'));
                         @endphp
                         {!! QrCode::size(100)->margin(1)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent) !!}
@@ -200,7 +201,7 @@
                 <i class="fas fa-info-circle"></i> Purpose / Description
             </h3>
             <div class="p-4 bg-primary-50 dark:bg-dark-900 rounded-xl italic text-sm text-primary-800 dark:text-primary-300 border border-primary-100 dark:border-dark-border">
-                {{ $payout['description'] ?? $payout['notes'] ?? 'Malipo kutoka FEEDTAN' }}
+                {{ $displayDescription }}
             </div>
         </div>
 

@@ -70,6 +70,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReference}/verify', [PayoutController::class, 'verifyOtp'])->name('verify');
         Route::post('/{orderReference}/resend-otp', [PayoutController::class, 'resendOtp'])->name('resend-otp');
         Route::post('/{orderReference}/approve', [PayoutController::class, 'approve'])->name('approve');
+        Route::post('/{orderReference}/cancel', [PayoutController::class, 'cancel'])->name('cancel');
         Route::post('/{orderReference}/reject', [PayoutController::class, 'reject'])->name('reject');
         Route::get('/{orderReference}', [PayoutController::class, 'show'])->name('status');
         Route::post('/{orderReference}/refresh', [PayoutController::class, 'refreshStatus'])->name('refresh');

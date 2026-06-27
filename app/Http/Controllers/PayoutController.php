@@ -656,6 +656,62 @@ class PayoutController extends Controller
         }
     }
 
+    public function cancel(Request $request, string $orderReference)
+    {
+        if (!auth()->user()->can_create_payouts) {
+            return redirect()->route('payouts.index')->with('error', 'You are not authorized to manage payouts');
+        }
+
+        $validated = $request->validate([
+            'cancellation_reason' => 'required|string|max:1000',
+        ]);
+
+        try {
+            $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
+            $isPendingVerification = in_array($payout->workflow_stage, ['INITIATION_OTP', 'PENDING_VERIFICATION'], true)
+                || $payout->status === 'PENDING_VERIFICATION';
+
+            if (!$isPendingVerification) {
+                return back()->with('warning', 'Only payouts waiting for verification can be cancelled from this page.');
+            }
+
+            $payout->otps()
+                ->where('is_verified', false)
+                ->where('expires_at', '>', now())
+                ->update(['expires_at' => now()]);
+
+            $payout->update([
+                'status' => 'CANCELLED',
+                'workflow_stage' => 'CANCELLED',
+                'rejected_by' => auth()->id(),
+                'rejected_at' => now(),
+                'rejection_reason' => $validated['cancellation_reason'],
+            ]);
+
+            Audit::log('cancel_payout', "Cancelled payout {$orderReference}. Reason: {$validated['cancellation_reason']}");
+
+            $this->notifications->notifyPayoutOfficers(
+                'payout_cancelled',
+                'Payout Cancelled',
+                "Payout {$orderReference} was cancelled by " . auth()->user()->name . ". Reason: {$validated['cancellation_reason']}",
+                route('payouts.status', $orderReference),
+                [
+                    'payout_id' => $payout->id,
+                    'order_reference' => $orderReference,
+                    'status' => 'CANCELLED',
+                    'reason' => $validated['cancellation_reason'],
+                ],
+                'payout:' . $payout->id . ':cancelled'
+            );
+
+            return redirect()->route('payouts.index', ['status' => 'PENDING', 'page' => 1])
+                ->with('success', 'Payout cancelled successfully.');
+        } catch (\Exception $e) {
+            Log::error('Payout cancellation failed', ['error' => $e->getMessage(), 'order_reference' => $orderReference]);
+            return back()->with('error', $e->getMessage());
+        }
+    }
+
     public function reject(Request $request, string $orderReference)
     {
         if (!auth()->user()->can_create_payouts) {

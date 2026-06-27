@@ -296,6 +296,14 @@
                                            title="{{ ($payout->workflow_stage ?? '') === 'PAYMENT_AUTHORIZATION_OTP' ? 'Authorize payment OTP' : 'Verify initiation OTP' }}">
                                             <i class="fas fa-shield-alt text-xs"></i>
                                         </a>
+                                        @if(($payout->workflow_stage ?? '') === 'INITIATION_OTP' || ($payout->status ?? '') === 'PENDING_VERIFICATION')
+                                            <button type="button"
+                                                    @click="openCancel('{{ $payout->order_reference }}', '{{ route('payouts.cancel', $payout->order_reference) }}')"
+                                                    class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
+                                                    title="Cancel payout">
+                                                <i class="fas fa-ban text-xs"></i>
+                                            </button>
+                                        @endif
                                     @elseif(($payout->workflow_stage ?? '') === 'APPROVAL_PENDING' && auth()->check() && auth()->user()->can_create_payouts)
                                         <form action="{{ route('payouts.approve', $payout->order_reference) }}" method="POST" class="contents">
                                             @csrf
@@ -471,6 +479,58 @@
             </template>
         </div>
     </div>
+
+    <div x-show="cancelOpen" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="closeCancel()">
+        <div class="absolute inset-0 bg-black/50" @click="closeCancel()"></div>
+        <div class="relative w-full max-w-lg card p-6 animate-fade-in" @click.stop>
+            <div class="flex items-start justify-between gap-4 mb-5">
+                <div>
+                    <h3 class="text-lg font-black text-primary-900 dark:text-white">Cancel Payout</h3>
+                    <p class="text-[10px] text-primary-500 uppercase tracking-widest mt-1">Pending Verification Only</p>
+                </div>
+                <button type="button" @click="closeCancel()" class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-dark-900 text-primary-600 hover:bg-primary-100 transition-all">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form :action="cancelAction" method="POST" class="space-y-4">
+                @csrf
+                <div class="rounded-xl border border-red-100 bg-red-50/70 dark:border-red-900/30 dark:bg-red-900/10 p-4">
+                    <p class="text-xs font-bold text-red-700 dark:text-red-300">
+                        You are cancelling payout <span class="font-mono" x-text="cancelReference"></span>.
+                    </p>
+                    <p class="text-[11px] text-red-600 dark:text-red-300 mt-1">
+                        This action is allowed only while the payout is still waiting for initiation verification.
+                    </p>
+                </div>
+
+                <div>
+                    <label for="cancellation_reason" class="block text-[10px] font-bold uppercase tracking-widest text-primary-500 mb-2">
+                        Cancellation Reason
+                    </label>
+                    <textarea id="cancellation_reason"
+                              name="cancellation_reason"
+                              x-model="cancelReason"
+                              rows="4"
+                              required
+                              maxlength="1000"
+                              class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-red-500"
+                              placeholder="Enter the reason for cancelling this payout"></textarea>
+                </div>
+
+                <div class="flex items-center justify-end gap-3">
+                    <button type="button" @click="closeCancel()" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-dark-border text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-200 transition-all">
+                        Keep Payout
+                    </button>
+                    <button type="submit"
+                            :disabled="!cancelReason.trim()"
+                            class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-all">
+                        Cancel Payout
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <style>[x-cloak] { display: none !important; }</style>
@@ -482,6 +542,10 @@ function payoutHistoryDetails() {
     return {
         open: false,
         selected: null,
+        cancelOpen: false,
+        cancelReference: null,
+        cancelAction: '',
+        cancelReason: '',
         copiedField: null,
         copyTimeout: null,
         openDetails(payload) {
@@ -489,10 +553,28 @@ function payoutHistoryDetails() {
             this.open = true;
             document.body.style.overflow = 'hidden';
         },
+        openCancel(reference, action) {
+            this.cancelReference = reference;
+            this.cancelAction = action;
+            this.cancelReason = '';
+            this.cancelOpen = true;
+            document.body.style.overflow = 'hidden';
+        },
         closeDetails() {
             this.open = false;
             this.selected = null;
-            document.body.style.overflow = '';
+            if (!this.cancelOpen) {
+                document.body.style.overflow = '';
+            }
+        },
+        closeCancel() {
+            this.cancelOpen = false;
+            this.cancelReference = null;
+            this.cancelAction = '';
+            this.cancelReason = '';
+            if (!this.open) {
+                document.body.style.overflow = '';
+            }
         },
         async copyText(text, field) {
             const value = String(text ?? '').trim();

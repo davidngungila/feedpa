@@ -517,21 +517,25 @@ class PayoutController extends Controller
         $payout = Payout::with(['initiator', 'approver'])->where('order_reference', $orderReference)->firstOrFail();
         $pendingOtp = $this->pendingOtpForPayout($payout);
 
-        if ((int) ($payout->initiated_by ?? 0) !== (int) auth()->id()) {
-            return redirect()->route('payouts.status', $orderReference)
-                ->with('warning', 'Only the initiating officer can verify the initiation OTP.');
-        }
-
         if (!$pendingOtp) {
             return redirect()->route('payouts.status', $orderReference)->with('warning', 'There is no pending OTP for this payout.');
         }
 
-        if ($pendingOtp->purpose !== 'initiation') {
-            return redirect()->route('payouts.status', $orderReference)
-                ->with('warning', 'This payout no longer uses a second OTP authorization step.');
-        }
+        if ($pendingOtp->purpose === 'initiation') {
+            if ((int) ($payout->initiated_by ?? 0) !== (int) auth()->id()) {
+                return redirect()->route('payouts.status', $orderReference)
+                    ->with('warning', 'Only the initiating officer can verify the initiation OTP.');
+            }
 
-        $otpPurpose = 'Initiation Verification';
+            $otpPurpose = 'Initiation Verification';
+        } else {
+            if ((int) ($payout->payment_otp_requested_by ?? 0) !== (int) auth()->id()) {
+                return redirect()->route('payouts.status', $orderReference)
+                    ->with('warning', 'Only the officer who requested the authorization OTP can verify it.');
+            }
+
+            $otpPurpose = 'Approval And Authorization';
+        }
 
         return view('payouts.verify-otp', compact('payout', 'pendingOtp', 'otpPurpose'));
     }
@@ -550,25 +554,60 @@ class PayoutController extends Controller
             $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
             $otpRecord = $this->pendingOtpForPayout($payout);
 
-            if ((int) ($payout->initiated_by ?? 0) !== (int) auth()->id()) {
-                return redirect()->route('payouts.status', $orderReference)
-                    ->with('warning', 'Only the initiating officer can verify the initiation OTP.');
-            }
-
             if (!$otpRecord) {
                 return redirect()->route('payouts.status', $orderReference)->with('warning', 'There is no pending OTP for this payout.');
-            }
-
-            if ($otpRecord->purpose !== 'initiation') {
-                return redirect()->route('payouts.status', $orderReference)
-                    ->with('warning', 'This payout no longer uses a second OTP authorization step.');
             }
 
             if ($otpRecord->otp !== $validated['otp']) {
                 return back()->with('error', 'Invalid OTP');
             }
 
+            if ($otpRecord->purpose === 'initiation') {
+                if ((int) ($payout->initiated_by ?? 0) !== (int) auth()->id()) {
+                    return redirect()->route('payouts.status', $orderReference)
+                        ->with('warning', 'Only the initiating officer can verify the initiation OTP.');
+                }
+            } else {
+                if ((int) ($payout->payment_otp_requested_by ?? 0) !== (int) auth()->id()) {
+                    return redirect()->route('payouts.status', $orderReference)
+                        ->with('warning', 'Only the officer who requested the authorization OTP can verify it.');
+                }
+            }
+
             $otpRecord->update(['is_verified' => true]);
+
+            if ($otpRecord->purpose === 'payment_authorization') {
+                $approvedAt = now();
+
+                $payout->update([
+                    'status' => 'PROCESSING',
+                    'workflow_stage' => 'PROCESSING',
+                    'approved_by' => auth()->id(),
+                    'approved_at' => $approvedAt,
+                    'payment_authorized_by' => auth()->id(),
+                    'payment_authorized_at' => $approvedAt,
+                ]);
+
+                $apiResponse = $this->submitPayoutToProvider($payout);
+
+                Audit::log('approve_payout', "Approved and authorized payout {$orderReference} using authorization OTP");
+
+                $this->updatePayoutFromApi($payout->fresh(), $apiResponse);
+                $payout->refresh();
+                $this->broadcastAuthorizationAlert($payout, auth()->user());
+
+                $this->notifications->notifyPayoutOfficers(
+                    'payout_approved',
+                    'Payout Approved And Authorized',
+                    "Payout {$orderReference} was approved and authorized by " . auth()->user()->name . " after OTP verification and submitted for payment processing.",
+                    route('payouts.status', $orderReference),
+                    ['payout_id' => $payout->id, 'order_reference' => $orderReference, 'status' => $payout->status],
+                    'payout:' . $payout->id . ':approved'
+                );
+
+                return redirect()->route('payouts.status', $orderReference)
+                    ->with('success', 'Payout approved and authorized successfully.');
+            }
 
             $payout->update([
                 'status' => 'PENDING_APPROVAL',
@@ -606,7 +645,7 @@ class PayoutController extends Controller
         try {
             $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
 
-            if (!in_array($payout->workflow_stage, ['APPROVAL_PENDING', 'PAYMENT_AUTHORIZATION_OTP'], true)) {
+            if ($payout->workflow_stage !== 'APPROVAL_PENDING') {
                 return back()->with('warning', 'This payout is not waiting for final approval.');
             }
 
@@ -619,35 +658,27 @@ class PayoutController extends Controller
                 ->where('expires_at', '>', now())
                 ->update(['expires_at' => now()]);
 
-            $apiResponse = $this->submitPayoutToProvider($payout);
-            $approvedAt = now();
-
             $payout->update([
-                'status' => 'PROCESSING',
-                'workflow_stage' => 'PROCESSING',
-                'approved_by' => auth()->id(),
-                'approved_at' => $approvedAt,
-                'payment_authorized_by' => auth()->id(),
-                'payment_authorized_at' => $approvedAt,
+                'status' => 'PENDING_PAYMENT_AUTHORIZATION',
+                'workflow_stage' => 'PAYMENT_AUTHORIZATION_OTP',
+                'payment_otp_requested_by' => auth()->id(),
+                'payment_otp_requested_at' => now(),
             ]);
 
-            Audit::log('approve_payout', "Approved and authorized payout {$orderReference} for provider submission");
-
-            $this->updatePayoutFromApi($payout->fresh(), $apiResponse);
-            $payout->refresh();
-            $this->broadcastAuthorizationAlert($payout, auth()->user());
+            Audit::log('approve_payout', "Requested approval and authorization OTP for payout {$orderReference}");
+            $this->createAndSendOtp($payout, auth()->user(), 'payment_authorization');
 
             $this->notifications->notifyPayoutOfficers(
                 'payout_approved',
-                'Payout Approved And Authorized',
-                "Payout {$orderReference} was approved and authorized by " . auth()->user()->name . " and submitted for payment processing.",
+                'Authorization OTP Requested',
+                "Payout {$orderReference} is awaiting authorization OTP verification by " . auth()->user()->name . '.',
                 route('payouts.status', $orderReference),
-                ['payout_id' => $payout->id, 'order_reference' => $orderReference, 'status' => $payout->status],
+                ['payout_id' => $payout->id, 'order_reference' => $orderReference, 'status' => 'PENDING_PAYMENT_AUTHORIZATION'],
                 'payout:' . $payout->id . ':approved'
             );
 
-            return redirect()->route('payouts.status', $orderReference)
-                ->with('success', 'Payout approved and authorized successfully.');
+            return redirect()->route('payouts.verify-otp', $orderReference)
+                ->with('success', 'Authorization OTP sent. Enter the OTP to approve and authorize this payout.');
         } catch (\Exception $e) {
             Log::error('Payout approval failed', ['error' => $e->getMessage()]);
             return back()->with('error', $e->getMessage());
@@ -761,14 +792,23 @@ class PayoutController extends Controller
 
         try {
             $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
-            if ((int) ($payout->initiated_by ?? 0) !== (int) auth()->id()) {
-                return redirect()->route('payouts.status', $orderReference)
-                    ->with('warning', 'Only the initiating officer can request a new initiation OTP.');
+            if (($payout->workflow_stage ?? '') === 'PAYMENT_AUTHORIZATION_OTP') {
+                if ((int) ($payout->payment_otp_requested_by ?? 0) !== (int) auth()->id()) {
+                    return redirect()->route('payouts.status', $orderReference)
+                        ->with('warning', 'Only the officer who requested the authorization OTP can resend it.');
+                }
+
+                $otpUser = User::find($payout->payment_otp_requested_by ?? auth()->id()) ?? auth()->user();
+                $this->createAndSendOtp($payout, $otpUser, 'payment_authorization');
+            } else {
+                if ((int) ($payout->initiated_by ?? 0) !== (int) auth()->id()) {
+                    return redirect()->route('payouts.status', $orderReference)
+                        ->with('warning', 'Only the initiating officer can request a new initiation OTP.');
+                }
+
+                $otpUser = User::find($payout->initiated_by ?? auth()->id()) ?? auth()->user();
+                $this->createAndSendOtp($payout, $otpUser, 'initiation');
             }
-
-            $otpUser = User::find($payout->initiated_by ?? auth()->id()) ?? auth()->user();
-
-            $this->createAndSendOtp($payout, $otpUser, 'initiation');
 
             return back()->with('success', 'OTP resent successfully');
         } catch (\Exception $e) {
@@ -789,7 +829,7 @@ class PayoutController extends Controller
         ])->where('order_reference', $orderReference)->firstOrFail();
 
         // Refresh status from API if not in final state
-        if (!in_array($payout->status, ['SUCCESS', 'FAILED', 'SETTLED', 'REJECTED']) && !in_array($payout->workflow_stage, ['INITIATION_OTP', 'APPROVAL_PENDING', 'REJECTED'], true)) {
+        if (!in_array($payout->status, ['SUCCESS', 'FAILED', 'SETTLED', 'REJECTED']) && !in_array($payout->workflow_stage, ['INITIATION_OTP', 'APPROVAL_PENDING', 'PAYMENT_AUTHORIZATION_OTP', 'REJECTED'], true)) {
             try {
                 $apiResponse = $this->api->queryPayoutStatus($orderReference);
                 $this->updatePayoutFromApi($payout, $apiResponse);
@@ -870,6 +910,8 @@ class PayoutController extends Controller
                         $orderRef = $apiPayout['order_reference'] ?? $apiPayout['orderReference'] ?? $apiPayout['id'] ?? null;
                         if (!$orderRef) continue;
 
+                        $existingPayout = Payout::where('order_reference', $orderRef)->first();
+                        $previousStatus = $existingPayout?->status;
                         $beneficiary = $apiPayout['beneficiary'] ?? [];
                         $payoutType = ($apiPayout['channel'] ?? '') === 'BANK TRANSFER' ? 'BANK' : 'MOBILE MONEY';
                         $syncedStatus = $apiPayout['status'] ?? 'UNKNOWN';
@@ -877,7 +919,7 @@ class PayoutController extends Controller
                             ? 'COMPLETED'
                             : (in_array($syncedStatus, ['FAILED', 'ERROR', 'CANCELLED'], true) ? 'FAILED' : 'PROCESSING');
 
-                        Payout::updateOrCreate(
+                        $payout = Payout::updateOrCreate(
                             ['order_reference' => $orderRef],
                             [
                                 'clickpesa_payout_id' => $apiPayout['id'] ?? null,
@@ -907,6 +949,11 @@ class PayoutController extends Controller
                                 'user_id' => auth()->check() ? auth()->id() : null
                             ]
                         );
+
+                        if ($previousStatus !== $syncedStatus && in_array($syncedStatus, ['SUCCESS', 'SETTLED'], true)) {
+                            $this->notifications->sendPayoutSuccessEmail($payout);
+                        }
+
                         $syncedCount++;
                     } catch (\Exception $e) {
                         Log::warning('Failed to sync individual payout', ['error' => $e->getMessage(), 'payout' => $apiPayout]);
@@ -993,8 +1040,13 @@ class PayoutController extends Controller
 
     protected function buildOtpMessage(Payout $payout, string $otp, string $purpose, User $user): string
     {
-        $heading = 'FEEDTAN PAYOUT INITIATION';
-        $actionLine = 'Use this OTP to confirm payout initiation.';
+        $heading = $purpose === 'payment_authorization'
+            ? 'FEEDTAN PAYOUT AUTHORIZATION'
+            : 'FEEDTAN PAYOUT INITIATION';
+
+        $actionLine = $purpose === 'payment_authorization'
+            ? 'Use this OTP to approve and authorize the payout for payment.'
+            : 'Use this OTP to confirm payout initiation.';
 
         return "{$heading}\n"
             . "Reference: {$payout->order_reference}\n"

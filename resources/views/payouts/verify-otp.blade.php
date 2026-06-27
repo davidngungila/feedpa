@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', 'Verify Initiation OTP')
+@section('title', ($pendingOtp->purpose ?? 'initiation') === 'payment_authorization' ? 'Verify Approval And Authorization OTP' : 'Verify Initiation OTP')
 
 @section('content')
 @php
@@ -140,12 +140,16 @@
     <!-- OTP Form -->
     <div class="card p-6">
         <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 mb-4 flex items-center gap-2">
-            <i class="fas fa-lock"></i> Verify Initiation OTP
+            <i class="fas fa-lock"></i> {{ ($pendingOtp->purpose ?? 'initiation') === 'payment_authorization' ? 'Verify Approval And Authorization OTP' : 'Verify Initiation OTP' }}
         </h3>
 
         <div class="mb-5 p-4 rounded-xl bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border">
             <p class="text-xs font-bold text-primary-700 dark:text-primary-300">
-                This OTP confirms the payout initiation before approval and authorization by another officer.
+                @if(($pendingOtp->purpose ?? 'initiation') === 'payment_authorization')
+                    This OTP confirms the approval and authorization by the second officer before the payout is submitted for payment.
+                @else
+                    This OTP confirms the payout initiation before approval and authorization by another officer.
+                @endif
             </p>
             <p class="mt-2 text-xs text-primary-500">
                 Sent to {{ $pendingOtp->phone ?? (auth()->user()->phone ?? 'your phone') }}
@@ -167,7 +171,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button type="submit" class="px-4 py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
                     <i class="fas fa-check-circle me-2"></i>
-                    Verify Initiation
+                    {{ ($pendingOtp->purpose ?? 'initiation') === 'payment_authorization' ? 'Approve And Authorize Payout' : 'Verify Initiation' }}
                 </button>
                 <button type="button" id="resendOtpBtn"
                         class="flex items-center justify-center px-4 py-3 rounded-xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border text-primary-600 dark:text-primary-400 text-xs font-bold hover:bg-primary-50 dark:hover:bg-dark-800 transition-all">

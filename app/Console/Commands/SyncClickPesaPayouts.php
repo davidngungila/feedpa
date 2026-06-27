@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Payout;
+use App\Services\AppNotificationService;
 use App\Services\ClickPesaAPIService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -12,11 +13,13 @@ class SyncClickPesaPayouts extends Command
     protected $signature = 'app:sync-click-pesa-payouts';
     protected $description = 'Sync all ClickPesa payouts to local database';
     protected ClickPesaAPIService $api;
+    protected AppNotificationService $notifications;
 
-    public function __construct(ClickPesaAPIService $api)
+    public function __construct(ClickPesaAPIService $api, AppNotificationService $notifications)
     {
         parent::__construct();
         $this->api = $api;
+        $this->notifications = $notifications;
     }
 
     /**
@@ -40,15 +43,22 @@ class SyncClickPesaPayouts extends Command
                 $orderRef = $apiPayout['order_reference'] ?? $apiPayout['orderReference'] ?? $apiPayout['id'] ?? null;
                 if (!$orderRef) continue;
 
+                $existingPayout = Payout::where('order_reference', $orderRef)->first();
+                $previousStatus = $existingPayout?->status;
                 $beneficiary = $apiPayout['beneficiary'] ?? [];
                 $payoutType = ($apiPayout['channel'] ?? '') === 'BANK TRANSFER' ? 'BANK' : 'MOBILE MONEY';
+                $syncedStatus = $apiPayout['status'] ?? 'UNKNOWN';
+                $syncedWorkflowStage = in_array($syncedStatus, ['SUCCESS', 'SETTLED'], true)
+                    ? 'COMPLETED'
+                    : (in_array($syncedStatus, ['FAILED', 'ERROR', 'CANCELLED'], true) ? 'FAILED' : 'PROCESSING');
 
-                Payout::updateOrCreate(
+                $payout = Payout::updateOrCreate(
                     ['order_reference' => $orderRef],
                     [
                         'clickpesa_payout_id' => $apiPayout['id'] ?? null,
                         'transaction_id' => $apiPayout['id'] ?? $apiPayout['transaction_id'] ?? null,
-                        'status' => $apiPayout['status'] ?? 'UNKNOWN',
+                        'status' => $syncedStatus,
+                        'workflow_stage' => $syncedWorkflowStage,
                         'amount' => $apiPayout['amount'] ?? 0,
                         'currency' => $apiPayout['currency'] ?? 'TZS',
                         'fee' => $apiPayout['fee'] ?? 0,
@@ -72,6 +82,10 @@ class SyncClickPesaPayouts extends Command
                         'user_id' => null
                     ]
                 );
+
+                if ($previousStatus !== $syncedStatus && in_array($syncedStatus, ['SUCCESS', 'SETTLED'], true)) {
+                    $this->notifications->sendPayoutSuccessEmail($payout);
+                }
 
                 $syncedCount++;
             }

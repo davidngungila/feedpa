@@ -27,7 +27,7 @@
     $workflowLabels = [
         'INITIATION_OTP' => 'Waiting For Initiator OTP Verification',
         'APPROVAL_PENDING' => 'Waiting For Approval And Authorization',
-        'PAYMENT_AUTHORIZATION_OTP' => 'Waiting For Approval And Authorization',
+        'PAYMENT_AUTHORIZATION_OTP' => 'Waiting For Authorizer OTP Verification',
         'PROCESSING' => 'Processing With Provider',
         'COMPLETED' => 'Completed',
         'FAILED' => 'Failed',
@@ -37,10 +37,15 @@
     $canManagePayout = auth()->check() && auth()->user()->can_create_payouts;
     $initiatorId = (int) ($payout['initiated_by'] ?? 0);
     $currentUserId = auth()->id() ? (int) auth()->id() : 0;
+    $authorizationRequesterId = (int) ($payout['payment_otp_requested_by'] ?? 0);
     $isInitiator = $initiatorId !== 0 && $initiatorId === $currentUserId;
     $canApproveAndAuthorize = $canManagePayout
-        && in_array($payout['workflow_stage'] ?? '', ['APPROVAL_PENDING', 'PAYMENT_AUTHORIZATION_OTP'], true)
+        && ($payout['workflow_stage'] ?? '') === 'APPROVAL_PENDING'
         && !$isInitiator;
+    $canVerifyAuthorizationOtp = $canManagePayout
+        && ($payout['workflow_stage'] ?? '') === 'PAYMENT_AUTHORIZATION_OTP'
+        && $authorizationRequesterId !== 0
+        && $authorizationRequesterId === $currentUserId;
 @endphp
 
 <div class="max-w-4xl mx-auto space-y-6 animate-fade-in">
@@ -327,9 +332,26 @@
                     @csrf
                     <button type="submit"
                             class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-900/20 transition-all w-full">
-                        <i class="fas fa-check"></i> Approve And Authorize
+                        <i class="fas fa-check"></i> Request Authorization OTP
                     </button>
                 </form>
+            @endif
+
+            @if($canVerifyAuthorizationOtp)
+                <a href="{{ route('payouts.verify-otp', $orderReference) }}"
+                   class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow-lg shadow-emerald-900/20 transition-all">
+                    <i class="fas fa-shield-alt"></i>
+                    Verify Approval OTP
+                </a>
+            @endif
+
+            @if($canManagePayout && ($payout['workflow_stage'] ?? '') === 'PAYMENT_AUTHORIZATION_OTP' && !$canVerifyAuthorizationOtp && !$isSuccessful)
+                <button type="button"
+                        disabled
+                        class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border text-gray-500 text-xs font-bold cursor-not-allowed w-full">
+                    <i class="fas fa-hourglass-half"></i>
+                    Waiting For Authorizer OTP
+                    </button>
             @endif
 
             @if(in_array($payout['status'] ?? '', ['SUCCESS', 'SETTLED']))

@@ -292,9 +292,10 @@
                                     </a>
                                     @php
                                         $isPayoutInitiator = auth()->check() && (int) auth()->id() === (int) ($payout->initiated_by ?? 0);
+                                        $isAuthorizationRequester = auth()->check() && (int) auth()->id() === (int) ($payout->payment_otp_requested_by ?? 0);
                                         $canApproveAndAuthorize = auth()->check()
                                             && auth()->user()->can_create_payouts
-                                            && in_array($payout->workflow_stage ?? '', ['APPROVAL_PENDING', 'PAYMENT_AUTHORIZATION_OTP'], true)
+                                            && ($payout->workflow_stage ?? '') === 'APPROVAL_PENDING'
                                             && !$isPayoutInitiator;
                                     @endphp
                                     @if(($payout->workflow_stage ?? '') === 'INITIATION_OTP' && $isPayoutInitiator)
@@ -316,10 +317,16 @@
                                             @csrf
                                             <button type="submit"
                                                     class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all"
-                                                    title="Approve and authorize payout">
+                                                    title="Request authorization OTP">
                                                 <i class="fas fa-check text-xs"></i>
                                             </button>
                                         </form>
+                                    @elseif(($payout->workflow_stage ?? '') === 'PAYMENT_AUTHORIZATION_OTP' && $isAuthorizationRequester)
+                                        <a href="{{ route('payouts.verify-otp', $payout->order_reference) }}"
+                                           class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all"
+                                           title="Verify approval and authorization OTP">
+                                            <i class="fas fa-shield-alt text-xs"></i>
+                                        </a>
                                     @endif
                                 </div>
                             </td>

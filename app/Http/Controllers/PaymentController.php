@@ -1205,8 +1205,7 @@ HTML;
             'selectedColumns',
             'availableColumns',
             'typeFilter',
-            'perPage',
-            'paginationLinks'
+            'perPage'
         ));
     }
 

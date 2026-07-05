@@ -378,9 +378,16 @@ class AccountController extends Controller
                 $error = 'API Fetch Error: ' . $e->getMessage();
             }
 
-            // 4. Identification and Cross-Referencing
-            $dbRefs = $dbTransactions->pluck('reference')->filter()->unique()->toArray();
-            $dbTids = $dbTransactions->pluck('transaction_id')->filter()->unique()->toArray();
+            // 4. Identification and Cross-Referencing: Use ALL DB transactions/payouts (not just filtered)
+            $allDbTransactions = \App\Models\Transaction::query()->whereIn('type', ['payment', 'billpay'])->get();
+            $allDbPayouts = \App\Models\Payout::query()->get();
+            
+            $dbRefs = $allDbTransactions->pluck('order_reference')->filter()->unique()->merge(
+                $allDbPayouts->pluck('order_reference')->filter()->unique()
+            )->toArray();
+            $dbTids = $allDbTransactions->pluck('transaction_id')->filter()->unique()->merge(
+                $allDbPayouts->pluck('clickpesa_payout_id')->filter()->unique()
+            )->toArray();
 
             // 5. Apply Status Sub-Tab Filtering
             $filterByStatus = function ($collection) use ($statusFilter) {

@@ -48,7 +48,7 @@
             </button>
         </div>
         
-        <form x-show="showFilters" x-transition method="GET" action="{{ route('account.statement') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4" id="filterForm">
+        <form x-show="showFilters" x-transition method="GET" action="{{ route('account.statement') }}" class="grid grid-cols-1 md:grid-cols-7 gap-4" id="filterForm">
             <input type="hidden" name="tab" value="{{ $activeTab }}">
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Search</label>
@@ -63,6 +63,14 @@
                 </select>
             </div>
             <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Type</label>
+                <select name="txn_type" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                    <option value="all" {{ $typeFilter === 'all' ? 'selected' : '' }}>All Types</option>
+                    <option value="payment" {{ $typeFilter === 'payment' ? 'selected' : '' }}>Payments</option>
+                    <option value="payout" {{ $typeFilter === 'payout' ? 'selected' : '' }}>Payouts</option>
+                </select>
+            </div>
+            <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Currency</label>
                 <select name="currency" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
                     <option value="TZS" {{ $currency === 'TZS' ? 'selected' : '' }}>TZS</option>
@@ -72,6 +80,15 @@
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Start Date</label>
                 <input type="date" name="start_date" id="startDate" value="{{ request('start_date') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Per Page</label>
+                <select name="per_page" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                    <option value="10" {{ $perPage === 10 ? 'selected' : '' }}>10</option>
+                    <option value="20" {{ $perPage === 20 ? 'selected' : '' }}>20</option>
+                    <option value="50" {{ $perPage === 50 ? 'selected' : '' }}>50</option>
+                    <option value="100" {{ $perPage === 100 ? 'selected' : '' }}>100</option>
+                </select>
             </div>
             <div class="flex items-end gap-2">
                 <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-500 text-white py-2 rounded-lg text-xs font-bold transition-all">
@@ -340,6 +357,54 @@
                 </tbody>
             </table>
         </div>
+        @if($statementType === 'payments' && $paginationLinks)
+        <div class="p-4 border-t border-primary-50 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="text-[10px] text-primary-500 font-bold">
+                Showing {{ ($paginationLinks->current_page - 1) * $paginationLinks->per_page + 1 }} to {{ min($paginationLinks->current_page * $paginationLinks->per_page, $paginationLinks->total) }} of {{ $paginationLinks->total }} records
+            </div>
+            <div class="flex items-center gap-2">
+                @if($paginationLinks->current_page > 1)
+                    <a href="{{ request()->fullUrlWithQuery(['page' => 1]) }}" class="px-3 py-1.5 bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-lg text-xs font-bold text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                        <i class="fas fa-angle-double-left"></i> First
+                    </a>
+                    <a href="{{ request()->fullUrlWithQuery(['page' => $paginationLinks->current_page - 1]) }}" class="px-3 py-1.5 bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-lg text-xs font-bold text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                        <i class="fas fa-angle-left"></i> Prev
+                    </a>
+                @endif
+                
+                @php
+                    $startPage = max(1, $paginationLinks->current_page - 2);
+                    $endPage = min($paginationLinks->last_page, $paginationLinks->current_page + 2);
+                @endphp
+                @if($startPage > 1)
+                    <span class="text-xs text-primary-500 px-2">...</span>
+                @endif
+                @for($i = $startPage; $i <= $endPage; $i++)
+                    @if($i == $paginationLinks->current_page)
+                        <span class="px-3 py-1.5 bg-primary-600 text-white rounded-lg text-xs font-bold">
+                            {{ $i }}
+                        </span>
+                    @else
+                        <a href="{{ request()->fullUrlWithQuery(['page' => $i]) }}" class="px-3 py-1.5 bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-lg text-xs font-bold text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                            {{ $i }}
+                        </a>
+                    @endif
+                @endfor
+                @if($endPage < $paginationLinks->last_page)
+                    <span class="text-xs text-primary-500 px-2">...</span>
+                @endif
+                
+                @if($paginationLinks->current_page < $paginationLinks->last_page)
+                    <a href="{{ request()->fullUrlWithQuery(['page' => $paginationLinks->current_page + 1]) }}" class="px-3 py-1.5 bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-lg text-xs font-bold text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                        Next <i class="fas fa-angle-right"></i>
+                    </a>
+                    <a href="{{ request()->fullUrlWithQuery(['page' => $paginationLinks->last_page]) }}" class="px-3 py-1.5 bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-lg text-xs font-bold text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                        Last <i class="fas fa-angle-double-right"></i>
+                    </a>
+                @endif
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- Transaction Detail Modal -->

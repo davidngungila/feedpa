@@ -163,6 +163,13 @@ class AccountController extends Controller
         $statusFilter = $request->get('status', 'all');
         $statementType = $request->get('type', 'payments');
         $search = $request->get('search');
+        $typeFilter = $request->get('txn_type', 'all');
+        $perPage = intval($request->get('per_page', 20));
+        $validPerPage = [10, 20, 50, 100];
+        if (!in_array($perPage, $validPerPage)) {
+            $perPage = 20;
+        }
+        $page = intval($request->get('page', 1));
         
         $error = null;
         $displayTransactions = collect();
@@ -172,6 +179,7 @@ class AccountController extends Controller
         $totalPaidFilter = false;
         $dbCount = 0;
         $apiCount = 0;
+        $paginationLinks = null;
 
         if ($statementType === 'payments') {
             // 1. Get PAYMENTS from Database
@@ -389,12 +397,21 @@ class AccountController extends Controller
                 $allDbPayouts->pluck('clickpesa_payout_id')->filter()->unique()
             )->toArray();
 
-            // 5. Apply Status Sub-Tab Filtering
+            // 5. Apply Status and Type Sub-Tab Filtering
             $filterByStatus = function ($collection) use ($statusFilter) {
                 if ($statusFilter === 'settled') {
                     return $collection->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED', 'COMPLETED']));
                 } elseif ($statusFilter === 'failed') {
                     return $collection->filter(fn($t) => in_array($t['status'], ['FAILED', 'ERROR', 'CANCELLED']));
+                }
+                return $collection;
+            };
+            
+            $filterByType = function ($collection) use ($typeFilter) {
+                if ($typeFilter === 'payment') {
+                    return $collection->filter(fn($t) => ($t['type'] ?? 'payment') === 'payment' && $t['entry'] !== 'DEBIT');
+                } elseif ($typeFilter === 'payout') {
+                    return $collection->filter(fn($t) => ($t['type'] ?? 'payment') === 'payout' || $t['entry'] === 'DEBIT');
                 }
                 return $collection;
             };
@@ -416,7 +433,22 @@ class AccountController extends Controller
                     return $t;
                 });
                 
-                $displayTransactions = $filterByStatus($sortedDbTransactions);
+                $filteredTransactions = $filterByStatus($sortedDbTransactions);
+                $filteredTransactions = $filterByType($filteredTransactions);
+                
+                // Paginate
+                $totalItems = $filteredTransactions->count();
+                $totalPages = max(1, ceil($totalItems / $perPage));
+                $page = max(1, min($page, $totalPages));
+                $offset = ($page - 1) * $perPage;
+                
+                $displayTransactions = $filteredTransactions->slice($offset, $perPage)->values();
+                $paginationLinks = (object)[
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $totalItems,
+                    'last_page' => $totalPages,
+                ];
             } else {
                 // Sort API transactions by date ascending (earliest first) and calculate running balance
                 $sortedApiTransactions = $apiTransactions->sortBy(function ($t) {
@@ -435,7 +467,22 @@ class AccountController extends Controller
                     return $t;
                 });
                 
-                $displayTransactions = $filterByStatus($sortedApiTransactions);
+                $filteredTransactions = $filterByStatus($sortedApiTransactions);
+                $filteredTransactions = $filterByType($filteredTransactions);
+                
+                // Paginate
+                $totalItems = $filteredTransactions->count();
+                $totalPages = max(1, ceil($totalItems / $perPage));
+                $page = max(1, min($page, $totalPages));
+                $offset = ($page - 1) * $perPage;
+                
+                $displayTransactions = $filteredTransactions->slice($offset, $perPage)->values();
+                $paginationLinks = (object)[
+                    'current_page' => $page,
+                    'per_page' => $perPage,
+                    'total' => $totalItems,
+                    'last_page' => $totalPages,
+                ];
             }
         } else {
             // Handle Billing Statement
@@ -499,7 +546,10 @@ class AccountController extends Controller
             'dbCount' => $dbTransactions->count(),
             'apiCount' => $apiTransactions->count(),
             'settledCount' => $statementType === 'payments' ? ($activeTab === 'database' ? $dbTransactions : $apiTransactions)->filter(fn($t) => in_array($t['status'], ['SUCCESS', 'SETTLED']))->count() : 0,
-            'failedCount' => $statementType === 'payments' ? ($activeTab === 'database' ? $dbTransactions : $apiTransactions)->filter(fn($t) => $t['status'] === 'FAILED')->count() : 0
+            'failedCount' => $statementType === 'payments' ? ($activeTab === 'database' ? $dbTransactions : $apiTransactions)->filter(fn($t) => $t['status'] === 'FAILED')->count() : 0,
+            'typeFilter' => $typeFilter,
+            'perPage' => $perPage,
+            'paginationLinks' => $paginationLinks
         ]);
     }
 

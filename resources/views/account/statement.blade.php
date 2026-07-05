@@ -285,15 +285,18 @@
                                         <i class="fas fa-eye text-xs"></i>
                                     </button>
                                     @if($activeTab === 'api')
+                                        @php
+                                            $isPayout = isset($t['type']) && strtolower($t['type']) === 'payout' || (isset($t['entry']) && $t['entry'] === 'DEBIT');
+                                        @endphp
                                         <button type="button"
-                                                @click="fetchTransaction('{{ $reference }}')"
+                                                @click="{{ $isPayout ? 'fetchPayout' : 'fetchTransaction' }}('{{ $reference }}')"
                                                 class="w-8 h-8 rounded-lg bg-gray-50 dark:bg-gray-800/30 text-gray-600 flex items-center justify-center hover:bg-gray-200 hover:text-gray-800 transition-all"
                                                 title="Fetch latest from API">
                                             <i class="fas fa-sync text-xs"></i>
                                         </button>
                                         @if($isSettled && !($t['is_synced'] ?? false))
                                             <button type="button"
-                                                    @click="syncTransaction('{{ $reference }}')"
+                                                    @click="{{ $isPayout ? 'syncPayout' : 'syncTransaction' }}('{{ $reference }}')"
                                                     class="w-8 h-8 rounded-lg bg-green-50 dark:bg-green-900/30 text-green-600 flex items-center justify-center hover:bg-green-600 hover:text-white transition-all"
                                                     title="Sync to Database">
                                                 <i class="fas fa-cloud-upload-alt text-xs"></i>
@@ -595,6 +598,29 @@ function statementDetails() {
                 }
             }
         },
+        async syncPayout(orderReference) {
+            if (confirm('Are you sure you want to sync this payout to the database?')) {
+                try {
+                    const response = await fetch('{{ route('account.payout.sync') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        body: JSON.stringify({ order_reference: orderReference })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        alert('Payout synced successfully!');
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || data.error));
+                    }
+                } catch (e) {
+                    alert('Error syncing payout: ' + e.message);
+                }
+            }
+        },
         async fetchTransaction(orderReference) {
             try {
                 const response = await fetch('{{ route('account.transaction.fetch') }}', {
@@ -614,6 +640,27 @@ function statementDetails() {
                 }
             } catch (e) {
                 alert('Error fetching transaction: ' + e.message);
+            }
+        },
+        async fetchPayout(orderReference) {
+            try {
+                const response = await fetch('{{ route('account.payout.fetch') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({ order_reference: orderReference })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Payout fetched successfully! Check console for details');
+                    console.log('Fetched Payout:', data.data);
+                } else {
+                    alert('Error fetching payout: ' + (data.message || data.error));
+                }
+            } catch (e) {
+                alert('Error fetching payout: ' + e.message);
             }
         }
     };

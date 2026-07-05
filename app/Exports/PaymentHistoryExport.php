@@ -40,7 +40,8 @@ class PaymentHistoryExport implements FromCollection, WithHeadings, WithMapping,
                 'Description',
                 'Payment Method',
                 'Created At',
-                'Updated At'
+                'Updated At',
+                'Running Balance'
             ];
         }
 
@@ -54,11 +55,15 @@ class PaymentHistoryExport implements FromCollection, WithHeadings, WithMapping,
     public function map($payment): array
     {
         if (empty($this->columns)) {
+            $amount = $payment['amount'] ?? 0;
+            $entry = $payment['entry'] ?? 'CREDIT';
+            $formattedAmount = ($entry === 'DEBIT' ? '-' : '+') . number_format($amount, 2);
+            
             return [
                 $payment['order_reference'] ?? 'N/A',
                 $payment['transaction_id'] ?? 'N/A',
                 $payment['status'] ?? 'N/A',
-                number_format($payment['amount'] ?? 0, 2),
+                $formattedAmount,
                 $payment['currency'] ?? 'TZS',
                 $payment['payer_name'] ?? 'N/A',
                 $payment['phone'] ?? 'N/A',
@@ -66,7 +71,8 @@ class PaymentHistoryExport implements FromCollection, WithHeadings, WithMapping,
                 $payment['description'] ?? 'N/A',
                 $payment['payment_method'] ?? 'N/A',
                 isset($payment['created_at']) ? \Carbon\Carbon::parse($payment['created_at'])->format('Y-m-d H:i:s') : 'N/A',
-                isset($payment['updated_at']) ? \Carbon\Carbon::parse($payment['updated_at'])->format('Y-m-d H:i:s') : 'N/A'
+                isset($payment['updated_at']) ? \Carbon\Carbon::parse($payment['updated_at'])->format('Y-m-d H:i:s') : 'N/A',
+                number_format($payment['running_balance'] ?? 0, 2)
             ];
         }
 
@@ -74,6 +80,9 @@ class PaymentHistoryExport implements FromCollection, WithHeadings, WithMapping,
         foreach ($this->columns as $col) {
             $value = $payment[$col] ?? 'N/A';
             if ($col === 'amount') {
+                $entry = $payment['entry'] ?? 'CREDIT';
+                $value = ($entry === 'DEBIT' ? '-' : '+') . number_format($value, 2);
+            } elseif ($col === 'running_balance') {
                 $value = number_format($value, 2);
             } elseif (in_array($col, ['created_at', 'updated_at', 'sms_sent_at'])) {
                 $value = $value && $value !== 'N/A' ? \Carbon\Carbon::parse($value)->format('Y-m-d H:i:s') : 'N/A';

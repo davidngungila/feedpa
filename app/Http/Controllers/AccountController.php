@@ -594,7 +594,16 @@ class AccountController extends Controller
         ]);
 
         try {
-            $transaction = $this->api->queryPaymentStatus($validated['order_reference']);
+            $apiResponse = $this->api->queryPaymentStatus($validated['order_reference']);
+            
+            // Handle wrapped API response (data at index 0)
+            $transaction = null;
+            if ($apiResponse && is_array($apiResponse) && isset($apiResponse[0])) {
+                $transaction = $apiResponse[0];
+            } elseif ($apiResponse && is_array($apiResponse)) {
+                $transaction = $apiResponse;
+            }
+            
             return response()->json([
                 'success' => true,
                 'data' => $transaction
@@ -630,10 +639,22 @@ class AccountController extends Controller
             }
 
             // Fetch from API
-            $apiTransaction = $this->api->queryPaymentStatus($orderReference);
+            $apiResponse = $this->api->queryPaymentStatus($orderReference);
+            
+            // Handle wrapped API response (data at index 0)
+            $apiTransaction = null;
+            if ($apiResponse && is_array($apiResponse) && isset($apiResponse[0])) {
+                $apiTransaction = $apiResponse[0];
+            } elseif ($apiResponse && is_array($apiResponse)) {
+                $apiTransaction = $apiResponse;
+            }
+            
+            if (!$apiTransaction || !isset($apiTransaction['status'])) {
+                throw new Exception('Invalid API response format');
+            }
             
             // Check status is SUCCESS or SETTLED
-            $status = strtoupper($apiTransaction['status'] ?? $apiTransaction['status'] ?? 'UNKNOWN');
+            $status = strtoupper($apiTransaction['status'] ?? 'UNKNOWN');
             if (!in_array($status, ['SUCCESS', 'SETTLED'])) {
                 return response()->json([
                     'success' => false,
@@ -709,7 +730,16 @@ class AccountController extends Controller
         ]);
 
         try {
-            $payout = $this->api->queryPayoutStatus($validated['order_reference']);
+            $apiResponse = $this->api->queryPayoutStatus($validated['order_reference']);
+            
+            // Handle wrapped API response (data at index 0)
+            $payout = null;
+            if ($apiResponse && is_array($apiResponse) && isset($apiResponse[0])) {
+                $payout = $apiResponse[0];
+            } elseif ($apiResponse && is_array($apiResponse)) {
+                $payout = $apiResponse;
+            }
+            
             return response()->json([
                 'success' => true,
                 'data' => $payout
@@ -745,7 +775,20 @@ class AccountController extends Controller
             }
 
             // Fetch from API
-            $apiPayout = $this->api->queryPayoutStatus($orderReference);
+            $apiResponse = $this->api->queryPayoutStatus($orderReference);
+            
+            // Handle wrapped API response (data at index 0)
+            $apiPayout = null;
+            if ($apiResponse && is_array($apiResponse) && isset($apiResponse[0])) {
+                $apiPayout = $apiResponse[0];
+            } elseif ($apiResponse && is_array($apiResponse)) {
+                $apiPayout = $apiResponse;
+            }
+            
+            if (!$apiPayout) {
+                throw new Exception('Invalid API response format');
+            }
+            
             $beneficiary = $apiPayout['beneficiary'] ?? [];
             $payoutType = ($apiPayout['channel'] ?? '') === 'BANK TRANSFER' ? 'BANK' : 'MOBILE MONEY';
 

@@ -4,6 +4,17 @@
 
 @section('content')
 <div class="space-y-6" x-data="statementDetails()">
+    <!-- Loading Modal -->
+    <div x-show="isLoading" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200"
+         x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-dark-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+            <div class="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin"></div>
+            <p class="text-sm font-bold text-primary-700 dark:text-primary-300" x-text="loadingMessage"></p>
+        </div>
+    </div>
+
     <!-- Source Tabs -->
     <div class="card p-1">
         <div class="flex gap-1">
@@ -518,6 +529,8 @@ function statementDetails() {
         selected: null,
         copiedField: null,
         copyTimeout: null,
+        isLoading: false,
+        loadingMessage: 'Processing...',
         init() {
             // Add real-time search
             const searchInput = document.getElementById('searchInput');
@@ -577,6 +590,8 @@ function statementDetails() {
         },
         async syncTransaction(orderReference) {
             if (confirm('Are you sure you want to sync this transaction to the database?')) {
+                this.isLoading = true;
+                this.loadingMessage = 'Syncing transaction...';
                 try {
                     const response = await fetch('{{ route('account.transaction.sync') }}', {
                         method: 'POST',
@@ -595,11 +610,15 @@ function statementDetails() {
                     }
                 } catch (e) {
                     alert('Error syncing transaction: ' + e.message);
+                } finally {
+                    this.isLoading = false;
                 }
             }
         },
         async syncPayout(orderReference) {
             if (confirm('Are you sure you want to sync this payout to the database?')) {
+                this.isLoading = true;
+                this.loadingMessage = 'Syncing payout...';
                 try {
                     const response = await fetch('{{ route('account.payout.sync') }}', {
                         method: 'POST',
@@ -618,10 +637,14 @@ function statementDetails() {
                     }
                 } catch (e) {
                     alert('Error syncing payout: ' + e.message);
+                } finally {
+                    this.isLoading = false;
                 }
             }
         },
         async fetchTransaction(orderReference) {
+            this.isLoading = true;
+            this.loadingMessage = 'Fetching transaction...';
             try {
                 const response = await fetch('{{ route('account.transaction.fetch') }}', {
                     method: 'POST',
@@ -640,9 +663,13 @@ function statementDetails() {
                 }
             } catch (e) {
                 alert('Error fetching transaction: ' + e.message);
+            } finally {
+                this.isLoading = false;
             }
         },
         async fetchPayout(orderReference) {
+            this.isLoading = true;
+            this.loadingMessage = 'Fetching payout...';
             try {
                 const response = await fetch('{{ route('account.payout.fetch') }}', {
                     method: 'POST',
@@ -661,6 +688,8 @@ function statementDetails() {
                 }
             } catch (e) {
                 alert('Error fetching payout: ' + e.message);
+            } finally {
+                this.isLoading = false;
             }
         }
     };

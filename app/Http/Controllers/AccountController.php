@@ -671,6 +671,12 @@ class AccountController extends Controller
             $payerName = $apiTransaction['payer_name'] ?? ($apiTransaction['customer']['customerName'] ?? $customerName);
             $paymentMethod = $apiTransaction['payment_method'] ?? $apiTransaction['channel'] ?? $apiTransaction['paymentMethod'] ?? null;
             $description = $apiTransaction['description'] ?? $apiTransaction['narrative'] ?? 'Synced from API';
+            
+            // Parse dates from API
+            $createdAt = isset($apiTransaction['createdAt']) ? \Carbon\Carbon::parse($apiTransaction['createdAt'])->toDateTimeString() : 
+                        (isset($apiTransaction['created_at']) ? \Carbon\Carbon::parse($apiTransaction['created_at'])->toDateTimeString() : now());
+            $updatedAt = isset($apiTransaction['updatedAt']) ? \Carbon\Carbon::parse($apiTransaction['updatedAt'])->toDateTimeString() : 
+                        (isset($apiTransaction['updated_at']) ? \Carbon\Carbon::parse($apiTransaction['updated_at'])->toDateTimeString() : now());
 
             // Create transaction in DB
             $transaction = \App\Models\Transaction::create([
@@ -688,6 +694,8 @@ class AccountController extends Controller
                 'callback_data' => $apiTransaction,
                 'callback_received_at' => now(),
                 'type' => $this->determineTransactionType($apiTransaction),
+                'created_at' => $createdAt,
+                'updated_at' => $updatedAt,
             ]);
 
             return response()->json([

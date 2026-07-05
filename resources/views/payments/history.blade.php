@@ -485,6 +485,12 @@
                 </tbody>
             </table>
         </div>
+        
+        @if($displayItems->hasPages())
+            <div class="p-4 bg-primary-50/30 dark:bg-dark-900/30 border-t border-primary-50 dark:border-dark-border">
+                {{ $displayItems->appends(request()->query())->links() }}
+            </div>
+        @endif
     </div>
 
     <!-- Payment detail modal -->

@@ -1174,12 +1174,17 @@ HTML;
         $offset = ($page - 1) * $perPage;
         $displayItems = $combinedWithBalance->slice($offset, $perPage)->values();
         
-        $paginationLinks = (object)[
-            'current_page' => $page,
-            'per_page' => $perPage,
-            'total' => $totalItems,
-            'last_page' => $totalPages,
-        ];
+        // Create LengthAwarePaginator for proper pagination links
+        $displayItems = new \Illuminate\Pagination\LengthAwarePaginator(
+            $displayItems,
+            $totalItems,
+            $perPage,
+            $page,
+            [
+                'path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(),
+                'pageName' => 'page',
+            ]
+        );
 
         $settledCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
         $failedCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['FAILED', 'ERROR'])->count();

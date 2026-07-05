@@ -58,11 +58,19 @@
             </button>
         </div>
         
-        <form x-show="showFilters" x-transition method="GET" action="{{ route('payments.history') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4" id="filterForm">
+        <form x-show="showFilters" x-transition method="GET" action="{{ route('payments.history') }}" class="grid grid-cols-1 md:grid-cols-6 gap-4" id="filterForm">
             <input type="hidden" name="status" value="{{ $activeStatus ?? request('status', 'SETTLED') }}">
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Search</label>
                 <input type="text" name="search" id="searchInput" value="{{ request('search') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Reference, name, phone...">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Type</label>
+                <select name="txn_type" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                    <option value="all" {{ ($typeFilter ?? request('txn_type', 'all')) === 'all' ? 'selected' : '' }}>All Types</option>
+                    <option value="payment" {{ ($typeFilter ?? request('txn_type', 'all')) === 'payment' ? 'selected' : '' }}>Payments</option>
+                    <option value="payout" {{ ($typeFilter ?? request('txn_type', 'all')) === 'payout' ? 'selected' : '' }}>Payouts</option>
+                </select>
             </div>
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Start Date</label>
@@ -71,6 +79,15 @@
             <div>
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">End Date</label>
                 <input type="date" name="end_date" id="endDate" value="{{ request('end_date') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Per Page</label>
+                <select name="per_page" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
+                    <option value="10" {{ ($perPage ?? request('per_page', 20)) == 10 ? 'selected' : '' }}>10</option>
+                    <option value="20" {{ ($perPage ?? request('per_page', 20)) == 20 ? 'selected' : '' }}>20</option>
+                    <option value="50" {{ ($perPage ?? request('per_page', 20)) == 50 ? 'selected' : '' }}>50</option>
+                    <option value="100" {{ ($perPage ?? request('per_page', 20)) == 100 ? 'selected' : '' }}>100</option>
+                </select>
             </div>
             <div class="flex items-end gap-2">
                 <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-500 text-white py-2 rounded-lg text-xs font-bold transition-all">
@@ -146,7 +163,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
-                    @forelse($combinedWithBalance as $item)
+                    @forelse($displayItems as $item)
                         @if(in_array($item['type'], ['payment', 'billpay']))
                             @php
                                 $payment = $item['record'];

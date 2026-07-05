@@ -957,6 +957,14 @@ HTML;
     public function history(Request $request)
     {
         $activeStatus = $request->get('status', 'SETTLED');
+        $typeFilter = $request->get('txn_type', 'all'); // all, payment, payout
+        $perPage = intval($request->get('per_page', 20));
+        $validPerPage = [10, 20, 50, 100];
+        if (!in_array($perPage, $validPerPage)) {
+            $perPage = 20;
+        }
+        $page = intval($request->get('page', 1));
+        
         $selectedColumns = $request->get('columns', ['order_reference', 'transaction_id', 'status', 'amount', 'currency', 'payer_name', 'phone', 'description', 'payment_method', 'created_at']);
         $availableColumns = [
             'order_reference' => 'Reference',
@@ -1151,24 +1159,49 @@ HTML;
 
         // Reverse to show newest first on the page
         $combinedWithBalance = $combinedWithBalance->reverse()->values();
+        
+        // Apply type filter
+        if ($typeFilter === 'payment') {
+            $combinedWithBalance = $combinedWithBalance->filter(fn($item) => in_array($item['type'], ['payment', 'billpay']));
+        } elseif ($typeFilter === 'payout') {
+            $combinedWithBalance = $combinedWithBalance->filter(fn($item) => in_array($item['type'], ['payout', 'payout-fee']));
+        }
+        
+        // Paginate
+        $totalItems = $combinedWithBalance->count();
+        $totalPages = max(1, ceil($totalItems / $perPage));
+        $page = max(1, min($page, $totalPages));
+        $offset = ($page - 1) * $perPage;
+        $displayItems = $combinedWithBalance->slice($offset, $perPage)->values();
+        
+        $paginationLinks = (object)[
+            'current_page' => $page,
+            'per_page' => $perPage,
+            'total' => $totalItems,
+            'last_page' => $totalPages,
+        ];
 
         $settledCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
         $failedCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['FAILED', 'ERROR'])->count();
         
         Log::info('Payment history loaded from database', [
-            'count' => $combinedWithBalance->count(),
+            'count' => $displayItems->count(),
             'tab' => $activeStatus,
         ]);
 
         return view('payments.history', compact(
             'combinedWithBalance',
+            'displayItems',
             'apiLiveBalance',
             'internalDbBalance',
             'settledCount',
             'failedCount',
             'activeStatus',
             'selectedColumns',
-            'availableColumns'
+            'availableColumns',
+            'typeFilter',
+            'perPage',
+            'paginationLinks'
         ));
     }
 

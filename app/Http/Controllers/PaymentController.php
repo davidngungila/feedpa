@@ -1314,7 +1314,7 @@ HTML;
             // Calculate running balance (oldest to newest)
             $runningBalance = 0;
             $combinedWithBalance = $combined->map(function ($item) use (&$runningBalance) {
-                if ($item['type'] === 'payment') {
+                if (in_array($item['type'], ['payment', 'ecommerce_payment'])) {
                     $amount = (float) $item['record']->amount;
                     if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
                         $runningBalance += $amount;
@@ -1332,9 +1332,9 @@ HTML;
                 }
 
                 $recordArray = [];
-                if ($item['type'] === 'payment') {
+                if (in_array($item['type'], ['payment', 'ecommerce_payment'])) {
                     $recordArray = $item['record']->toArray();
-                    $recordArray['type'] = 'payment';
+                    $recordArray['type'] = $item['type'];
                     $recordArray['entry'] = 'CREDIT';
                     $recordArray['description'] = $item['record']->resolved_description;
                 } elseif ($item['type'] === 'payout') {
@@ -1477,7 +1477,7 @@ HTML;
             // Calculate running balance (oldest to newest)
             $runningBalance = 0;
             $combinedWithBalance = $combined->map(function ($item) use (&$runningBalance) {
-                if ($item['type'] === 'payment') {
+                if (in_array($item['type'], ['payment', 'ecommerce_payment'])) {
                     $amount = (float) $item['record']->amount;
                     if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
                         $runningBalance += $amount;
@@ -1495,9 +1495,9 @@ HTML;
                 }
 
                 $recordArray = [];
-                if ($item['type'] === 'payment') {
+                if (in_array($item['type'], ['payment', 'ecommerce_payment'])) {
                     $recordArray = $item['record']->toArray();
-                    $recordArray['type'] = 'payment';
+                    $recordArray['type'] = $item['type'];
                     $recordArray['entry'] = 'CREDIT';
                     $recordArray['description'] = $item['record']->resolved_description;
                 } elseif ($item['type'] === 'payout') {

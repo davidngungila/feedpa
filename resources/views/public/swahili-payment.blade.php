@@ -70,8 +70,8 @@
         }
         .animate-fade-up { animation: fadeUp 0.45s ease-out both; }
         .modal-backdrop { 
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
         }
     </style>
 </head>
@@ -259,7 +259,7 @@
                         </div>
 
                         <!-- Sub-Option Selection Modal -->
-                        <div id="subOptionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop bg-slate-900/70">
+                        <div id="subOptionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop bg-slate-900/90">
                             <div class="w-full max-w-md bg-white rounded-2xl shadow-card p-6 animate-fade-up">
                                 <div class="text-center mb-4">
                                     <h3 id="subOptionModalTitle" class="text-lg font-bold text-slate-900"></h3>
@@ -572,7 +572,7 @@
 
         function showProcessingModal() {
             modalRoot.innerHTML = `
-                <div id="processingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/70">
+                <div id="processingModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/90">
                     <div class="w-full max-w-md bg-white rounded-2xl shadow-card p-6 sm:p-8 text-center animate-fade-up">
                         <div class="w-14 h-14 mx-auto rounded-2xl bg-brand-50 flex items-center justify-center mb-4">
                             <i class="fas fa-spinner fa-spin text-2xl text-brand-600"></i>
@@ -593,7 +593,7 @@
             const amount = formatAmountDisplay(data.amount);
             const orderReference = data.order_reference;
             modalRoot.innerHTML = `
-                <div id="ussdNotification" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/70">
+                <div id="ussdNotification" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/90">
                     <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
                         <div class="bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-5 text-white text-center">
                             <div class="w-12 h-12 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
@@ -734,7 +734,7 @@
             const amount = formatAmountDisplay(paymentData.amount || paymentData.collectedAmount || 0);
             
             modalRoot.innerHTML = `
-                <div id="successModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/70">
+                <div id="successModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/90">
                     <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
                         <div class="bg-gradient-to-r from-green-600 to-emerald-700 px-6 py-5 text-white text-center">
                             <div class="w-14 h-14 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
@@ -777,7 +777,7 @@
 
         function showFailureModal(status) {
             modalRoot.innerHTML = `
-                <div id="failureModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/70">
+                <div id="failureModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/90">
                     <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
                         <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-5 text-white text-center">
                             <div class="w-14 h-14 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
@@ -809,7 +809,7 @@
 
         function showPollingTimeout(orderReference) {
             modalRoot.innerHTML = `
-                <div id="timeoutModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/70">
+                <div id="timeoutModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900/90">
                     <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
                         <div class="bg-gradient-to-r from-amber-600 to-amber-700 px-6 py-5 text-white text-center">
                             <div class="w-14 h-14 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
@@ -848,7 +848,7 @@
             };
             const s = styles[type] || styles.warning;
             const overlay = document.createElement('div');
-            overlay.className = 'fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop bg-slate-900/70';
+            overlay.className = 'fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop bg-slate-900/90';
             overlay.innerHTML = `
                 <div class="w-full max-w-sm bg-white rounded-2xl shadow-card p-6 text-center ring-4 ${s.ring} animate-fade-up">
                     <div class="w-12 h-12 mx-auto rounded-full ${s.bg} flex items-center justify-center mb-3">

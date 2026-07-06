@@ -216,13 +216,13 @@
                                         Malipo Kwaajili Ya <span class="text-red-500">*</span>
                                     </label>
                                     <div class="flex flex-wrap gap-2 mb-2.5" id="purposeChips">
-                                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa', 'SWF Contribution', 'Malipo ya Bidhaa'] as $purpose)
-                                            <button type="button" data-purpose="{{ $purpose }}"
-                                                    class="purpose-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
-                                                {{ $purpose }}
-                                            </button>
-                                        @endforeach
-                                    </div>
+                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa', 'SWF Contribution', 'Malipo ya Bidhaa', 'Nyingine'] as $purpose)
+                            <button type="button" data-purpose="{{ $purpose }}"
+                                    class="purpose-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
+                                {{ $purpose }}
+                            </button>
+                        @endforeach
+                    </div>
                                     <input type="text" id="description" name="description" required readonly
                                               class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100/80 text-sm text-slate-900 cursor-not-allowed"
                                               placeholder="Chagua malipo kwaajili ya…">
@@ -268,6 +268,28 @@
                                 <button type="button" id="subOptionModalClose" class="w-full py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition-colors">
                                     Funga
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- Custom Input Modal for Nyingine -->
+                        <div id="customInputModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop bg-slate-900">
+                            <div class="w-full max-w-md bg-white rounded-2xl shadow-card p-6 animate-fade-up">
+                                <div class="text-center mb-4">
+                                    <h3 class="text-lg font-bold text-slate-900">Andika Malipo Kwaajili Ya</h3>
+                                </div>
+                                <div class="mb-4">
+                                    <input type="text" id="customPurposeInput" 
+                                           class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-medium text-slate-900"
+                                           placeholder="Andika maelezo ya malipo…" maxlength="100">
+                                </div>
+                                <div class="flex gap-3">
+                                    <button type="button" id="customInputModalClose" class="flex-1 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition-colors">
+                                        Funga
+                                    </button>
+                                    <button type="button" id="customInputModalSave" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold transition-colors">
+                                        Hifadhi
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -359,6 +381,10 @@
         const subOptionModalTitle = document.getElementById('subOptionModalTitle');
         const subOptionModalContent = document.getElementById('subOptionModalContent');
         const subOptionModalClose = document.getElementById('subOptionModalClose');
+        const customInputModal = document.getElementById('customInputModal');
+        const customPurposeInput = document.getElementById('customPurposeInput');
+        const customInputModalClose = document.getElementById('customInputModalClose');
+        const customInputModalSave = document.getElementById('customInputModalSave');
 
         // Define sub-options for each purpose
         const subOptions = {
@@ -427,6 +453,29 @@
             currentSubOptionConfig = null;
         }
 
+        // Function to open custom input modal
+        function openCustomInputModal() {
+            customPurposeInput.value = '';
+            customInputModal.classList.remove('hidden');
+            customPurposeInput.focus();
+        }
+
+        // Function to close custom input modal
+        function closeCustomInputModal() {
+            customInputModal.classList.add('hidden');
+        }
+
+        // Function to save custom purpose
+        function saveCustomPurpose() {
+            const customValue = customPurposeInput.value.trim();
+            if (customValue) {
+                descriptionInput.value = customValue;
+                closeCustomInputModal();
+            } else {
+                showAlert('warning', 'Tafadhali andika maelezo ya malipo.');
+            }
+        }
+
         // Function to handle sub-option selection
         function selectSubOption(option) {
             if (!currentSubOptionConfig) return;
@@ -454,6 +503,9 @@
                 // Check if this purpose has sub-options
                 if (subOptions[purpose]) {
                     openSubOptionModal(purpose);
+                } else if (purpose === 'Nyingine') {
+                    // Open custom input modal for Nyingine
+                    openCustomInputModal();
                 } else {
                     // No sub-options, just set description
                     descriptionInput.value = purpose;
@@ -468,6 +520,20 @@
         subOptionModal.addEventListener('click', function (e) {
             if (e.target === subOptionModal) {
                 closeSubOptionModal();
+            }
+        });
+
+        // Custom input modal event listeners
+        customInputModalClose.addEventListener('click', closeCustomInputModal);
+        customInputModalSave.addEventListener('click', saveCustomPurpose);
+        customInputModal.addEventListener('click', function (e) {
+            if (e.target === customInputModal) {
+                closeCustomInputModal();
+            }
+        });
+        customPurposeInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                saveCustomPurpose();
             }
         });
 

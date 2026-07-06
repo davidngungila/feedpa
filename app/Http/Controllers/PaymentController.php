@@ -1106,7 +1106,7 @@ HTML;
         $combined = collect();
         foreach ($payments as $payment) {
             $combined->push([
-                'type' => 'payment',
+                'type' => $payment->type,
                 'record' => $payment,
                 'created_at' => $payment->created_at,
                 'entry' => 'CREDIT',
@@ -1137,7 +1137,7 @@ HTML;
         // Calculate internal database balance and running balance for display (oldest to newest)
         $internalDbBalance = 0;
         $combinedWithBalance = $combined->map(function ($item) use (&$internalDbBalance) {
-            if ($item['type'] === 'payment') {
+            if (in_array($item['type'], ['payment', 'ecommerce_payment'])) {
                 $amount = (float) $item['record']->amount;
                 if (in_array(strtoupper($item['record']->status), ['SUCCESS', 'SETTLED'])) {
                     $internalDbBalance += $amount;

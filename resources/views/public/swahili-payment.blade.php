@@ -259,13 +259,13 @@
                         </div>
 
                         <!-- Sub-Option Selection Modal -->
-                        <div id="subOptionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop bg-slate-900/50">
-                            <div class="w-full max-w-md bg-white rounded-2xl shadow-card p-6 animate-fade-up">
-                                <div class="text-center mb-4">
-                                    <h3 id="subOptionModalTitle" class="text-lg font-bold text-slate-900"></h3>
+                        <div id="subOptionModal" class="fixed inset-0 z-[9999] hidden flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-sm">
+                            <div class="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 animate-fade-up relative z-10">
+                                <div class="text-center mb-6">
+                                    <h3 id="subOptionModalTitle" class="text-xl font-bold text-slate-900"></h3>
                                 </div>
-                                <div id="subOptionModalContent" class="flex flex-wrap gap-2 justify-center mb-4"></div>
-                                <button type="button" id="subOptionModalClose" class="w-full py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition-colors">
+                                <div id="subOptionModalContent" class="flex flex-wrap gap-3 justify-center mb-6"></div>
+                                <button type="button" id="subOptionModalClose" class="w-full py-3 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-sm font-bold transition-colors">
                                     Funga
                                 </button>
                             </div>
@@ -412,7 +412,7 @@
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.textContent = option;
-                button.className = 'px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors';
+                button.className = 'flex-1 min-w-[140px] px-5 py-3 rounded-xl border-2 border-brand-200 bg-white text-base font-bold text-brand-800 hover:border-brand-500 hover:bg-brand-50 hover:shadow-md transition-all';
                 button.addEventListener('click', () => selectSubOption(option));
                 subOptionModalContent.appendChild(button);
             });

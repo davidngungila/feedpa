@@ -134,6 +134,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/balance-sheet/export/pdf', [ReportController::class, 'exportBalanceSheet'])->name('balance-sheet.export.pdf');
         Route::get('/profit-loss', [ReportController::class, 'profitLoss'])->name('profit-loss');
         Route::get('/profit-loss/export/pdf', [ReportController::class, 'exportProfitLoss'])->name('profit-loss.export.pdf');
+        Route::get('/customer-report', [ReportController::class, 'customerReport'])->name('customer-report');
+        Route::get('/customer-report/export/pdf', [ReportController::class, 'exportCustomerReportPdf'])->name('customer-report.export.pdf');
+        Route::get('/customer-report/export/excel', [ReportController::class, 'exportCustomerReportExcel'])->name('customer-report.export.excel');
     });
 
     // Profile Routes

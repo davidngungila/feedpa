@@ -6,9 +6,198 @@ use App\Models\Transaction;
 use App\Models\Payout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
+    public function customerReport(Request $request)
+    {
+        $customerName = $request->get('customer_name');
+        $phone = $request->get('phone');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        $status = $request->get('status', 'all');
+        
+        // Get distinct customers for filter dropdown
+        $customers = Transaction::select('customer_name')
+            ->whereNotNull('customer_name')
+            ->distinct()
+            ->orderBy('customer_name')
+            ->pluck('customer_name');
+        
+        $paymentQuery = Transaction::whereIn('type', ['payment', 'billpay', 'ecommerce_payment']);
+        
+        if ($customerName) {
+            $paymentQuery->where('customer_name', 'like', '%' . $customerName . '%');
+        }
+        
+        if ($phone) {
+            $paymentQuery->where('phone', 'like', '%' . $phone . '%');
+        }
+        
+        if ($startDate) {
+            $paymentQuery->whereDate('created_at', '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $paymentQuery->whereDate('created_at', '<=', $endDate);
+        }
+        
+        if ($status !== 'all') {
+            if ($status === 'settled') {
+                $paymentQuery->whereIn('status', ['SETTLED', 'SUCCESS']);
+            } else if ($status === 'failed') {
+                $paymentQuery->whereIn('status', ['FAILED', 'ERROR']);
+            }
+        }
+        
+        $payments = $paymentQuery->orderBy('created_at', 'desc')->paginate(20);
+        
+        // Calculate totals
+        $totalAmount = $payments->whereIn('status', ['SETTLED', 'SUCCESS'])->sum('amount');
+        
+        return view('reports.customer-report', compact(
+            'payments',
+            'customers',
+            'customerName',
+            'phone',
+            'startDate',
+            'endDate',
+            'status',
+            'totalAmount'
+        ));
+    }
+    
+    public function exportCustomerReportPdf(Request $request)
+    {
+        $customerName = $request->get('customer_name');
+        $phone = $request->get('phone');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        $status = $request->get('status', 'all');
+        
+        $paymentQuery = Transaction::whereIn('type', ['payment', 'billpay', 'ecommerce_payment']);
+        
+        if ($customerName) {
+            $paymentQuery->where('customer_name', 'like', '%' . $customerName . '%');
+        }
+        
+        if ($phone) {
+            $paymentQuery->where('phone', 'like', '%' . $phone . '%');
+        }
+        
+        if ($startDate) {
+            $paymentQuery->whereDate('created_at', '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $paymentQuery->whereDate('created_at', '<=', $endDate);
+        }
+        
+        if ($status !== 'all') {
+            if ($status === 'settled') {
+                $paymentQuery->whereIn('status', ['SETTLED', 'SUCCESS']);
+            } else if ($status === 'failed') {
+                $paymentQuery->whereIn('status', ['FAILED', 'ERROR']);
+            }
+        }
+        
+        $payments = $paymentQuery->orderBy('created_at', 'asc')->get();
+        
+        $totalAmount = $payments->whereIn('status', ['SETTLED', 'SUCCESS'])->sum('amount');
+        
+        $pdf = Pdf::loadView('reports.exports.customer-report-pdf', [
+            'payments' => $payments,
+            'customerName' => $customerName,
+            'phone' => $phone,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'totalAmount' => $totalAmount,
+        ])->setPaper('a4', 'landscape');
+        
+        return $pdf->download('customer-report-' . date('Y-m-d') . '.pdf');
+    }
+    
+    public function exportCustomerReportExcel(Request $request)
+    {
+        $customerName = $request->get('customer_name');
+        $phone = $request->get('phone');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        $status = $request->get('status', 'all');
+        
+        $paymentQuery = Transaction::whereIn('type', ['payment', 'billpay', 'ecommerce_payment']);
+        
+        if ($customerName) {
+            $paymentQuery->where('customer_name', 'like', '%' . $customerName . '%');
+        }
+        
+        if ($phone) {
+            $paymentQuery->where('phone', 'like', '%' . $phone . '%');
+        }
+        
+        if ($startDate) {
+            $paymentQuery->whereDate('created_at', '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $paymentQuery->whereDate('created_at', '<=', $endDate);
+        }
+        
+        if ($status !== 'all') {
+            if ($status === 'settled') {
+                $paymentQuery->whereIn('status', ['SETTLED', 'SUCCESS']);
+            } else if ($status === 'failed') {
+                $paymentQuery->whereIn('status', ['FAILED', 'ERROR']);
+            }
+        }
+        
+        $payments = $paymentQuery->orderBy('created_at', 'asc')->get();
+        
+        // Create a simple export class inline
+        $export = new class($payments) implements \Maatwebsite\Excel\Concerns\FromCollection, \Maatwebsite\Excel\Concerns\WithHeadings, \Maatwebsite\Excel\Concerns\ShouldAutoSize {
+            protected $payments;
+            
+            public function __construct($payments) {
+                $this->payments = $payments;
+            }
+            
+            public function collection() {
+                return $this->payments->map(function($payment) {
+                    return [
+                        'Date' => $payment->created_at->format('Y-m-d H:i:s'),
+                        'Reference' => $payment->order_reference,
+                        'Customer Name' => $payment->customer_name ?? $payment->payer_name,
+                        'Payer Name' => $payment->payer_name,
+                        'Phone' => $payment->phone,
+                        'Description' => $payment->description,
+                        'Amount' => $payment->amount,
+                        'Currency' => $payment->currency ?? 'TZS',
+                        'Status' => $payment->status,
+                        'Payment Method' => $payment->payment_method,
+                    ];
+                });
+            }
+            
+            public function headings(): array {
+                return [
+                    'Date',
+                    'Reference',
+                    'Customer Name',
+                    'Payer Name',
+                    'Phone',
+                    'Description',
+                    'Amount',
+                    'Currency',
+                    'Status',
+                    'Payment Method',
+                ];
+            }
+        };
+        
+        return Excel::download($export, 'customer-report-' . date('Y-m-d') . '.xlsx');
+    }
     public function trialBalance(Request $request)
     {
         $startDate = $request->get('start_date');

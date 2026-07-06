@@ -70,7 +70,8 @@
         }
         .animate-fade-up { animation: fadeUp 0.45s ease-out both; }
         .modal-backdrop { 
-            /* backdrop-filter removed as requested */
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
         }
     </style>
 </head>

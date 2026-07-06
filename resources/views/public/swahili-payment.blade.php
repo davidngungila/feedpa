@@ -216,16 +216,16 @@
                                         Malipo Kwaajili Ya <span class="text-red-500">*</span>
                                     </label>
                                     <div class="flex flex-wrap gap-2 mb-2.5" id="purposeChips">
-                                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa'] as $purpose)
+                                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa', 'SWF Contribution', 'Malipo ya Bidhaa'] as $purpose)
                                             <button type="button" data-purpose="{{ $purpose }}"
                                                     class="purpose-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
                                                 {{ $purpose }}
                                             </button>
                                         @endforeach
                                     </div>
-                                    <textarea id="description" name="description" rows="3" required
-                                              class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/80 text-sm text-slate-900 placeholder:text-slate-400 resize-none"
-                                              placeholder="Eleza madhumuni ya malipo yako…"></textarea>
+                                    <input type="text" id="description" name="description" required readonly
+                                              class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100/80 text-sm text-slate-900 cursor-not-allowed"
+                                              placeholder="Chagua malipo kwaajili ya…">
                                 </div>
 
                                 <!-- Akiba Type (only shown when Akiba is selected) -->
@@ -258,6 +258,22 @@
                                         @endforeach
                                     </div>
                                     <input type="hidden" id="uwekezaji_type" name="uwekezaji_type">
+                                </div>
+
+                                <!-- Hisa Type (only shown when Hisa is selected) -->
+                                <div id="hisaTypeSection" class="hidden">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
+                                        Aina ya Hisa <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="flex flex-wrap gap-2" id="hisaTypeChips">
+                                        @foreach(['Hisa za duka', 'Hisa za Feedtan CMG'] as $type)
+                                            <button type="button" data-hisa-type="{{ $type }}"
+                                                    class="hisa-type-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
+                                                {{ $type }}
+                                            </button>
+                                        @endforeach
+                                    </div>
+                                    <input type="hidden" id="hisa_type" name="hisa_type">
                                 </div>
 
                                 <!-- Summary + submit -->
@@ -370,6 +386,8 @@
         const akibaTypeInput = document.getElementById('akiba_type');
         const uwekezajiTypeSection = document.getElementById('uwekezajiTypeSection');
         const uwekezajiTypeInput = document.getElementById('uwekezaji_type');
+        const hisaTypeSection = document.getElementById('hisaTypeSection');
+        const hisaTypeInput = document.getElementById('hisa_type');
 
         // Polling variables
         let pollingInterval = null;
@@ -392,24 +410,24 @@
                 document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
                 this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
                 
-                // Show/hide appropriate sections
+                // Reset all type sections first
+                akibaTypeSection.classList.add('hidden');
+                uwekezajiTypeSection.classList.add('hidden');
+                hisaTypeSection.classList.add('hidden');
+                akibaTypeInput.value = '';
+                uwekezajiTypeInput.value = '';
+                hisaTypeInput.value = '';
+                document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                document.querySelectorAll('.hisa-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+
+                // Show appropriate section
                 if (this.dataset.purpose === 'Akiba') {
                     akibaTypeSection.classList.remove('hidden');
-                    uwekezajiTypeSection.classList.add('hidden');
-                    uwekezajiTypeInput.value = '';
-                    document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
                 } else if (this.dataset.purpose === 'Uwekezaji') {
                     uwekezajiTypeSection.classList.remove('hidden');
-                    akibaTypeSection.classList.add('hidden');
-                    akibaTypeInput.value = '';
-                    document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-                } else {
-                    akibaTypeSection.classList.add('hidden');
-                    uwekezajiTypeSection.classList.add('hidden');
-                    akibaTypeInput.value = '';
-                    uwekezajiTypeInput.value = '';
-                    document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-                    document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                } else if (this.dataset.purpose === 'Hisa') {
+                    hisaTypeSection.classList.remove('hidden');
                 }
             });
         });
@@ -426,6 +444,16 @@
             chip.addEventListener('click', function () {
                 uwekezajiTypeInput.value = this.dataset.uwekezajiType;
                 document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
+            });
+        });
+
+        document.querySelectorAll('.hisa-type-chip').forEach(function (chip) {
+            chip.addEventListener('click', function () {
+                hisaTypeInput.value = this.dataset.hisaType;
+                // Update description to include the hisa type
+                descriptionInput.value = 'Hisa - ' + this.dataset.hisaType;
+                document.querySelectorAll('.hisa-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
                 this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
             });
         });
@@ -447,7 +475,8 @@
                 payer_name: String(formData.get('payer_name') || '').trim(),
                 description: String(formData.get('description') || '').trim(),
                 akiba_type: String(formData.get('akiba_type') || '').trim(),
-                uwekezaji_type: String(formData.get('uwekezaji_type') || '').trim()
+                uwekezaji_type: String(formData.get('uwekezaji_type') || '').trim(),
+                hisa_type: String(formData.get('hisa_type') || '').trim()
             };
 
             if (!data.payer_name) {
@@ -455,7 +484,7 @@
                 return;
             }
             if (!data.description) {
-                showAlert('error', 'Tafadhali ingiza maelezo ya malipo (Malipo Kwaajili Ya).');
+                showAlert('error', 'Tafadhali chagua malipo kwaajili ya.');
                 return;
             }
             // Validate akiba type if purpose is Akiba
@@ -466,6 +495,11 @@
             // Validate uwekezaji type if purpose is Uwekezaji
             if (data.description === 'Uwekezaji' && !data.uwekezaji_type) {
                 showAlert('error', 'Tafadhali chagua aina ya Uwekezaji (2Year FIA, 4Years FIA, au 6 Years FIA).');
+                return;
+            }
+            // Validate hisa type if purpose is Hisa
+            if (data.description.startsWith('Hisa') && !data.hisa_type) {
+                showAlert('error', 'Tafadhali chagua aina ya Hisa (Hisa za duka au Hisa za Feedtan CMG).');
                 return;
             }
             if (!data.phone_number.match(/^255[67]\d{8}$/)) {

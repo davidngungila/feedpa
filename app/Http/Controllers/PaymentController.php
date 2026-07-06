@@ -561,6 +561,7 @@ HTML;
             'description' => 'required|string|max:500',
             'akiba_type' => 'nullable|string|max:50',
             'uwekezaji_type' => 'nullable|string|max:50',
+            'hisa_type' => 'nullable|string|max:50',
         ]);
 
         $description = trim($validated['description']);
@@ -616,6 +617,7 @@ HTML;
                 'description' => $description,
                 'akiba_type' => $validated['akiba_type'] ?? null,
                 'uwekezaji_type' => $validated['uwekezaji_type'] ?? null,
+                'hisa_type' => $validated['hisa_type'] ?? null,
                 'type' => 'payment',
                 'callback_data' => TransactionFieldResolver::initialCallbackSnapshot(
                     $description,

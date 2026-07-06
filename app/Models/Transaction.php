@@ -24,6 +24,7 @@ class Transaction extends Model
         'description',
         'akiba_type',
         'uwekezaji_type',
+        'hisa_type',
         'type',
         'payment_method',
         'payer_name',

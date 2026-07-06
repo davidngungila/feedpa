@@ -788,7 +788,7 @@
                     showSuccessModal(orderReference, data || transaction);
                 } else if (isFailed) {
                     stopPolling();
-                    showFailureModal(status);
+                    showFailureModal(status, data || transaction);
                 }
                 
             } catch (error) {
@@ -841,7 +841,19 @@
             resetButton();
         };
 
-        function showFailureModal(status) {
+        function showFailureModal(status, transactionData) {
+            // Try to get the failure reason from transaction data
+            let failureReason = 'Hakuna maelezo ya kushambulika.';
+            if (transactionData) {
+                // Check common fields that might contain failure reason
+                failureReason = transactionData.reason || 
+                                transactionData.description || 
+                                transactionData.message || 
+                                transactionData.error || 
+                                transactionData.failure_reason || 
+                                failureReason;
+            }
+            
             modalRoot.innerHTML = `
                 <div id="failureModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop bg-slate-900">
                     <div class="w-full max-w-md bg-white rounded-2xl shadow-card overflow-hidden animate-fade-up">
@@ -852,10 +864,16 @@
                             <h3 class="text-lg font-bold">Malipo Haujaweza</h3>
                         </div>
                         <div class="p-6 space-y-4">
-                            <p class="text-sm text-slate-600 text-center">Malipo haujaweza kukamilika. Tafadhali jaribu tena.</p>
-                            <div class="flex justify-between items-center py-2.5 px-4 rounded-xl bg-red-50 border border-red-100">
-                                <span class="text-xs text-red-700 font-medium">Hali</span>
-                                <span class="text-sm font-bold text-red-800">${status}</span>
+                            <p class="text-sm text-slate-600 text-center">Malipo haujaweza kukamilika.</p>
+                            <div class="py-3 px-4 rounded-xl bg-red-50 border border-red-100">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs text-red-700 font-medium">Hali</span>
+                                    <span class="text-sm font-bold text-red-800">${status}</span>
+                                </div>
+                                <div class="mt-2 pt-2 border-t border-red-200">
+                                    <span class="text-xs text-red-700 font-medium block mb-1">Sababu</span>
+                                    <p class="text-sm text-red-800">${failureReason}</p>
+                                </div>
                             </div>
                             <button type="button" onclick="closeFailureModal()"
                                     class="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white text-sm font-bold transition-colors">

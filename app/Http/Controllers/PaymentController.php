@@ -1222,8 +1222,8 @@ HTML;
                 return $this->receipt($request->order_reference);
             }
 
-            // Get filtered payments and bill payments from database
-            $paymentQuery = Transaction::query()->whereIn('type', ['payment', 'billpay']);
+            // Get filtered payments, bill payments and ecommerce payments from database
+            $paymentQuery = Transaction::query()->whereIn('type', ['payment', 'billpay', 'ecommerce_payment']);
 
             $this->applyHistoryTabFilter($paymentQuery, $request->get('status', 'SETTLED'));
             if ($request->filled('currency')) {
@@ -1394,8 +1394,8 @@ HTML;
     public function exportExcel(Request $request)
     {
         try {
-            // Get filtered payments and bill payments from database
-            $paymentQuery = Transaction::query()->whereIn('type', ['payment', 'billpay']);
+            // Get filtered payments, bill payments and ecommerce payments from database
+            $paymentQuery = Transaction::query()->whereIn('type', ['payment', 'billpay', 'ecommerce_payment']);
 
             $this->applyHistoryTabFilter($paymentQuery, $request->get('status', 'SETTLED'));
             if ($request->filled('currency')) {

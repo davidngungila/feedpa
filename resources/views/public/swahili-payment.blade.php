@@ -216,64 +216,22 @@
                                         Malipo Kwaajili Ya <span class="text-red-500">*</span>
                                     </label>
                                     <div class="flex flex-wrap gap-2 mb-2.5" id="purposeChips">
-                                        <button type="button" id="openPurposeModal"
-                                                class="purpose-chip px-3 py-1.5 rounded-lg border border-brand-500 bg-brand-50 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors">
-                                            <i class="fas fa-list mr-1"></i>
-                                            Malipo Kwaajili Ya *
-                                        </button>
+                                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa', 'SWF Contribution', 'Malipo ya Bidhaa'] as $purpose)
+                                            <button type="button" data-purpose="{{ $purpose }}"
+                                                    class="purpose-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
+                                                {{ $purpose }}
+                                            </button>
+                                        @endforeach
                                     </div>
                                     <input type="text" id="description" name="description" required readonly
                                               class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100/80 text-sm text-slate-900 cursor-not-allowed"
                                               placeholder="Chagua malipo kwaajili ya…">
                                 </div>
 
-                                <!-- Akiba Type (only shown when Akiba is selected) -->
-                                <div id="akibaTypeSection" class="hidden">
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
-                                        Aina ya Akiba <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="flex flex-wrap gap-2" id="akibaTypeChips">
-                                        @foreach(['RDA', 'FLEX', 'EMERGENCE'] as $type)
-                                            <button type="button" data-akiba-type="{{ $type }}"
-                                                    class="akiba-type-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
-                                                {{ $type }}
-                                            </button>
-                                        @endforeach
-                                    </div>
-                                    <input type="hidden" id="akiba_type" name="akiba_type">
-                                </div>
-
-                                <!-- Uwekezaji Type (only shown when Uwekezaji is selected) -->
-                                <div id="uwekezajiTypeSection" class="hidden">
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
-                                        Aina ya Uwekezaji <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="flex flex-wrap gap-2" id="uwekezajiTypeChips">
-                                        @foreach(['2Year FIA', '4Years FIA', '6 Years FIA'] as $type)
-                                            <button type="button" data-uwekezaji-type="{{ $type }}"
-                                                    class="uwekezaji-type-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
-                                                {{ $type }}
-                                            </button>
-                                        @endforeach
-                                    </div>
-                                    <input type="hidden" id="uwekezaji_type" name="uwekezaji_type">
-                                </div>
-
-                                <!-- Hisa Type (only shown when Hisa is selected) -->
-                                <div id="hisaTypeSection" class="hidden">
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">
-                                        Aina ya Hisa <span class="text-red-500">*</span>
-                                    </label>
-                                    <div class="flex flex-wrap gap-2" id="hisaTypeChips">
-                                        @foreach(['Hisa za duka', 'Hisa za Feedtan CMG'] as $type)
-                                            <button type="button" data-hisa-type="{{ $type }}"
-                                                    class="hisa-type-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
-                                                {{ $type }}
-                                            </button>
-                                        @endforeach
-                                    </div>
-                                    <input type="hidden" id="hisa_type" name="hisa_type">
-                                </div>
+                                <!-- Hidden inputs for types -->
+                                <input type="hidden" id="akiba_type" name="akiba_type">
+                                <input type="hidden" id="uwekezaji_type" name="uwekezaji_type">
+                                <input type="hidden" id="hisa_type" name="hisa_type">
 
                                 <!-- Summary + submit -->
                                 <div class="rounded-xl bg-brand-50 border border-brand-100 p-4 flex items-center justify-between gap-4">
@@ -300,6 +258,19 @@
                             </form>
                         </div>
 
+                        <!-- Sub-Option Selection Modal -->
+                        <div id="subOptionModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 modal-backdrop bg-slate-900/50">
+                            <div class="w-full max-w-md bg-white rounded-2xl shadow-card p-6 animate-fade-up">
+                                <div class="text-center mb-4">
+                                    <h3 id="subOptionModalTitle" class="text-lg font-bold text-slate-900"></h3>
+                                </div>
+                                <div id="subOptionModalContent" class="flex flex-wrap gap-2 justify-center mb-4"></div>
+                                <button type="button" id="subOptionModalClose" class="w-full py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-bold transition-colors">
+                                    Funga
+                                </button>
+                            </div>
+                        </div>
+
                         <p class="hidden sm:flex text-center text-[10px] text-slate-400 mt-4 items-center justify-center gap-1.5">
                             <i class="fas fa-lock text-brand-500"></i>
                             Powered by FeedTan Team · FeedTan CMG
@@ -308,29 +279,6 @@
                 </div>
             </div>
         </main>
-    </div>
-
-    <!-- Purpose Selection Modal -->
-    <div id="purposeModal" class="fixed inset-0 z-[60] hidden">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="purposeModalOverlay"></div>
-        <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-2xl shadow-card w-full max-w-md animate-fade-up">
-                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-slate-900">Chagua Malipo Kwaajili Ya</h3>
-                    <button type="button" id="closePurposeModal" class="text-slate-400 hover:text-slate-600">
-                        <i class="fas fa-times text-lg"></i>
-                    </button>
-                </div>
-                <div class="p-5 space-y-3">
-                    @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa', 'SWF Contribution', 'Malipo ya Bidhaa'] as $purpose)
-                        <button type="button" data-purpose-option="{{ $purpose }}"
-                                class="purpose-option-chip w-full text-left px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-brand-500 hover:bg-brand-50 hover:text-brand-700 transition-colors">
-                            {{ $purpose }}
-                        </button>
-                    @endforeach
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Modals mount -->
@@ -343,12 +291,6 @@
         const noticeMessageEl = document.getElementById('globalNoticeMessage');
         const noticeIconEl = document.getElementById('globalNoticeIcon');
         const noticeCloseEl = document.getElementById('globalNoticeClose');
-
-        // Purpose Modal Elements
-        const purposeModal = document.getElementById('purposeModal');
-        const openPurposeModalBtn = document.getElementById('openPurposeModal');
-        const closePurposeModalBtn = document.getElementById('closePurposeModal');
-        const purposeModalOverlay = document.getElementById('purposeModalOverlay');
 
         function showGlobalNotice(type, title, message) {
             const styles = {
@@ -410,31 +352,44 @@
         const descriptionInput = document.getElementById('description');
         const phoneInput = document.getElementById('phone_number');
         const modalRoot = document.getElementById('modalRoot');
-        const akibaTypeSection = document.getElementById('akibaTypeSection');
         const akibaTypeInput = document.getElementById('akiba_type');
-        const uwekezajiTypeSection = document.getElementById('uwekezajiTypeSection');
         const uwekezajiTypeInput = document.getElementById('uwekezaji_type');
-        const hisaTypeSection = document.getElementById('hisaTypeSection');
         const hisaTypeInput = document.getElementById('hisa_type');
+        const subOptionModal = document.getElementById('subOptionModal');
+        const subOptionModalTitle = document.getElementById('subOptionModalTitle');
+        const subOptionModalContent = document.getElementById('subOptionModalContent');
+        const subOptionModalClose = document.getElementById('subOptionModalClose');
+
+        // Define sub-options for each purpose
+        const subOptions = {
+            'Akiba': {
+                title: 'Chagua Aina ya Akiba',
+                options: ['RDA', 'FLEX', 'EMERGENCE'],
+                inputField: akibaTypeInput,
+                descriptionPrefix: 'Akiba'
+            },
+            'Uwekezaji': {
+                title: 'Chagua Aina ya Uwekezaji',
+                options: ['2Year FIA', '4Years FIA', '6 Years FIA'],
+                inputField: uwekezajiTypeInput,
+                descriptionPrefix: 'Uwekezaji'
+            },
+            'Hisa': {
+                title: 'Chagua Aina ya Hisa',
+                options: ['Hisa za duka', 'Hisa za Feedtan CMG'],
+                inputField: hisaTypeInput,
+                descriptionPrefix: 'Hisa'
+            }
+        };
+
+        let currentPurpose = null;
+        let currentSubOptionConfig = null;
 
         // Polling variables
         let pollingInterval = null;
         let pollingStartTime = null;
         const POLLING_DURATION = 60000; // 1 minute
         const POLLING_INTERVAL = 3000; // 3 seconds per poll
-
-        // Purpose Modal Functions
-        function openPurposeModal() {
-            purposeModal.classList.remove('hidden');
-        }
-
-        function closePurposeModal() {
-            purposeModal.classList.add('hidden');
-        }
-
-        openPurposeModalBtn.addEventListener('click', openPurposeModal);
-        closePurposeModalBtn.addEventListener('click', closePurposeModal);
-        purposeModalOverlay.addEventListener('click', closePurposeModal);
 
         function formatAmountDisplay(value) {
             const n = Number(value) || 0;
@@ -445,61 +400,75 @@
             btnAmount.textContent = formatAmountDisplay(this.value);
         });
 
-        // Handle purpose option selection in modal
-        document.querySelectorAll('.purpose-option-chip').forEach(function (chip) {
+        // Function to open sub-option modal
+        function openSubOptionModal(purpose) {
+            currentPurpose = purpose;
+            currentSubOptionConfig = subOptions[purpose];
+            
+            subOptionModalTitle.textContent = currentSubOptionConfig.title;
+            subOptionModalContent.innerHTML = '';
+            
+            currentSubOptionConfig.options.forEach(option => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = option;
+                button.className = 'px-4 py-2 rounded-lg border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors';
+                button.addEventListener('click', () => selectSubOption(option));
+                subOptionModalContent.appendChild(button);
+            });
+            
+            subOptionModal.classList.remove('hidden');
+        }
+
+        // Function to close sub-option modal
+        function closeSubOptionModal() {
+            subOptionModal.classList.add('hidden');
+            currentPurpose = null;
+            currentSubOptionConfig = null;
+        }
+
+        // Function to handle sub-option selection
+        function selectSubOption(option) {
+            if (!currentSubOptionConfig) return;
+            
+            currentSubOptionConfig.inputField.value = option;
+            descriptionInput.value = `${currentSubOptionConfig.descriptionPrefix} - ${option}`;
+            
+            closeSubOptionModal();
+        }
+
+        // Purpose chip click handler
+        document.querySelectorAll('.purpose-chip').forEach(function (chip) {
             chip.addEventListener('click', function () {
-                const selectedPurpose = this.dataset.purposeOption;
-                descriptionInput.value = selectedPurpose;
+                const purpose = this.dataset.purpose;
                 
-                // Reset all type sections first
-                akibaTypeSection.classList.add('hidden');
-                uwekezajiTypeSection.classList.add('hidden');
-                hisaTypeSection.classList.add('hidden');
+                // Reset all type inputs
                 akibaTypeInput.value = '';
                 uwekezajiTypeInput.value = '';
                 hisaTypeInput.value = '';
-                document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-                document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-                document.querySelectorAll('.hisa-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-
-                // Show appropriate section
-                if (selectedPurpose === 'Akiba') {
-                    akibaTypeSection.classList.remove('hidden');
-                } else if (selectedPurpose === 'Uwekezaji') {
-                    uwekezajiTypeSection.classList.remove('hidden');
-                } else if (selectedPurpose === 'Hisa') {
-                    hisaTypeSection.classList.remove('hidden');
+                
+                // Update active purpose chip
+                document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
+                this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
+                
+                // Check if this purpose has sub-options
+                if (subOptions[purpose]) {
+                    openSubOptionModal(purpose);
+                } else {
+                    // No sub-options, just set description
+                    descriptionInput.value = purpose;
                 }
-
-                // Close the modal
-                closePurposeModal();
             });
         });
 
-        document.querySelectorAll('.akiba-type-chip').forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                akibaTypeInput.value = this.dataset.akibaType;
-                document.querySelectorAll('.akiba-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-                this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
-            });
-        });
+        // Modal close button click handler
+        subOptionModalClose.addEventListener('click', closeSubOptionModal);
 
-        document.querySelectorAll('.uwekezaji-type-chip').forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                uwekezajiTypeInput.value = this.dataset.uwekezajiType;
-                document.querySelectorAll('.uwekezaji-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-                this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
-            });
-        });
-
-        document.querySelectorAll('.hisa-type-chip').forEach(function (chip) {
-            chip.addEventListener('click', function () {
-                hisaTypeInput.value = this.dataset.hisaType;
-                // Update description to include the hisa type
-                descriptionInput.value = 'Hisa - ' + this.dataset.hisaType;
-                document.querySelectorAll('.hisa-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-                this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
-            });
+        // Close modal when clicking on backdrop
+        subOptionModal.addEventListener('click', function (e) {
+            if (e.target === subOptionModal) {
+                closeSubOptionModal();
+            }
         });
 
         phoneInput.addEventListener('blur', function () {

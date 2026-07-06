@@ -165,7 +165,7 @@
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
                     @forelse($displayItems as $item)
-                        @if(in_array($item['type'], ['payment', 'billpay']))
+                        @if(in_array($item['type'], ['payment', 'billpay', 'ecommerce_payment']))
                             @php
                                 $payment = $item['record'];
                                 $callbackData = is_array($payment->callback_data ?? null) ? $payment->callback_data : [];

@@ -216,12 +216,11 @@
                                         Malipo Kwaajili Ya <span class="text-red-500">*</span>
                                     </label>
                                     <div class="flex flex-wrap gap-2 mb-2.5" id="purposeChips">
-                                        @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa', 'SWF Contribution', 'Malipo ya Bidhaa'] as $purpose)
-                                            <button type="button" data-purpose="{{ $purpose }}"
-                                                    class="purpose-chip px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-600 hover:border-brand-300 hover:text-brand-700 hover:bg-brand-50 transition-colors">
-                                                {{ $purpose }}
-                                            </button>
-                                        @endforeach
+                                        <button type="button" id="openPurposeModal"
+                                                class="purpose-chip px-3 py-1.5 rounded-lg border border-brand-500 bg-brand-50 text-xs font-semibold text-brand-700 hover:bg-brand-100 transition-colors">
+                                            <i class="fas fa-list mr-1"></i>
+                                            Malipo Kwaajili Ya *
+                                        </button>
                                     </div>
                                     <input type="text" id="description" name="description" required readonly
                                               class="input-field w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-100/80 text-sm text-slate-900 cursor-not-allowed"
@@ -311,6 +310,29 @@
         </main>
     </div>
 
+    <!-- Purpose Selection Modal -->
+    <div id="purposeModal" class="fixed inset-0 z-[60] hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="purposeModalOverlay"></div>
+        <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-2xl shadow-card w-full max-w-md animate-fade-up">
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-slate-900">Chagua Malipo Kwaajili Ya</h3>
+                    <button type="button" id="closePurposeModal" class="text-slate-400 hover:text-slate-600">
+                        <i class="fas fa-times text-lg"></i>
+                    </button>
+                </div>
+                <div class="p-5 space-y-3">
+                    @foreach(['Akiba', 'Uwekezaji', 'Malipo ya mkopo', 'Ada ya Uanachama', 'Hisa', 'SWF Contribution', 'Malipo ya Bidhaa'] as $purpose)
+                        <button type="button" data-purpose-option="{{ $purpose }}"
+                                class="purpose-option-chip w-full text-left px-4 py-3 rounded-lg border border-slate-200 bg-white text-sm font-medium text-slate-700 hover:border-brand-500 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                            {{ $purpose }}
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modals mount -->
     <div id="modalRoot"></div>
 
@@ -321,6 +343,12 @@
         const noticeMessageEl = document.getElementById('globalNoticeMessage');
         const noticeIconEl = document.getElementById('globalNoticeIcon');
         const noticeCloseEl = document.getElementById('globalNoticeClose');
+
+        // Purpose Modal Elements
+        const purposeModal = document.getElementById('purposeModal');
+        const openPurposeModalBtn = document.getElementById('openPurposeModal');
+        const closePurposeModalBtn = document.getElementById('closePurposeModal');
+        const purposeModalOverlay = document.getElementById('purposeModalOverlay');
 
         function showGlobalNotice(type, title, message) {
             const styles = {
@@ -395,6 +423,19 @@
         const POLLING_DURATION = 60000; // 1 minute
         const POLLING_INTERVAL = 3000; // 3 seconds per poll
 
+        // Purpose Modal Functions
+        function openPurposeModal() {
+            purposeModal.classList.remove('hidden');
+        }
+
+        function closePurposeModal() {
+            purposeModal.classList.add('hidden');
+        }
+
+        openPurposeModalBtn.addEventListener('click', openPurposeModal);
+        closePurposeModalBtn.addEventListener('click', closePurposeModal);
+        purposeModalOverlay.addEventListener('click', closePurposeModal);
+
         function formatAmountDisplay(value) {
             const n = Number(value) || 0;
             return n.toLocaleString('en-TZ');
@@ -404,11 +445,11 @@
             btnAmount.textContent = formatAmountDisplay(this.value);
         });
 
-        document.querySelectorAll('.purpose-chip').forEach(function (chip) {
+        // Handle purpose option selection in modal
+        document.querySelectorAll('.purpose-option-chip').forEach(function (chip) {
             chip.addEventListener('click', function () {
-                descriptionInput.value = this.dataset.purpose;
-                document.querySelectorAll('.purpose-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
-                this.classList.add('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700');
+                const selectedPurpose = this.dataset.purposeOption;
+                descriptionInput.value = selectedPurpose;
                 
                 // Reset all type sections first
                 akibaTypeSection.classList.add('hidden');
@@ -422,13 +463,16 @@
                 document.querySelectorAll('.hisa-type-chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-brand-500', 'border-brand-500', 'bg-brand-50', 'text-brand-700'));
 
                 // Show appropriate section
-                if (this.dataset.purpose === 'Akiba') {
+                if (selectedPurpose === 'Akiba') {
                     akibaTypeSection.classList.remove('hidden');
-                } else if (this.dataset.purpose === 'Uwekezaji') {
+                } else if (selectedPurpose === 'Uwekezaji') {
                     uwekezajiTypeSection.classList.remove('hidden');
-                } else if (this.dataset.purpose === 'Hisa') {
+                } else if (selectedPurpose === 'Hisa') {
                     hisaTypeSection.classList.remove('hidden');
                 }
+
+                // Close the modal
+                closePurposeModal();
             });
         });
 

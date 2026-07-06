@@ -986,8 +986,8 @@ HTML;
             'updated_at' => 'Updated At',
         ];
 
-        // Get payments and bill payments from database
-        $paymentQuery = Transaction::query()->whereIn('type', ['payment', 'billpay']);
+        // Get payments, bill payments and ecommerce payments from database
+        $paymentQuery = Transaction::query()->whereIn('type', ['payment', 'billpay', 'ecommerce_payment']);
         $this->applyHistoryTabFilter($paymentQuery, $activeStatus);
         if ($request->filled('currency')) {
             $paymentQuery->where('currency', $request->currency);
@@ -1162,7 +1162,9 @@ HTML;
         
         // Apply type filter
         if ($typeFilter === 'payment') {
-            $combinedWithBalance = $combinedWithBalance->filter(fn($item) => in_array($item['type'], ['payment', 'billpay']));
+            $combinedWithBalance = $combinedWithBalance->filter(fn($item) => in_array($item['type'], ['payment', 'billpay', 'ecommerce_payment']));
+        } elseif ($typeFilter === 'ecommerce') {
+            $combinedWithBalance = $combinedWithBalance->filter(fn($item) => $item['type'] === 'ecommerce_payment');
         } elseif ($typeFilter === 'payout') {
             $combinedWithBalance = $combinedWithBalance->filter(fn($item) => in_array($item['type'], ['payout', 'payout-fee']));
         }

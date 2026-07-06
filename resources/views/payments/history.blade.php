@@ -69,6 +69,7 @@
                 <select name="txn_type" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs outline-none">
                     <option value="all" {{ ($typeFilter ?? request('txn_type', 'all')) === 'all' ? 'selected' : '' }}>All Types</option>
                     <option value="payment" {{ ($typeFilter ?? request('txn_type', 'all')) === 'payment' ? 'selected' : '' }}>Payments</option>
+                    <option value="ecommerce" {{ ($typeFilter ?? request('txn_type', 'all')) === 'ecommerce' ? 'selected' : '' }}>E-commerce Payments</option>
                     <option value="payout" {{ ($typeFilter ?? request('txn_type', 'all')) === 'payout' ? 'selected' : '' }}>Payouts</option>
                 </select>
             </div>

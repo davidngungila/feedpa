@@ -193,6 +193,9 @@ Route::get('/payment', function () {
 Route::prefix('payments')->name('payments.')->group(function () {
     Route::post('/', [PaymentController::class, 'store'])->name('store');
     Route::post('/store', [PaymentController::class, 'store'])->name('store.alt'); // Add explicit /store route
+    Route::get('/', function() {
+        return redirect('/payment')->with('info', 'Please use the payment form to submit payments.');
+    }); // Handle direct access to /payments
     Route::get('/store', function() {
         return redirect('/payment')->with('info', 'Please use the payment form to submit payments.');
     }); // Handle direct access to /store

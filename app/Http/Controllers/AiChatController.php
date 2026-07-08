@@ -4,238 +4,105 @@ namespace App\Http\Controllers;
 
 use App\Models\SystemSetting;
 use App\Models\Transaction;
+use App\Models\Payout;
+use App\Models\AccountBalance;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Carbon\Carbon;
 
 class AiChatController extends Controller
 {
-    private function settledStatuses(): array
-    {
-        return ['SUCCESS', 'SETTLED', 'success', 'settled'];
-    }
-
-    private function applyDateFilter($query, string $dateFilter, ?string $startDate = null, ?string $endDate = null)
-    {
-        return match ($dateFilter) {
-            'week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
-            'month' => $query->whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()]),
-            'quarter' => $query->whereBetween('created_at', [now()->copy()->subMonths(3)->startOfDay(), now()->endOfDay()]),
-            'year' => $query->whereBetween('created_at', [now()->startOfYear(), now()->endOfYear()]),
-            'custom' => ($startDate && $endDate)
-                ? $query->whereBetween('created_at', [Carbon::parse($startDate)->startOfDay(), Carbon::parse($endDate)->endOfDay()])
-                : $query->whereDate('created_at', now()->toDateString()),
-            default => $query->whereDate('created_at', now()->toDateString()),
-        };
-    }
-
     public function chat(Request $request)
     {
-        try {
-            $request->validate([
-                'message' => 'required|string|max:5000',
-                'history' => 'nullable|array',
-            ]);
+        $request->validate([
+            'message' => 'required|string|max:2000',
+            'history' => 'nullable|array',
+        ]);
 
-            $apiKey = SystemSetting::get('gemini_api_key');
-            if (!$apiKey) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Gemini API key not configured',
-                ], 400);
+        $apiKey = SystemSetting::get('gemini_api_key');
+        if (!$apiKey) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gemini API key not configured',
+            ], 400);
+        }
+
+        // Gather system data for the AI
+        $systemData = $this->gatherSystemData();
+
+        $messages = [];
+
+        // Add system prompt with data access
+        $messages[] = [
+            'role' => 'user',
+            'parts' => [['text' => "You are a helpful AI assistant for Feedtan ClickPesa staff. You have access to real data from the system. Use this data to answer questions about transactions, payments, payouts, customers, and business operations. If the data doesn't have the answer, say so clearly but still be helpful.\n\nCURRENT SYSTEM DATA:\n" . json_encode($systemData, JSON_PRETTY_PRINT) . "\n\nAlways use the latest data provided when answering questions. Format your answers clearly and professionally."]]
+        ];
+
+        if ($request->has('history') && is_array($request->history)) {
+            foreach ($request->history as $item) {
+                $messages[] = [
+                    'role' => $item['role'] ?? 'user',
+                    'parts' => [['text' => $item['text'] ?? '']]
+                ];
             }
+        }
 
-            // --- Step 1: Load all relevant business data ---
-            $dateFilter = 'today';
-            $settledStatuses = $this->settledStatuses();
+        $messages[] = [
+            'role' => 'user',
+            'parts' => [['text' => $request->message]]
+        ];
 
-            $baseQuery = Transaction::query();
-            $this->applyDateFilter($baseQuery, $dateFilter);
+        // First, get list of available models
+        $availableModel = null;
+        $apiVersionToUse = null;
 
-            $settledQuery = (clone $baseQuery)->whereIn('status', $settledStatuses);
-
-            $todaySettledAmount = (clone $settledQuery)->sum('amount');
-            $todaySuccessfulCount = (clone $settledQuery)->count();
-            $todayTotalCount = (clone $baseQuery)->count();
-            $successRate = $todayTotalCount > 0
-                ? round(($todaySuccessfulCount / $todayTotalCount) * 100, 2)
-                : 0;
-
-            // Get account balance safely
+        foreach (['v1', 'v1beta'] as $apiVersion) {
             try {
-                $accountBalanceService = app(\App\Services\AccountBalanceService::class);
-                $accountBalance = $accountBalanceService->getTzsBalance(refresh: true);
-            } catch (\Exception $e) {
-                $accountBalance = 'Error retrieving balance';
-            }
+                $listResponse = Http::timeout(30)
+                    ->get("https://generativelanguage.googleapis.com/{$apiVersion}/models?key={$apiKey}");
 
-            $topCustomersToday = (clone $settledQuery)->whereNotNull('phone')
-                ->selectRaw('phone, max(customer_name) as customer_name, max(description) as description, count(*) as count, sum(amount) as total_amount')
-                ->groupBy('phone')
-                ->orderByDesc('total_amount')
-                ->limit(10)
-                ->get()
-                ->map(function ($row) {
-                    return [
-                        'name' => $row->customer_name ?: $row->description ?: $row->phone,
-                        'phone' => $row->phone,
-                        'count' => (int)$row->count,
-                        'total_amount' => $row->total_amount,
-                    ];
-                })->toArray();
-
-            $paymentMethodsToday = (clone $settledQuery)->whereNotNull('payment_method')
-                ->selectRaw('payment_method as name, count(*) as count, sum(amount) as total_amount')
-                ->groupBy('payment_method')
-                ->orderByDesc('count')
-                ->get()
-                ->toArray();
-
-            $topPurposesToday = (clone $settledQuery)->whereNotNull('description')
-                ->selectRaw('description, count(*) as count, sum(amount) as total_amount')
-                ->groupBy('description')
-                ->orderByDesc('total_amount')
-                ->limit(10)
-                ->get()
-                ->toArray();
-
-            $statusStatsToday = (clone $baseQuery)
-                ->selectRaw('status, count(*) as count, sum(amount) as amount')
-                ->groupBy('status')
-                ->orderByDesc('count')
-                ->get()
-                ->toArray();
-
-            $recentTransactions = (clone $settledQuery)->orderBy('created_at', 'desc')
-                ->limit(20)
-                ->get()
-                ->map(function ($txn) {
-                    return [
-                        'order_reference' => $txn->order_reference,
-                        'customer_name' => $txn->customer_name ?? $txn->description ?? 'Payment',
-                        'phone' => $txn->phone,
-                        'amount' => $txn->amount,
-                        'status' => $txn->status,
-                        'payment_method' => $txn->payment_method,
-                        'created_at' => $txn->created_at ? $txn->created_at->toDateTimeString() : 'N/A',
-                    ];
-                })->toArray();
-
-            // --- Step 2: Prepare system prompt with data ---
-            $systemPrompt = <<<SYSTEM_PROMPT
-You are a helpful financial assistant for Feedtan Digital staff. You have access to real-time business data from their payment system.
-
-CURRENT BUSINESS DATA AS OF {now}:
-
-**Today's Stats:
-- Total Transactions Today: {$todayTotalCount}
-- Successful Transactions Today: {$todaySuccessfulCount}
-- Success Rate Today: {$successRate}%
-- Total Amount Collected Today: TZS {$todaySettledAmount}
-- Current Account Balance: TZS {$accountBalance['balance']}
-
-**Top Customers Today:
-{top_customers}
-
-**Payment Methods Today:
-{payment_methods}
-
-**Top Payment Purposes Today:
-{top_purposes}
-
-**Transaction Status Breakdown Today:
-{status_stats}
-
-**Recent Successful Transactions Today (last 20):
-{recent_transactions}
-
-IMPORTANT: When answering questions, use this data directly. Be friendly and professional.
-SYSTEM_PROMPT;
-
-            // Format data for system prompt
-            $topCustomersStr = empty($topCustomersToday) ? 'None yet today' : json_encode($topCustomersToday, JSON_PRETTY_PRINT);
-            $paymentMethodsStr = empty($paymentMethodsToday) ? 'None yet today' : json_encode($paymentMethodsToday, JSON_PRETTY_PRINT);
-            $topPurposesStr = empty($topPurposesToday) ? 'None yet today' : json_encode($topPurposesToday, JSON_PRETTY_PRINT);
-            $statusStatsStr = empty($statusStatsToday) ? 'None yet today' : json_encode($statusStatsToday, JSON_PRETTY_PRINT);
-            $recentTransactionsStr = empty($recentTransactions) ? 'None yet today' : json_encode($recentTransactions, JSON_PRETTY_PRINT);
-
-            $systemPrompt = str_replace(
-                ['{now}', '{top_customers}', '{payment_methods}', '{top_purposes}', '{status_stats}', '{recent_transactions}'],
-                [now()->toDateTimeString(), $topCustomersStr, $paymentMethodsStr, $topPurposesStr, $statusStatsStr, $recentTransactionsStr],
-                $systemPrompt
-            );
-
-            $messages = [
-                [
-                    'role' => 'user',
-                    'parts' => [['text' => $systemPrompt]]
-                ],
-                [
-                    'role' => 'model',
-                    'parts' => [['text' => 'Okay, I understand. I have access to this business data and will use it to answer staff questions.']]
-                ]
-            ];
-            
-            if ($request->has('history') && is_array($request->history)) {
-                foreach ($request->history as $item) {
-                    $messages[] = [
-                        'role' => $item['role'] ?? 'user',
-                        'parts' => [['text' => $item['text'] ?? '']]
-                    ];
-                }
-            }
-            
-            $messages[] = [
-                'role' => 'user',
-                'parts' => [['text' => $request->message]]
-            ];
-
-            // First, get list of available models
-            $availableModel = null;
-            $apiVersionToUse = null;
-            
-            foreach (['v1', 'v1beta'] as $apiVersion) {
-                try {
-                    $listResponse = Http::timeout(30)
-                        ->get("https://generativelanguage.googleapis.com/{$apiVersion}/models?key={$apiKey}");
-                    
-                    if ($listResponse->successful()) {
-                        $modelsList = $listResponse->json();
-                        if (isset($modelsList['models']) && is_array($modelsList['models'])) {
-                            foreach ($modelsList['models'] as $model) {
-                                if (
-                                    str_contains($model['name'], 'gemini') &&
-                                    isset($model['supportedGenerationMethods']) &&
-                                    in_array('generateContent', $model['supportedGenerationMethods'])
-                                ) {
-                                    $availableModel = str_replace('models/', '', $model['name']);
-                                    $apiVersionToUse = $apiVersion;
-                                    break 2;
-                                }
+                if ($listResponse->successful()) {
+                    $modelsList = $listResponse->json();
+                    if (isset($modelsList['models']) && is_array($modelsList['models'])) {
+                        foreach ($modelsList['models'] as $model) {
+                            // Check if model supports generateContent
+                            if (
+                                str_contains($model['name'], 'gemini') &&
+                                isset($model['supportedGenerationMethods']) &&
+                                in_array('generateContent', $model['supportedGenerationMethods'])
+                            ) {
+                                // Found a supported model
+                                $availableModel = str_replace('models/', '', $model['name']);
+                                $apiVersionToUse = $apiVersion;
+                                break 2;
                             }
                         }
                     }
-                } catch (\Exception $e) {
-                    // Continue
                 }
+            } catch (\Exception $e) {
+                // Continue to next API version
             }
+        }
 
-            if (!$availableModel) {
-                $fallbackModels = [
-                    ['version' => 'v1', 'model' => 'gemini-1.5-flash'],
-                    ['version' => 'v1', 'model' => 'gemini-1.0-pro'],
-                    ['version' => 'v1beta', 'model' => 'gemini-1.5-flash'],
-                    ['version' => 'v1beta', 'model' => 'gemini-1.0-pro'],
-                ];
-                
-                foreach ($fallbackModels as $item) {
-                    $apiVersionToUse = $item['version'];
-                    $availableModel = $item['model'];
-                    break;
-                }
+        // If no model found, try fallback models
+        if (!$availableModel) {
+            $fallbackModels = [
+                ['version' => 'v1', 'model' => 'gemini-1.5-flash'],
+                ['version' => 'v1', 'model' => 'gemini-1.0-pro'],
+                ['version' => 'v1beta', 'model' => 'gemini-1.5-flash'],
+                ['version' => 'v1beta', 'model' => 'gemini-1.0-pro'],
+            ];
+
+            foreach ($fallbackModels as $item) {
+                $apiVersionToUse = $item['version'];
+                $availableModel = $item['model'];
+                break;
             }
+        }
 
-            $response = Http::timeout(90)
+        // Now try to use the model
+        try {
+            $response = Http::timeout(60)
                 ->post("https://generativelanguage.googleapis.com/{$apiVersionToUse}/models/{$availableModel}:generateContent?key={$apiKey}", [
                     'contents' => $messages,
                     'generationConfig' => [
@@ -257,7 +124,7 @@ SYSTEM_PROMPT;
             }
 
             $result = $response->json();
-            
+
             $aiResponse = $result['candidates'][0]['content']['parts'][0]['text'] ?? 'No response received';
 
             return response()->json([
@@ -269,8 +136,105 @@ SYSTEM_PROMPT;
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred: ' . $e->getMessage() . ' (File: ' . $e->getFile() . ' Line: ' . $e->getLine() . ')',
+                'message' => 'An error occurred: ' . $e->getMessage(),
+                'model' => $availableModel,
+                'version' => $apiVersionToUse
             ], 500);
         }
+    }
+
+    private function gatherSystemData(): array
+    {
+        $now = Carbon::now();
+        $settledStatuses = ['SUCCESS', 'SETTLED', 'success', 'settled'];
+
+        // Today's data
+        $todayStart = $now->copy()->startOfDay();
+        $todayEnd = $now->copy()->endOfDay();
+        $todayTransactions = Transaction::whereBetween('created_at', [$todayStart, $todayEnd])->get();
+        $todaySettled = $todayTransactions->whereIn('status', $settledStatuses);
+        $todaySettledCount = $todaySettled->count();
+        $todaySettledAmount = $todaySettled->sum('amount');
+
+        // This week's data
+        $weekStart = $now->copy()->startOfWeek();
+        $weekEnd = $now->copy()->endOfWeek();
+        $weekTransactions = Transaction::whereBetween('created_at', [$weekStart, $weekEnd])->get();
+        $weekSettled = $weekTransactions->whereIn('status', $settledStatuses);
+        $weekSettledCount = $weekSettled->count();
+        $weekSettledAmount = $weekSettled->sum('amount');
+
+        // This month's data
+        $monthStart = $now->copy()->startOfMonth();
+        $monthEnd = $now->copy()->endOfMonth();
+        $monthTransactions = Transaction::whereBetween('created_at', [$monthStart, $monthEnd])->get();
+        $monthSettled = $monthTransactions->whereIn('status', $settledStatuses);
+        $monthSettledCount = $monthSettled->count();
+        $monthSettledAmount = $monthSettled->sum('amount');
+
+        // Payout data
+        $todayPayouts = Payout::whereBetween('created_at', [$todayStart, $todayEnd])->get();
+        $monthPayouts = Payout::whereBetween('created_at', [$monthStart, $monthEnd])->get();
+
+        // Account balance
+        $accountBalance = AccountBalance::where('currency', 'TZS')->first();
+
+        // Top customers
+        $topCustomers = $monthSettled
+            ->whereNotNull('phone')
+            ->groupBy('phone')
+            ->map(function ($group) {
+                return [
+                    'phone' => $group->first()->phone,
+                    'name' => $group->first()->customer_name ?? $group->first()->description ?? 'Unknown',
+                    'count' => $group->count(),
+                    'total_amount' => $group->sum('amount')
+                ];
+            })
+            ->sortByDesc('total_amount')
+            ->take(10)
+            ->values()
+            ->toArray();
+
+        // Recent transactions
+        $recentTransactions = Transaction::orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($txn) {
+                return [
+                    'id' => $txn->id,
+                    'order_reference' => $txn->order_reference,
+                    'status' => $txn->status,
+                    'amount' => $txn->amount,
+                    'customer_name' => $txn->customer_name ?? $txn->description ?? 'Unknown',
+                    'phone' => $txn->phone,
+                    'payment_method' => $txn->payment_method,
+                    'created_at' => $txn->created_at->toISOString()
+                ];
+            })
+            ->toArray();
+
+        return [
+            'current_datetime' => $now->toISOString(),
+            'today' => [
+                'settled_transactions_count' => $todaySettledCount,
+                'settled_amount_tzs' => $todaySettledAmount,
+                'payouts_count' => $todayPayouts->count(),
+                'payouts_amount_tzs' => $todayPayouts->sum('amount')
+            ],
+            'this_week' => [
+                'settled_transactions_count' => $weekSettledCount,
+                'settled_amount_tzs' => $weekSettledAmount
+            ],
+            'this_month' => [
+                'settled_transactions_count' => $monthSettledCount,
+                'settled_amount_tzs' => $monthSettledAmount,
+                'payouts_count' => $monthPayouts->count(),
+                'payouts_amount_tzs' => $monthPayouts->sum('amount')
+            ],
+            'account_balance_tzs' => $accountBalance?->balance ?? 0,
+            'top_customers' => $topCustomers,
+            'recent_transactions' => $recentTransactions
+        ];
     }
 }

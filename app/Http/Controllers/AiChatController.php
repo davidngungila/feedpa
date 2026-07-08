@@ -41,7 +41,7 @@ class AiChatController extends Controller
 
         try {
             $response = Http::timeout(60)
-                ->post("https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key={$apiKey}", [
+                ->post("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
                     'contents' => $messages,
                     'generationConfig' => [
                         'temperature' => 0.7,

@@ -132,7 +132,7 @@ CURRENT BUSINESS DATA AS OF {now}:
 - Successful Transactions Today: {$todaySuccessfulCount}
 - Success Rate Today: {$successRate}%
 - Total Amount Collected Today: TZS {$todaySettledAmount}
-- Current Account Balance: TZS {$accountBalance}
+- Current Account Balance: TZS {$accountBalance['balance']}
 
 **Top Customers Today:
 {top_customers}

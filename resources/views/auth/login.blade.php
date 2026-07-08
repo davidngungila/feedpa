@@ -8,8 +8,6 @@
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <!-- Google Fonts -->
@@ -48,12 +46,13 @@
         @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
         @keyframes countUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
         @keyframes moveRightLeft { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-20px); } }
+        .hidden-element { display: none !important; }
     </style>
 </head>
-<body class="h-full main-bg" x-data="loginApp()">
+<body class="h-full main-bg">
 
     <!-- Auto Logout Toast Notification -->
-    <div id="auto-logout-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-yellow-100 border border-yellow-400" style="animation: moveRightLeft 4s ease-in-out infinite;">
+    <div id="auto-logout-toast" class="fixed top-4 right-4 z-[9999] hidden-element flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-yellow-100 border border-yellow-400" style="animation: moveRightLeft 4s ease-in-out infinite;">
         <div class="flex-shrink-0">
             <i class="fa-solid fa-clock text-2xl text-yellow-600"></i>
         </div>
@@ -64,7 +63,7 @@
     </div>
 
     <!-- Error Toast Notification -->
-    <div id="error-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-red-100 border border-red-400">
+    <div id="error-toast" class="fixed top-4 right-4 z-[9999] hidden-element flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-red-100 border border-red-400">
         <div class="flex-shrink-0">
             <i class="fa-solid fa-exclamation-circle text-2xl text-red-600"></i>
         </div>
@@ -75,7 +74,7 @@
     </div>
     
     <!-- Success Toast Notification -->
-    <div id="success-toast" class="fixed top-4 right-4 z-[9999] hidden flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-green-100 border border-green-400">
+    <div id="success-toast" class="fixed top-4 right-4 z-[9999] hidden-element flex items-center gap-4 px-6 py-4 rounded-xl shadow-2xl bg-green-100 border border-green-400">
         <div class="flex-shrink-0">
             <i class="fa-solid fa-check-circle text-2xl text-green-600"></i>
         </div>
@@ -88,7 +87,7 @@
     <!-- ============================================================
          LOGIN SCREEN
          ============================================================ -->
-    <div x-show="!showSplash" x-transition class="fixed inset-0 z-50 flex items-center justify-center">
+    <div id="loginScreen" class="fixed inset-0 z-50 flex items-center justify-center">
         <!-- Background decorations -->
         <div class="absolute inset-0 overflow-hidden pointer-events-none">
             <div class="absolute -top-40 -left-40 w-96 h-96 rounded-full opacity-10 bg-primary-600"></div>
@@ -107,7 +106,7 @@
                     <p class="text-sm mt-1 text-primary-600">Payment System</p>
                 </div>
 
-                <form id="loginForm" method="POST" action="{{ route('login.attempt', ['entryToken' => request()->route('entryToken')]) }}" @submit.prevent="submitLogin()">
+                <form id="loginForm" method="POST" action="{{ route('login.attempt', ['entryToken' => request()->route('entryToken')]) }}">
                     @csrf
 
                     <!-- Email -->
@@ -145,7 +144,7 @@
                     </div>
 
                     <!-- Login Button -->
-                    <button type="submit" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/20 active:scale-95">
+                    <button type="submit" id="submitBtn" class="w-full py-3 rounded-xl bg-primary-600 hover:bg-primary-500 text-white font-semibold text-sm transition-all duration-200 hover:shadow-lg hover:shadow-primary-900/20 active:scale-95">
                         <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign In
                     </button>
                 </form>
@@ -156,7 +155,7 @@
     <!-- ============================================================
          LOADING SCREEN
          ============================================================ -->
-    <div x-show="showSplash" x-transition class="fixed inset-0 z-[60] flex items-center justify-center">
+    <div id="loadingScreen" class="fixed inset-0 z-[60] flex items-center justify-center hidden-element">
         <div class="text-center">
             <!-- Spinner -->
             <div class="mb-6">
@@ -164,61 +163,27 @@
             </div>
             <!-- Step messages -->
             <div class="space-y-1">
-                <p class="text-lg font-bold text-primary-900" x-text="currentStep"></p>
-                <p class="text-sm text-primary-600" x-text="currentStepDescription"></p>
+                <p class="text-lg font-bold text-primary-900" id="currentStep">Validating...</p>
+                <p class="text-sm text-primary-600" id="currentStepDescription">Checking your credentials</p>
             </div>
         </div>
     </div>
 
     <script>
-        function loginApp() {
-            return {
-                showSplash: false,
-                currentStep: 'Validating...',
-                currentStepDescription: 'Checking your credentials',
-                steps: [
-                    { title: 'Validating...', description: 'Checking your credentials', delay: 400 },
-                    { title: 'Authorizing...', description: 'Verifying your account', delay: 400 }
-                ],
-                async submitLogin() {
-                    const form = document.getElementById('loginForm');
-                    const emailInput = document.getElementById('email');
-                    const passwordInput = document.getElementById('password');
-                    
-                    document.cookie = "auto_logout=; path=/; max-age=-1";
-                    document.getElementById('auto-logout-toast').classList.add('hidden');
-                    document.getElementById('error-toast').classList.add('hidden');
-                    
-                    if (!emailInput.value.trim() || !passwordInput.value.trim()) {
-                        const errorToast = document.getElementById('error-toast');
-                        const errorTitle = document.getElementById('error-toast-title');
-                        const errorMessage = document.getElementById('error-toast-message');
-                        
-                        errorTitle.textContent = 'Validation Error';
-                        errorMessage.textContent = 'Please enter both email and password.';
-                        errorToast.classList.remove('hidden');
-                        
-                        setTimeout(() => {
-                            errorToast.classList.add('hidden');
-                        }, 5000);
-                        
-                        return;
-                    }
-                    
-                    this.showSplash = true;
-                    
-                    for (let i = 0; i < this.steps.length; i++) {
-                        this.currentStep = this.steps[i].title;
-                        this.currentStepDescription = this.steps[i].description;
-                        await new Promise(resolve => setTimeout(resolve, this.steps[i].delay));
-                    }
-                    
-                    form.submit();
-                }
-            }
-        }
-        
         document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('loginForm');
+            const loginScreen = document.getElementById('loginScreen');
+            const loadingScreen = document.getElementById('loadingScreen');
+            const currentStepEl = document.getElementById('currentStep');
+            const currentStepDescriptionEl = document.getElementById('currentStepDescription');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            const steps = [
+                { title: 'Validating...', description: 'Checking your credentials', delay: 400 },
+                { title: 'Authorizing...', description: 'Verifying your account', delay: 400 }
+            ];
+
+            // Auto-logout cookie check
             const cookies = document.cookie.split(';');
             let autoLogout = false;
             
@@ -231,7 +196,7 @@
             
             if (autoLogout) {
                 const toast = document.getElementById('auto-logout-toast');
-                toast.classList.remove('hidden');
+                toast.classList.remove('hidden-element');
             }
             
             @if($errors->any())
@@ -244,10 +209,10 @@
                     $firstError = $errors->first();
                 @endphp
                 errorMessage.textContent = '{{ addslashes($firstError) }}';
-                errorToast.classList.remove('hidden');
+                errorToast.classList.remove('hidden-element');
                 
                 setTimeout(() => {
-                    errorToast.classList.add('hidden');
+                    errorToast.classList.add('hidden-element');
                 }, 5000);
             @endif
             
@@ -256,12 +221,50 @@
                 const successMessage = document.getElementById('success-toast-message');
                 
                 successMessage.textContent = '{{ addslashes(session('success')) }}';
-                successToast.classList.remove('hidden');
+                successToast.classList.remove('hidden-element');
                 
                 setTimeout(() => {
-                    successToast.classList.add('hidden');
+                    successToast.classList.add('hidden-element');
                 }, 5000);
             @endif
+
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const emailInput = document.getElementById('email');
+                const passwordInput = document.getElementById('password');
+                
+                document.cookie = "auto_logout=; path=/; max-age=-1";
+                document.getElementById('auto-logout-toast').classList.add('hidden-element');
+                document.getElementById('error-toast').classList.add('hidden-element');
+                
+                if (!emailInput.value.trim() || !passwordInput.value.trim()) {
+                    const errorToast = document.getElementById('error-toast');
+                    const errorTitle = document.getElementById('error-toast-title');
+                    const errorMessage = document.getElementById('error-toast-message');
+                    
+                    errorTitle.textContent = 'Validation Error';
+                    errorMessage.textContent = 'Please enter both email and password.';
+                    errorToast.classList.remove('hidden-element');
+                    
+                    setTimeout(() => {
+                        errorToast.classList.add('hidden-element');
+                    }, 5000);
+                    
+                    return;
+                }
+                
+                submitBtn.disabled = true;
+                loginScreen.classList.add('hidden-element');
+                loadingScreen.classList.remove('hidden-element');
+                
+                for (let i = 0; i < steps.length; i++) {
+                    currentStepEl.textContent = steps[i].title;
+                    currentStepDescriptionEl.textContent = steps[i].description;
+                    await new Promise(resolve => setTimeout(resolve, steps[i].delay));
+                }
+                
+                form.submit();
+            });
         });
     </script>
 </body>

@@ -158,6 +158,13 @@
                     <span>Dashboard</span>
                 </a>
 
+                <!-- AI Chat -->
+                <a href="javascript:void(0);" onclick="openChat()"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-primary-200 hover:bg-primary-800/50 hover:text-white">
+                    <i class="fa-solid fa-robot w-4 text-center"></i>
+                    <span>AI Chat</span>
+                </a>
+
                 <!-- Payments Dropdown -->
                 <div class="space-y-0.5">
                     <button @click="openDropdowns.includes('payments') ? openDropdowns = openDropdowns.filter(d => d !== 'payments') : openDropdowns.push('payments')"
@@ -623,6 +630,170 @@
             }, 1000);
         @endif
     </script>
+
+    <!-- AI Chat Functionality -->
+    <script>
+        let chatHistory = [];
+        
+        function openChat() {
+            document.getElementById('chatModal').classList.remove('hidden');
+            document.getElementById('chatMessages').scrollTop = document.getElementById('chatMessages').scrollHeight;
+        }
+        
+        function closeChat() {
+            document.getElementById('chatModal').classList.add('hidden');
+        }
+        
+        async function sendMessage() {
+            const messageInput = document.getElementById('chatInput');
+            const message = messageInput.value.trim();
+            if (!message) return;
+            
+            messageInput.value = '';
+            
+            // Add user message to UI
+            addMessageToChat('user', message);
+            chatHistory.push({role: 'user', text: message});
+            
+            // Show loading indicator
+            const loadingMessage = addLoadingMessage();
+            
+            try {
+                const response = await fetch('{{ route('dashboard.ai-chat') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: chatHistory
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // Remove loading indicator
+                loadingMessage.remove();
+                
+                if (data.success) {
+                    addMessageToChat('model', data.response);
+                    chatHistory.push({role: 'model', text: data.response});
+                } else {
+                    addMessageToChat('model', 'Error: ' + (data.message || 'Something went wrong'));
+                }
+            } catch (error) {
+                loadingMessage.remove();
+                addMessageToChat('model', 'Error: ' + error.message);
+            }
+        }
+        
+        function addMessageToChat(role, text) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'p-4 rounded-lg mb-3 ' + 
+                (role === 'user' 
+                    ? 'bg-green-100 text-gray-800 ml-auto max-w-[80%]' 
+                    : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white max-w-[80%]');
+            
+            const formattedText = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+            
+            messageDiv.innerHTML = formattedText;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            return messageDiv;
+        }
+        
+        function addLoadingMessage() {
+            const chatMessages = document.getElementById('chatMessages');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'p-4 rounded-lg mb-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white max-w-[80%]';
+            loadingDiv.innerHTML = '<div class="flex space-x-1"><span class="w-2 h-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0s;"></span><span class="w-2 h-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.2s;"></span><span class="w-2 h-2 bg-green-600 rounded-full animate-bounce" style="animation-delay: 0.4s;"></span></div>';
+            chatMessages.appendChild(loadingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            return loadingDiv;
+        }
+        
+        // Handle enter key on chat input
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        sendMessage();
+                    }
+                });
+            }
+        });
+    </script>
+
+    <!-- Floating AI Chat Button -->
+    <button 
+        onclick="openChat()"
+        class="fixed bottom-8 right-8 z-50 w-14 h-14 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+        </svg>
+    </button>
+
+    <!-- AI Chat Modal -->
+    <div id="chatModal" class="fixed bottom-24 right-8 z-40 w-96 max-w-[90vw] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 hidden">
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-green-600 to-green-500 text-white p-5 rounded-t-2xl">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-lg">AI Assistant</h3>
+                        <p class="text-sm text-green-100">Powered by Google Gemini</p>
+                    </div>
+                </div>
+                <button 
+                    onclick="closeChat()"
+                    class="text-white/80 hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div 
+            id="chatMessages" 
+            class="p-5 h-80 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+            <div class="p-4 rounded-lg mb-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white max-w-[80%]">
+                <p>Hi there! How can I help you with your payments and transactions today?</p>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-5 border-t border-gray-200 dark:border-gray-700">
+            <div class="flex gap-3">
+                <input 
+                    id="chatInput" 
+                    type="text" 
+                    placeholder="Ask me anything..."
+                    class="flex-1 px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500">
+                <button 
+                    onclick="sendMessage()"
+                    class="px-5 py-3 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-xl hover:from-green-500 hover:to-green-400 transition-all font-semibold">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // Show loading when page starts loading (from cache or navigation)

@@ -146,6 +146,11 @@ class SettingsController extends Controller
         $paymentNotificationsEnabled = SystemSetting::get('payment_notifications_enabled', true);
         $payoutNotificationsEnabled = SystemSetting::get('payout_notifications_enabled', true);
         
+        // AI Settings
+        $geminiApiKey = SystemSetting::get('gemini_api_key', '');
+        $geminiProjectName = SystemSetting::get('gemini_project_name', '');
+        $geminiProjectNumber = SystemSetting::get('gemini_project_number', '');
+        
         $users = User::all();
         
         return view('settings.general', compact(
@@ -158,6 +163,9 @@ class SettingsController extends Controller
             'siteDescription',
             'paymentNotificationsEnabled',
             'payoutNotificationsEnabled',
+            'geminiApiKey',
+            'geminiProjectName',
+            'geminiProjectNumber',
             'users'
         ));
     }
@@ -219,6 +227,9 @@ class SettingsController extends Controller
             'site_description' => 'nullable|string',
             'payment_notifications_enabled' => 'nullable',
             'payout_notifications_enabled' => 'nullable',
+            'gemini_api_key' => 'nullable|string',
+            'gemini_project_name' => 'nullable|string',
+            'gemini_project_number' => 'nullable|string',
         ]);
 
         SystemSetting::set('session_timeout', $validated['session_timeout'] ?? 120, 'number', 'general', 'Session Timeout (minutes)', 'How long until session expires');
@@ -227,6 +238,11 @@ class SettingsController extends Controller
         SystemSetting::set('site_description', $validated['site_description'] ?? '', 'string', 'general', 'Site Description', 'Short description of the site');
         SystemSetting::set('payment_notifications_enabled', $request->has('payment_notifications_enabled'), 'boolean', 'general', 'Payment Notifications', 'Email officers when payment is made');
         SystemSetting::set('payout_notifications_enabled', $request->has('payout_notifications_enabled'), 'boolean', 'general', 'Payout Notifications', 'Email officers when payout is made');
+        
+        // AI Settings
+        SystemSetting::set('gemini_api_key', $validated['gemini_api_key'] ?? '', 'string', 'ai', 'Gemini API Key', 'API key for Google Gemini AI');
+        SystemSetting::set('gemini_project_name', $validated['gemini_project_name'] ?? '', 'string', 'ai', 'Gemini Project Name', 'Project name for Google Gemini API');
+        SystemSetting::set('gemini_project_number', $validated['gemini_project_number'] ?? '', 'string', 'ai', 'Gemini Project Number', 'Project number for Google Gemini API');
 
         return back()->with('success', 'General Settings updated successfully!');
     }

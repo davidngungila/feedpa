@@ -4,7 +4,7 @@
 
 @section('content')
 <div class="space-y-6 animate-fade-in">
-    <!-- Header with Sync Buttons -->
+    <!-- Header with Sync and Export Buttons -->
     <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <h2 class="text-xl font-bold text-primary-900 dark:text-white">Dashboard Overview</h2>
         <div class="flex flex-wrap items-center gap-4">
@@ -14,7 +14,7 @@
                 <p class="text-xs text-purple-600 dark:text-purple-400">
                     Bills last sync: {{ cache()->get('api_bills_last_sync') ? \Carbon\Carbon::createFromTimestamp(cache()->get('api_bills_last_sync'))->diffForHumans() : 'Never' }}</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
                 <form action="{{ route('api-sync') }}" method="POST">
                     @csrf
                     <button type="submit" class="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
@@ -27,6 +27,14 @@
                         <i class="fas fa-sync-alt mr-1"></i> Sync Bills
                     </button>
                 </form>
+                <div class="border-l border-gray-300 dark:border-gray-600 h-8 mx-2"></div>
+                <a href="{{ route('dashboard.export.pdf', ['date_filter' => request('date_filter', 'today'), 'start_date' => request('start_date'), 'end_date' => request('end_date')]) }}" 
+                   class="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
+                    <i class="fas fa-file-pdf mr-1"></i> Export PDF
+                </a>
+                <button id="exportImageBtn" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
+                    <i class="fas fa-image mr-1"></i> Export Image
+                </button>
             </div>
         </div>
     </div>
@@ -46,10 +54,10 @@
                         'quarter' => '3 Months',
                         'year' => 'This Year',
                     ] as $value => $label)
-                        <button type="submit" name="date_filter" value="{{ $value }}"
-                                class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ ($dateFilter ?? 'today') === $value ? 'bg-primary-600 text-white shadow-md' : 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 hover:bg-primary-100' }}">
-                            {{ $label }}
-                        </button>
+                    <button type="submit" name="date_filter" value="{{ $value }}"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all {{ ($dateFilter ?? 'today') === $value ? 'bg-primary-600 text-white shadow-md' : 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-300 hover:bg-primary-100' }}">
+                        {{ $label }}
+                    </button>
                     @endforeach
                 </div>
             </div>
@@ -72,18 +80,24 @@
     </div>
 
     <!-- Stats Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div id="dashboard-content" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Settled amount for period -->
         <div class="card p-5 flex items-center gap-4">
             <div class="w-12 h-12 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center text-primary-600 dark:text-primary-400">
                 <i class="fas fa-money-bill-wave text-xl"></i>
             </div>
-            <div>
+            <div class="flex-1">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500">{{ $periodLabel ?? 'Today' }} Payments</p>
                 <p class="text-[9px] text-primary-400 normal-case">Money settled in period</p>
                 <h3 class="text-xl font-black text-primary-900 dark:text-white mt-1">
                     <span class="text-xs font-bold text-primary-500">TZS</span> {{ number_format($stats['period_settled_amount'] ?? 0, 0) }}
                 </h3>
+                @if($stats['amount_growth_rate'] ?? 0 != 0)
+                <p class="text-[10px] mt-1 flex items-center gap-1 {{ ($stats['amount_growth_rate'] ?? 0) > 0 ? 'text-green-600' : 'text-red-600' }}">
+                    <i class="fas fa-arrow-{{ ($stats['amount_growth_rate'] ?? 0) > 0 ? 'up' : 'down' }}"></i>
+                    {{ abs($stats['amount_growth_rate']) }}% from previous period
+                </p>
+                @endif
             </div>
         </div>
 
@@ -92,9 +106,15 @@
             <div class="w-12 h-12 rounded-2xl bg-green-50 dark:bg-green-900/20 flex items-center justify-center text-green-600">
                 <i class="fas fa-check-double text-xl"></i>
             </div>
-            <div>
+            <div class="flex-1">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Successful for {{ strtolower($periodLabel ?? 'today') }}</p>
                 <h3 class="text-2xl font-black text-primary-900 dark:text-white mt-1">{{ number_format($stats['period_successful_count'] ?? 0) }}</h3>
+                @if($stats['count_growth_rate'] ?? 0 != 0)
+                <p class="text-[10px] mt-1 flex items-center gap-1 {{ ($stats['count_growth_rate'] ?? 0) > 0 ? 'text-green-600' : 'text-red-600' }}">
+                    <i class="fas fa-arrow-{{ ($stats['count_growth_rate'] ?? 0) > 0 ? 'up' : 'down' }}"></i>
+                    {{ abs($stats['count_growth_rate']) }}% from previous period
+                </p>
+                @endif
             </div>
         </div>
 
@@ -103,7 +123,7 @@
             <div class="w-12 h-12 rounded-2xl bg-primary-600 flex items-center justify-center text-white shadow-lg shadow-primary-900/20">
                 <i class="fas fa-wallet text-xl"></i>
             </div>
-            <div class="min-w-0">
+            <div class="flex-1 min-w-0">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-primary-500">Total Revenue</p>
                 <p class="text-[9px] text-primary-400 normal-case">Live ClickPesa balance (TZS)</p>
                 <h3 class="text-xl font-black text-primary-900 dark:text-white mt-1" id="accountBalanceAmount">
@@ -112,10 +132,10 @@
                 </h3>
                 <p class="text-[9px] text-primary-400 mt-1" id="accountBalanceSynced">
                     @if(!empty($accountBalance['synced_at']))
-                        <i class="fas fa-circle text-[6px] {{ ($accountBalance['live'] ?? false) ? 'text-green-500' : 'text-amber-500' }} me-1"></i>
-                        Updated {{ $accountBalance['synced_at']->diffForHumans() }}
+                    <i class="fas fa-circle text-[6px] {{ ($accountBalance['live'] ?? false) ? 'text-green-500' : 'text-amber-500' }} me-1"></i>
+                    Updated {{ $accountBalance['synced_at']->diffForHumans() }}
                     @else
-                        Balance not synced yet
+                    Balance not synced yet
                     @endif
                 </p>
             </div>
@@ -126,10 +146,57 @@
             <div class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600">
                 <i class="fas fa-chart-pie text-xl"></i>
             </div>
-            <div>
+            <div class="flex-1">
                 <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Success Rate</p>
                 <p class="text-[9px] text-primary-400 normal-case">For {{ strtolower($periodLabel ?? 'today') }}</p>
                 <h3 class="text-2xl font-black text-primary-900 dark:text-white mt-1">{{ $stats['success_rate'] ?? 0 }}%</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Average Transaction Value -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="card p-5 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-2xl bg-yellow-50 dark:bg-yellow-900/20 flex items-center justify-center text-yellow-600">
+                <i class="fas fa-coins text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Average Transaction Value</p>
+                <h3 class="text-2xl font-black text-primary-900 dark:text-white mt-1">
+                    <span class="text-xs font-bold text-primary-500">TZS</span> {{ number_format($stats['average_transaction_value'] ?? 0, 0) }}
+                </h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Insights Section -->
+    <div class="card p-5">
+        <h3 class="text-sm font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
+            <i class="fas fa-robot"></i> AI Insights & Recommendations
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-3">
+                <h4 class="text-xs font-bold text-primary-700">Key Insights</h4>
+                @foreach($aiInsights['insights'] ?? [] as $insight)
+                <div class="p-3 rounded-lg {{ $insight['bg'] ?? 'bg-blue-50' }} border border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i class="fas {{ $insight['icon'] ?? 'fa-info-circle' }} {{ $insight['color'] ?? 'text-blue-600' }}"></i>
+                        <span class="text-xs font-bold text-primary-900 dark:text-white">{{ $insight['title'] ?? '' }}</span>
+                    </div>
+                    <p class="text-xs text-gray-600 dark:text-gray-400">{{ $insight['message'] ?? '' }}</p>
+                </div>
+                @endforeach
+            </div>
+            <div>
+                <h4 class="text-xs font-bold text-primary-700 mb-3">Recommendations</h4>
+                <ul class="space-y-2">
+                    @foreach($aiInsights['recommendations'] ?? [] as $rec)
+                    <li class="flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300">
+                        <i class="fas fa-lightbulb text-yellow-500 mt-0.5"></i>
+                        {{ $rec }}
+                    </li>
+                    @endforeach
+                </ul>
             </div>
         </div>
     </div>
@@ -177,6 +244,26 @@
         </div>
     </div>
 
+    <!-- Top Purposes -->
+    @if(!empty($stats['top_purposes']))
+    <div class="card p-5">
+        <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
+            <i class="fas fa-star"></i> Top Payment Purposes
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            @foreach($stats['top_purposes'] as $purpose)
+            <div class="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold text-primary-900 dark:text-white truncate max-w-[150px]">{{ $purpose['description'] }}</span>
+                </div>
+                <div class="text-lg font-black text-primary-600">TZS {{ number_format($purpose['total_amount'], 0) }}</div>
+                <div class="text-[10px] text-gray-500">{{ $purpose['count'] }} payments</div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Recent Payments -->
         <div class="lg:col-span-2 space-y-4">
@@ -200,29 +287,29 @@
                         </thead>
                         <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
                             @forelse($recentPayments ?? [] as $payment)
-                                <tr class="hover:bg-primary-50/30 dark:hover:bg-primary-900/5 transition-colors">
-                                    <td>
-                                        <div class="font-bold text-primary-900 dark:text-white">{{ $payment['customer_name'] ?? 'Mteja' }}</div>
-                                        <div class="text-[10px] text-primary-500 font-mono">{{ $payment['customer_phone'] ?? 'N/A' }}</div>
-                                    </td>
-                                    <td>
-                                        <span class="font-mono text-[10px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded text-primary-700 dark:text-primary-300">
-                                            {{ $payment['orderReference'] ?? 'N/A' }}
-                                        </span>
-                                    </td>
-                                    <td class="font-bold text-primary-900 dark:text-white">
-                                        {{ number_format($payment['amount'] ?? $payment['collectedAmount'] ?? 0, 0) }}
-                                    </td>
-                                    <td>
-                                        <span class="badge {{ in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']) ? 'badge-green' : (in_array($payment['status'] ?? '', ['FAILED', 'ERROR']) ? 'badge-red' : 'badge-yellow') }}">
-                                            {{ $payment['status'] ?? 'PENDING' }}
-                                        </span>
-                                    </td>
-                                </tr>
+                            <tr class="hover:bg-primary-50/30 dark:hover:bg-primary-900/5 transition-colors">
+                                <td>
+                                    <div class="font-bold text-primary-900 dark:text-white">{{ $payment['customer_name'] ?? 'Mteja' }}</div>
+                                    <div class="text-[10px] text-primary-500 font-mono">{{ $payment['customer_phone'] ?? 'N/A' }}</div>
+                                </td>
+                                <td>
+                                    <span class="font-mono text-[10px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded text-primary-700 dark:text-primary-300">
+                                        {{ $payment['orderReference'] ?? 'N/A' }}
+                                    </span>
+                                </td>
+                                <td class="font-bold text-primary-900 dark:text-white">
+                                    {{ number_format($payment['amount'] ?? $payment['collectedAmount'] ?? 0, 0) }}
+                                </td>
+                                <td>
+                                    <span class="badge {{ in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']) ? 'badge-green' : (in_array($payment['status'] ?? '', ['FAILED', 'ERROR']) ? 'badge-red' : 'badge-yellow') }}">
+                                        {{ $payment['status'] ?? 'PENDING' }}
+                                    </span>
+                                </td>
+                            </tr>
                             @empty
-                                <tr>
-                                    <td colspan="4" class="text-center py-10 text-primary-500 text-xs italic">No recent activities</td>
-                                </tr>
+                            <tr>
+                                <td colspan="4" class="text-center py-10 text-primary-500 text-xs italic">No recent activities</td>
+                            </tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -239,23 +326,23 @@
                 </h3>
                 <div class="card p-4 space-y-3">
                     @forelse($stats['top_customers'] ?? [] as $customer)
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-bold text-xs uppercase">
-                                    {{ substr($customer['name'] ?? 'C', 0, 1) }}
-                                </div>
-                                <div>
-                                    <p class="text-xs font-bold text-primary-900 dark:text-white truncate max-w-[120px]">{{ $customer['name'] ?? 'Member' }}</p>
-                                    <p class="text-[10px] text-primary-500">{{ $customer['count'] ?? 0 }} payments</p>
-                                </div>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 font-bold text-xs uppercase">
+                                {{ substr($customer['name'] ?? 'C', 0, 1) }}
                             </div>
-                            <div class="text-right">
-                                <p class="text-xs font-black text-primary-600 dark:text-primary-400">{{ number_format($customer['total_amount'] ?? $customer['amount'] ?? 0, 0) }}</p>
-                                <p class="text-[9px] text-gray-400 uppercase font-bold">TZS</p>
+                            <div>
+                                <p class="text-xs font-bold text-primary-900 dark:text-white truncate max-w-[120px]">{{ $customer['name'] ?? 'Member' }}</p>
+                                <p class="text-[10px] text-primary-500">{{ $customer['count'] ?? 0 }} payments</p>
                             </div>
                         </div>
+                        <div class="text-right">
+                            <p class="text-xs font-black text-primary-600 dark:text-primary-400">{{ number_format($customer['total_amount'] ?? $customer['amount'] ?? 0, 0) }}</p>
+                            <p class="text-[9px] text-gray-400 uppercase font-bold">TZS</p>
+                        </div>
+                    </div>
                     @empty
-                        <p class="text-center py-4 text-primary-500 text-xs italic">No data available</p>
+                    <p class="text-center py-4 text-primary-500 text-xs italic">No data available</p>
                     @endforelse
                 </div>
             </div>
@@ -267,27 +354,30 @@
                 </h3>
                 <div class="card p-4 space-y-3">
                     @forelse($stats['payment_methods'] ?? [] as $method)
-                        <div>
-                            <div class="flex justify-between text-[10px] font-bold uppercase mb-1">
-                                <span class="text-primary-700 dark:text-primary-300">{{ $method['method'] ?? $method['name'] ?? 'Unknown' }}</span>
-                                <span class="text-primary-500">{{ number_format($method['count'] ?? 0) }}</span>
-                            </div>
-                            <div class="w-full h-1.5 bg-primary-50 dark:bg-dark-900 rounded-full overflow-hidden">
-                                @php 
-                                    $methodCount = $method['count'] ?? 0;
-                                    $percent = ($stats['period_successful_count'] ?? 0) > 0 ? ($methodCount / $stats['period_successful_count'] * 100) : 0;
-                                @endphp
-                                <div class="h-full bg-primary-600 rounded-full" style="width: {{ $percent }}%"></div>
-                            </div>
+                    <div>
+                        <div class="flex justify-between text-[10px] font-bold uppercase mb-1">
+                            <span class="text-primary-700 dark:text-primary-300">{{ $method['method'] ?? $method['name'] ?? 'Unknown' }}</span>
+                            <span class="text-primary-500">{{ number_format($method['count'] ?? 0) }}</span>
                         </div>
+                        <div class="w-full h-1.5 bg-primary-50 dark:bg-dark-900 rounded-full overflow-hidden">
+                            @php 
+                            $methodCount = $method['count'] ?? 0;
+                            $percent = ($stats['period_successful_count'] ?? 0) > 0 ? ($methodCount / $stats['period_successful_count'] * 100) : 0;
+                            @endphp
+                            <div class="h-full bg-primary-600 rounded-full" style="width: {{ $percent }}%"></div>
+                        </div>
+                    </div>
                     @empty
-                        <p class="text-center py-2 text-primary-500 text-xs italic">No data</p>
+                    <p class="text-center py-2 text-primary-500 text-xs italic">No data</p>
                     @endforelse
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- html2canvas for image export -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 <script>
@@ -296,21 +386,21 @@
         fetch('{{ route('dashboard.account-balance') }}', {
             headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         })
-            .then(res => res.json())
-            .then(payload => {
-                if (!payload.success || !payload.data) return;
-                const balance = payload.data.balance ?? 0;
-                const valueEl = document.getElementById('accountBalanceValue');
-                const syncedEl = document.getElementById('accountBalanceSynced');
-                if (valueEl) {
-                    valueEl.textContent = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(balance);
-                }
-                if (syncedEl) {
-                    const live = payload.data.live ? 'text-green-500' : 'text-amber-500';
-                    syncedEl.innerHTML = '<i class="fas fa-circle text-[6px] ' + live + ' me-1"></i>Updated just now';
-                }
-            })
-            .catch(() => {});
+        .then(res => res.json())
+        .then(payload => {
+            if (!payload.success || !payload.data) return;
+            const balance = payload.data.balance ?? 0;
+            const valueEl = document.getElementById('accountBalanceValue');
+            const syncedEl = document.getElementById('accountBalanceSynced');
+            if (valueEl) {
+                valueEl.textContent = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(balance);
+            }
+            if (syncedEl) {
+                const live = payload.data.live ? 'text-green-500' : 'text-amber-500';
+                syncedEl.innerHTML = '<i class="fas fa-circle text-[6px] ' + live + ' me-1"></i>Updated just now';
+            }
+        })
+        .catch(() => {});
     }
     refreshAccountBalance();
     setInterval(refreshAccountBalance, 60000);
@@ -348,6 +438,30 @@
     // Auto-sync every second
     setInterval(syncTransactions, 1000);
     setInterval(syncBills, 1000);
+
+    // Export to image
+    document.getElementById('exportImageBtn').addEventListener('click', function() {
+        const element = document.getElementById('dashboard-content');
+        this.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Exporting...';
+        this.disabled = true;
+        
+        html2canvas(document.body, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'dashboard-report-{{ $dateFilter }}-' + new Date().toISOString().slice(0,10) + '.png';
+            link.href = canvas.toDataURL();
+            link.click();
+            
+            this.innerHTML = '<i class="fas fa-image mr-1"></i> Export Image';
+            this.disabled = false;
+        }).catch(() => {
+            this.innerHTML = '<i class="fas fa-image mr-1"></i> Export Image';
+            this.disabled = false;
+        });
+    });
 
     // Daily Transactions Chart
     const dailyLabels = @json(array_column($stats['daily_stats'] ?? [], 'date'));

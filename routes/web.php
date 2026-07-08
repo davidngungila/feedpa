@@ -43,6 +43,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/send-manual-sms', [DashboardController::class, 'sendManualSMS'])->name('send.manual.sms');
         Route::post('/sync-transactions', [DashboardController::class, 'syncTransactions'])->name('sync-transactions');
         Route::post('/sync-bills', [DashboardController::class, 'syncBills'])->name('sync-bills');
+        Route::get('/export/pdf', [DashboardController::class, 'exportPdf'])->name('export.pdf');
     });
 
     // Payment Routes (Authenticated)

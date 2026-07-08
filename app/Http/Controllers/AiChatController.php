@@ -12,6 +12,11 @@ use Carbon\Carbon;
 
 class AiChatController extends Controller
 {
+    public function index()
+    {
+        return view('ai-chat.index');
+    }
+    
     public function chat(Request $request)
     {
         $request->validate([

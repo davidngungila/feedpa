@@ -159,8 +159,8 @@
                 </a>
 
                 <!-- AI Chat -->
-                <a href="javascript:void(0);" onclick="openChat()"
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all text-primary-200 hover:bg-primary-800/50 hover:text-white">
+                <a href="{{ route('dashboard.ai-chat.index') }}"
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('dashboard.ai-chat.*') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
                     <i class="fa-solid fa-robot w-4 text-center"></i>
                     <span>AI Chat</span>
                 </a>
@@ -671,19 +671,7 @@
                     })
                 });
                 
-                // First, get the raw response text to check what we're getting
-                const responseText = await response.text();
-                let data;
-                try {
-                    data = JSON.parse(responseText);
-                } catch (e) {
-                    // If it's not JSON, show the first 2000 characters in a pre tag
-                    loadingMessage.remove();
-                    addMessageToChat('model', 'Debug - Raw Server Response:<pre style="font-size: 10px; overflow-x: auto; background: #f0f0f0; padding: 5px; border-radius: 5px; max-height: 300px;">' + 
-                        escapeHtml(responseText.substring(0, 2000)) + 
-                        '</pre>');
-                    return;
-                }
+                const data = await response.json();
                 
                 // Remove loading indicator
                 loadingMessage.remove();
@@ -709,17 +697,6 @@
                 loadingMessage.remove();
                 addMessageToChat('model', 'Error: ' + error.message);
             }
-        }
-        
-        function escapeHtml(text) {
-            const map = {
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#039;'
-            };
-            return text.replace(/[&<>"]/g, function(m) { return map[m]; });
         }
         
         function addMessageToChat(role, text) {

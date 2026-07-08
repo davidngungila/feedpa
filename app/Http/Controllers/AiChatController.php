@@ -39,47 +39,94 @@ class AiChatController extends Controller
             'parts' => [['text' => $request->message]]
         ];
 
-        // Try multiple models in fallback order
-        $apiVersions = ['v1', 'v1beta'];
-        $models = ['gemini-1.5-flash', 'gemini-1.0-pro', 'gemini-pro'];
+        // First, get list of available models
+        $availableModel = null;
+        $apiVersionToUse = null;
         
-        $lastError = null;
-        
-        foreach ($apiVersions as $apiVersion) {
-            foreach ($models as $model) {
-                try {
-                    $response = Http::timeout(60)
-                        ->post("https://generativelanguage.googleapis.com/{$apiVersion}/models/{$model}:generateContent?key={$apiKey}", [
-                            'contents' => $messages,
-                            'generationConfig' => [
-                                'temperature' => 0.7,
-                                'topK' => 40,
-                                'topP' => 0.95,
-                                'maxOutputTokens' => 2048,
-                            ],
-                        ]);
-
-                    if ($response->successful()) {
-                        $result = $response->json();
-                        if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
-                            return response()->json([
-                                'success' => true,
-                                'response' => $result['candidates'][0]['content']['parts'][0]['text'],
-                            ]);
+        foreach (['v1', 'v1beta'] as $apiVersion) {
+            try {
+                $listResponse = Http::timeout(30)
+                    ->get("https://generativelanguage.googleapis.com/{$apiVersion}/models?key={$apiKey}");
+                
+                if ($listResponse->successful()) {
+                    $modelsList = $listResponse->json();
+                    if (isset($modelsList['models']) && is_array($modelsList['models'])) {
+                        foreach ($modelsList['models'] as $model) {
+                            // Check if model supports generateContent
+                            if (
+                                str_contains($model['name'], 'gemini') &&
+                                isset($model['supportedGenerationMethods']) &&
+                                in_array('generateContent', $model['supportedGenerationMethods'])
+                            ) {
+                                // Found a supported model
+                                $availableModel = str_replace('models/', '', $model['name']);
+                                $apiVersionToUse = $apiVersion;
+                                break 2;
+                            }
                         }
-                    } else {
-                        $lastError = $response->body();
                     }
-                } catch (\Exception $e) {
-                    $lastError = $e->getMessage();
                 }
+            } catch (\Exception $e) {
+                // Continue to next API version
             }
         }
 
-        return response()->json([
-            'success' => false,
-            'message' => 'Error calling Gemini API',
-            'error' => $lastError
-        ], 500);
+        // If no model found, try fallback models
+        if (!$availableModel) {
+            $fallbackModels = [
+                ['version' => 'v1', 'model' => 'gemini-1.5-flash'],
+                ['version' => 'v1', 'model' => 'gemini-1.0-pro'],
+                ['version' => 'v1beta', 'model' => 'gemini-1.5-flash'],
+                ['version' => 'v1beta', 'model' => 'gemini-1.0-pro'],
+            ];
+            
+            foreach ($fallbackModels as $item) {
+                $apiVersionToUse = $item['version'];
+                $availableModel = $item['model'];
+                break;
+            }
+        }
+
+        // Now try to use the model
+        try {
+            $response = Http::timeout(60)
+                ->post("https://generativelanguage.googleapis.com/{$apiVersionToUse}/models/{$availableModel}:generateContent?key={$apiKey}", [
+                    'contents' => $messages,
+                    'generationConfig' => [
+                        'temperature' => 0.7,
+                        'topK' => 40,
+                        'topP' => 0.95,
+                        'maxOutputTokens' => 2048,
+                    ],
+                ]);
+
+            if (!$response->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Error calling Gemini API',
+                    'error' => $response->body(),
+                    'usingModel' => $availableModel,
+                    'usingVersion' => $apiVersionToUse
+                ], $response->status());
+            }
+
+            $result = $response->json();
+            
+            $aiResponse = $result['candidates'][0]['content']['parts'][0]['text'] ?? 'No response received';
+
+            return response()->json([
+                'success' => true,
+                'response' => $aiResponse,
+                'model' => $availableModel,
+                'version' => $apiVersionToUse
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred: ' . $e->getMessage(),
+                'model' => $availableModel,
+                'version' => $apiVersionToUse
+            ], 500);
+        }
     }
 }

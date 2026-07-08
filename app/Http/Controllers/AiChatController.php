@@ -39,39 +39,47 @@ class AiChatController extends Controller
             'parts' => [['text' => $request->message]]
         ];
 
-        try {
-            $response = Http::timeout(60)
-                ->post("https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => $messages,
-                    'generationConfig' => [
-                        'temperature' => 0.7,
-                        'topK' => 40,
-                        'topP' => 0.95,
-                        'maxOutputTokens' => 2048,
-                    ],
-                ]);
+        // Try multiple models in fallback order
+        $apiVersions = ['v1', 'v1beta'];
+        $models = ['gemini-1.5-flash', 'gemini-1.0-pro', 'gemini-pro'];
+        
+        $lastError = null;
+        
+        foreach ($apiVersions as $apiVersion) {
+            foreach ($models as $model) {
+                try {
+                    $response = Http::timeout(60)
+                        ->post("https://generativelanguage.googleapis.com/{$apiVersion}/models/{$model}:generateContent?key={$apiKey}", [
+                            'contents' => $messages,
+                            'generationConfig' => [
+                                'temperature' => 0.7,
+                                'topK' => 40,
+                                'topP' => 0.95,
+                                'maxOutputTokens' => 2048,
+                            ],
+                        ]);
 
-            if (!$response->successful()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error calling Gemini API',
-                    'error' => $response->body()
-                ], $response->status());
+                    if ($response->successful()) {
+                        $result = $response->json();
+                        if (isset($result['candidates'][0]['content']['parts'][0]['text'])) {
+                            return response()->json([
+                                'success' => true,
+                                'response' => $result['candidates'][0]['content']['parts'][0]['text'],
+                            ]);
+                        }
+                    } else {
+                        $lastError = $response->body();
+                    }
+                } catch (\Exception $e) {
+                    $lastError = $e->getMessage();
+                }
             }
-
-            $result = $response->json();
-            
-            $aiResponse = $result['candidates'][0]['content']['parts'][0]['text'] ?? 'No response received';
-
-            return response()->json([
-                'success' => true,
-                'response' => $aiResponse,
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'An error occurred: ' . $e->getMessage(),
-            ], 500);
         }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Error calling Gemini API',
+            'error' => $lastError
+        ], 500);
     }
 }

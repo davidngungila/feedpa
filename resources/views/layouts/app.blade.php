@@ -680,7 +680,18 @@
                     addMessageToChat('model', data.response);
                     chatHistory.push({role: 'model', text: data.response});
                 } else {
-                    addMessageToChat('model', 'Error: ' + (data.message || 'Something went wrong'));
+                    let errorMsg = 'Error: ' + (data.message || 'Something went wrong');
+                    if (data.error) {
+                        try {
+                            const errorObj = JSON.parse(data.error);
+                            if (errorObj.error && errorObj.error.message) {
+                                errorMsg = 'Error: ' + errorObj.error.message;
+                            }
+                        } catch (e) {
+                            errorMsg = 'Error: ' + data.message;
+                        }
+                    }
+                    addMessageToChat('model', errorMsg);
                 }
             } catch (error) {
                 loadingMessage.remove();

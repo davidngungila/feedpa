@@ -44,6 +44,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/send-manual-sms', [DashboardController::class, 'sendManualSMS'])->name('send.manual.sms');
         Route::post('/sync-transactions', [DashboardController::class, 'syncTransactions'])->name('sync-transactions');
         Route::post('/sync-bills', [DashboardController::class, 'syncBills'])->name('sync-bills');
+        Route::post('/clear-cache', [DashboardController::class, 'clearCache'])->name('clear-cache');
         Route::get('/export/pdf', [DashboardController::class, 'exportPdf'])->name('export.pdf');
         Route::post('/ai-chat', [AiChatController::class, 'chat'])->name('ai-chat');
     });

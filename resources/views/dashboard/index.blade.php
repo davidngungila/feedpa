@@ -27,6 +27,12 @@
                         <i class="fas fa-sync-alt mr-1"></i> Sync Bills
                     </button>
                 </form>
+                <form id="clear-cache-form" action="{{ route('dashboard.clear-cache') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
+                        <i class="fas fa-broom mr-1"></i> Clear Cache
+                    </button>
+                </form>
                 <div class="border-l border-gray-300 dark:border-gray-600 h-8 mx-2"></div>
                 <a href="{{ route('dashboard.export.pdf', ['date_filter' => request('date_filter', 'today'), 'start_date' => request('start_date'), 'end_date' => request('end_date')]) }}" 
                    class="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">

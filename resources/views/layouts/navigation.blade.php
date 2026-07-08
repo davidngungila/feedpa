@@ -161,6 +161,12 @@
             <div data-i18n="General Settings">General Settings</div>
           </a>
         </li>
+        <li class="menu-item {{ request()->routeIs('settings.ai') ? 'active' : '' }}">
+          <a href="{{ route('settings.ai') }}" class="menu-link">
+            <i class="menu-icon tf-icons bx bx-robot"></i>
+            <div data-i18n="AI Settings">AI Settings</div>
+          </a>
+        </li>
       </ul>
     </li>
     @endif

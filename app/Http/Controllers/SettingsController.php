@@ -162,6 +162,39 @@ class SettingsController extends Controller
         ));
     }
     
+    public function ai()
+    {
+        $this->checkAdmin();
+        $settings = SystemSetting::where('group', 'ai')->get()->keyBy('key');
+        
+        $geminiApiKey = SystemSetting::get('gemini_api_key', '');
+        $geminiProjectName = SystemSetting::get('gemini_project_name', '');
+        $geminiProjectNumber = SystemSetting::get('gemini_project_number', '');
+        
+        return view('settings.ai', compact(
+            'settings',
+            'geminiApiKey',
+            'geminiProjectName',
+            'geminiProjectNumber'
+        ));
+    }
+    
+    public function updateAi(Request $request)
+    {
+        $this->checkAdmin();
+        $validated = $request->validate([
+            'gemini_api_key' => 'nullable|string',
+            'gemini_project_name' => 'nullable|string',
+            'gemini_project_number' => 'nullable|string',
+        ]);
+
+        SystemSetting::set('gemini_api_key', $validated['gemini_api_key'] ?? '', 'string', 'ai', 'Gemini API Key', 'API key for Google Gemini AI');
+        SystemSetting::set('gemini_project_name', $validated['gemini_project_name'] ?? '', 'string', 'ai', 'Gemini Project Name', 'Project name for Google Gemini API');
+        SystemSetting::set('gemini_project_number', $validated['gemini_project_number'] ?? '', 'string', 'ai', 'Gemini Project Number', 'Project number for Google Gemini API');
+
+        return back()->with('success', 'AI Settings updated successfully!');
+    }
+    
     public function toggleUserLock(User $user)
     {
         $this->checkAdmin();

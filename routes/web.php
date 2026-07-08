@@ -172,6 +172,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/general/update', [SettingsController::class, 'updateGeneral'])->name('general.update');
         Route::post('/users/{user}/toggle-lock', [SettingsController::class, 'toggleUserLock'])->name('users.toggle-lock');
         Route::delete('/users/{user}', [SettingsController::class, 'deleteUser'])->name('users.delete');
+        Route::get('/ai', [SettingsController::class, 'ai'])->name('ai');
+        Route::post('/ai/update', [SettingsController::class, 'updateAi'])->name('ai.update');
     });
     
     // Sync Trigger Routes

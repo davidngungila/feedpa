@@ -44,6 +44,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/sync-transactions', [DashboardController::class, 'syncTransactions'])->name('sync-transactions');
         Route::post('/sync-bills', [DashboardController::class, 'syncBills'])->name('sync-bills');
         Route::get('/export/pdf', [DashboardController::class, 'exportPdf'])->name('export.pdf');
+        Route::post('/ai-chat', [AiChatController::class, 'chat'])->name('ai-chat');
     });
 
     // Payment Routes (Authenticated)

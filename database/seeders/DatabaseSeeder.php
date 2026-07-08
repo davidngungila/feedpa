@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             EmailCredentialSeeder::class,
             UserSeeder::class,
+            SystemSettingSeeder::class,
         ]);
     }
 }

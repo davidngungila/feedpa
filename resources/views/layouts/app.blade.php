@@ -100,52 +100,52 @@
         bottom: 2rem;
         right: 2rem;
         z-index: 50;
-        width: 4.5rem;
-        height: 4.5rem;
+        width: 3.5rem;
+        height: 3.5rem;
         background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         border-radius: 50%;
-        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+        box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 3px solid #065f46;
+        border: 2px solid #065f46;
     }
     .ai-button:hover {
         transform: scale(1.1);
-        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.6);
+        box-shadow: 0 12px 30px rgba(16, 185, 129, 0.6);
     }
     
     .ai-face {
         position: relative;
-        width: 3rem;
-        height: 3rem;
+        width: 2.25rem;
+        height: 2.25rem;
     }
     
     .ai-eye {
         position: absolute;
-        top: 0.875rem;
-        width: 0.75rem;
-        height: 0.75rem;
+        top: 0.625rem;
+        width: 0.5625rem;
+        height: 0.5625rem;
         background: white;
         border-radius: 50%;
         overflow: hidden;
-        box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
     }
     .ai-eye.left {
-        left: 0.375rem;
+        left: 0.25rem;
     }
     .ai-eye.right {
-        right: 0.375rem;
+        right: 0.25rem;
     }
     
     .ai-pupil {
         position: absolute;
-        top: 0.1875rem;
-        left: 0.1875rem;
-        width: 0.375rem;
-        height: 0.375rem;
+        top: 0.125rem;
+        left: 0.125rem;
+        width: 0.3125rem;
+        height: 0.3125rem;
         background: #064e3b;
         border-radius: 50%;
         transition: transform 0.1s ease;
@@ -153,12 +153,12 @@
     
     .ai-mouth {
         position: absolute;
-        bottom: 0.5rem;
+        bottom: 0.375rem;
         left: 50%;
         transform: translateX(-50%);
-        width: 1.25rem;
-        height: 0.625rem;
-        border: 3px solid white;
+        width: 0.9375rem;
+        height: 0.46875rem;
+        border: 2px solid white;
         border-top: none;
         border-radius: 0 0 999px 999px;
     }
@@ -843,7 +843,7 @@
                 const centerY = rect.top + rect.height / 2;
                 
                 const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-                const distance = Math.min(4, Math.hypot(e.clientX - centerX, e.clientY - centerY) / 50);
+                const distance = Math.min(2, Math.hypot(e.clientX - centerX, e.clientY - centerY) / 60);
                 
                 const offsetX = Math.cos(angle) * distance;
                 const offsetY = Math.sin(angle) * distance;

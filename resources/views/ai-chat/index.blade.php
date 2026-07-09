@@ -3,164 +3,143 @@
 @section('title', 'AI Chat')
 
 @section('content')
-<div class="h-[calc(100vh-7rem)] flex flex-col">
-    <!-- Header -->
-    <div class="card mb-4 p-4 border-l-4 border-l-primary-500">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center shadow-lg">
-                <i class="fas fa-robot text-xl text-white"></i>
+<div class="h-[calc(100vh-10rem)] flex flex-col max-w-4xl mx-auto w-full">
+    <!-- Chat Header -->
+    <div class="flex items-center justify-center mb-6">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                <i class="fas fa-robot text-2xl text-white"></i>
             </div>
-            <div class="flex-1">
-                <h2 class="text-lg font-bold text-primary-900 dark:text-white">AI Assistant</h2>
-                <p class="text-xs text-gray-500 dark:text-gray-400">Powered by Google Gemini • Always ready to help</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                <span class="text-xs text-gray-600 dark:text-gray-400 font-medium">Online</span>
+            <div>
+                <h1 class="text-xl font-bold text-gray-900 dark:text-white">FEEDTAN AI</h1>
+                <p class="text-xs text-gray-500">Powered by Google Gemini</p>
             </div>
         </div>
     </div>
-    
-    <!-- Chat Container -->
-    <div class="card flex-1 flex flex-col overflow-hidden shadow-xl">
-        <!-- Chat Messages -->
-        <div id="chatMessages" class="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-950"></div>
-        
-        <!-- Input Area -->
-        <div class="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
-            <form id="chatForm" class="flex gap-4 items-end">
-                <div class="flex-1">
-                    <textarea 
-                        id="chatInput" 
-                        placeholder="Ask about payments, transactions, or anything else..." 
-                        rows="1"
-                        class="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none text-sm"
-                        onkeydown="handleKeyDown(event)"
-                        oninput="autoResize(this)"
-                    ></textarea>
-                </div>
-                <button 
-                    id="sendBtn" 
-                    type="submit"
-                    class="px-6 py-4 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-bold rounded-2xl hover:shadow-xl transition-all shadow-lg shadow-primary-900/20 flex items-center gap-2 hover:scale-105 active:scale-95"
-                >
-                    <span class="hidden sm:inline">Send</span>
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </form>
+
+    <!-- Chat Messages -->
+    <div id="chatMessages" class="flex-1 overflow-y-auto px-4 space-y-6 mb-4"></div>
+
+    <!-- Input Area -->
+    <div class="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-3">
+        <div class="flex items-end gap-3">
+            <textarea 
+                id="chatInput" 
+                placeholder="Message FEEDTAN AI..." 
+                rows="1"
+                class="flex-1 resize-none px-4 py-3 bg-gray-50 dark:bg-gray-800 border-0 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                style="min-height: 52px; max-height: 200px;"
+            ></textarea>
+            <button 
+                id="sendBtn" 
+                onclick="sendMessage()"
+                class="p-3 bg-primary-600 hover:bg-primary-700 text-white rounded-xl transition-all disabled:opacity-50"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                    <path d="M22 2L11 13"/>
+                    <path d="M22 2l-7 20-4-9-9-4 20-7z"/>
+                </svg>
+            </button>
         </div>
+        <p class="text-center text-[10px] text-gray-400 mt-2">FEEDTAN AI can make mistakes. Consider checking important information.</p>
     </div>
 </div>
 
 <script>
 let chatHistory = [];
-
-function formatMessage(text) {
-    // Escape HTML first
-    let formatted = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    
-    // Format bold
-    formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong class="text-primary-700 dark:text-primary-300">$1</strong>');
-    
-    // Format lists
-    formatted = formatted.replace(/^- (.*)$/gm, '<li class="ml-4">$1</li>');
-    
-    // Preserve line breaks
-    formatted = formatted.replace(/\n/g, '<br>');
-    
-    return formatted;
-}
+let isLoading = false;
 
 function addMessageToChat(role, text) {
     const chatMessages = document.getElementById('chatMessages');
     const messageDiv = document.createElement('div');
+    messageDiv.className = 'flex gap-4 w-full max-w-3xl mx-auto';
     
     if (role === 'user') {
-        messageDiv.className = 'flex justify-end gap-3';
         messageDiv.innerHTML = `
-            <div class="flex flex-col items-end max-w-[80%]">
-                <div class="bg-gradient-to-br from-primary-500 to-primary-600 text-white p-5 rounded-2xl rounded-br-md shadow-lg">
-                    <div class="text-sm leading-relaxed whitespace-pre-wrap">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</div>
+            <div class="flex-1 flex justify-end">
+                <div class="bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-3 rounded-2xl rounded-tr-sm max-w-[75%]">
+                    <div class="whitespace-pre-wrap text-sm">${escapeHtml(text)}</div>
                 </div>
-                <span class="text-[10px] text-gray-400 mt-1">You</span>
             </div>
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                <i class="fas fa-user text-white text-sm"></i>
+            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-user text-xs text-gray-500"></i>
             </div>
         `;
     } else {
-        messageDiv.className = 'flex justify-start gap-3';
         messageDiv.innerHTML = `
-            <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-                <i class="fas fa-robot text-white text-sm"></i>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-robot text-xs text-white"></i>
             </div>
-            <div class="flex flex-col items-start max-w-[80%]">
-                <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200 p-5 rounded-2xl rounded-bl-md shadow-lg">
-                    <div class="text-sm leading-relaxed whitespace-pre-wrap">${formatMessage(text)}</div>
+            <div class="flex-1">
+                <div class="text-gray-900 dark:text-white px-4 py-3 rounded-2xl rounded-tl-sm max-w-[75%]">
+                    <div class="whitespace-pre-wrap text-sm">${formatMessage(text)}</div>
                 </div>
-                <span class="text-[10px] text-gray-400 mt-1">AI Assistant</span>
             </div>
         `;
     }
     
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    
     return messageDiv;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function formatMessage(text) {
+    text = escapeHtml(text);
+    // Handle bold
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    // Handle italic
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    // Handle newlines
+    text = text.replace(/\n/g, '<br>');
+    return text;
 }
 
 function addLoadingMessage() {
     const chatMessages = document.getElementById('chatMessages');
     const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'flex justify-start gap-3';
+    loadingDiv.className = 'flex gap-4 w-full max-w-3xl mx-auto';
     loadingDiv.id = 'loading-message';
     loadingDiv.innerHTML = `
-        <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-            <i class="fas fa-robot text-white text-sm"></i>
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-robot text-xs text-white"></i>
         </div>
-        <div class="flex flex-col items-start">
-            <div class="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-5 rounded-2xl rounded-bl-md shadow-lg">
-                <div class="flex items-center gap-2">
-                    <span class="w-2.5 h-2.5 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0s;"></span>
-                    <span class="w-2.5 h-2.5 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0.2s;"></span>
-                    <span class="w-2.5 h-2.5 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0.4s;"></span>
+        <div class="flex-1">
+            <div class="px-4 py-3">
+                <div class="flex space-x-1">
+                    <span class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0s;"></span>
+                    <span class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0.2s;"></span>
+                    <span class="w-2 h-2 bg-primary-500 rounded-full animate-bounce" style="animation-delay: 0.4s;"></span>
                 </div>
             </div>
-            <span class="text-[10px] text-gray-400 mt-1">AI Assistant</span>
         </div>
     `;
     chatMessages.appendChild(loadingDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    
     return loadingDiv;
 }
 
-function autoResize(textarea) {
+function autoResizeTextarea() {
+    const textarea = document.getElementById('chatInput');
     textarea.style.height = 'auto';
     textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
 }
 
-function handleKeyDown(event) {
-    if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-    }
-}
-
 async function sendMessage() {
+    if (isLoading) return;
+    
     const chatInput = document.getElementById('chatInput');
-    const sendBtn = document.getElementById('sendBtn');
     const message = chatInput.value.trim();
     if (!message) return;
     
-    // Clear and reset input
+    isLoading = true;
     chatInput.value = '';
-    chatInput.style.height = 'auto';
-    
-    // Disable input while sending
-    chatInput.disabled = true;
-    sendBtn.disabled = true;
-    sendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    autoResizeTextarea();
     
     addMessageToChat('user', message);
     chatHistory.push({role: 'user', text: message});
@@ -181,36 +160,37 @@ async function sendMessage() {
         });
         
         const data = await response.json();
-        
         loadingDiv.remove();
         
         if (data.success) {
             addMessageToChat('model', data.response);
             chatHistory.push({role: 'model', text: data.response});
         } else {
-            addMessageToChat('model', '⚠️ Error: ' + (data.message || 'Something went wrong'));
+            addMessageToChat('model', 'Error: ' + (data.message || 'Something went wrong'));
         }
     } catch (error) {
         loadingDiv.remove();
-        addMessageToChat('model', '⚠️ Error: ' + error.message);
-    } finally {
-        // Re-enable input
-        chatInput.disabled = false;
-        sendBtn.disabled = false;
-        sendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-        chatInput.focus();
+        addMessageToChat('model', 'Error: ' + error.message);
     }
+    
+    isLoading = false;
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     // Add welcome message
-    addMessageToChat('model', 'Hi there! I\'m your AI assistant for the Feedtan payment system. I can help you with:\n\n• Transaction inquiries\n• Payment status updates\n• Account balance information\n• Customer details\n• And much more!\n\nHow can I help you today?');
+    addMessageToChat('model', 'Hi there! I\'m FEEDTAN AI, your personal assistant. How can I help you with your payments, transactions, bills, or anything else today?');
     
-    // Handle form submission
-    const chatForm = document.getElementById('chatForm');
-    chatForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        sendMessage();
+    const chatInput = document.getElementById('chatInput');
+    
+    // Auto resize textarea
+    chatInput.addEventListener('input', autoResizeTextarea);
+    
+    // Handle enter key
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
     });
 });
 </script>

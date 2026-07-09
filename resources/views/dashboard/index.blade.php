@@ -4,45 +4,9 @@
 
 @section('content')
 <div class="space-y-6 animate-fade-in">
-    <!-- Header with Sync and Export Buttons -->
+    <!-- Header -->
     <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <h2 class="text-xl font-bold text-primary-900 dark:text-white">Dashboard Overview</h2>
-        <div class="flex flex-wrap items-center gap-4">
-            <div class="flex flex-col gap-1">
-                <p class="text-xs text-primary-600 dark:text-primary-400">
-                    Transactions last sync: {{ cache()->get('api_last_sync') ? \Carbon\Carbon::createFromTimestamp(cache()->get('api_last_sync'))->diffForHumans() : 'Never' }}</p>
-                <p class="text-xs text-purple-600 dark:text-purple-400">
-                    Bills last sync: {{ cache()->get('api_bills_last_sync') ? \Carbon\Carbon::createFromTimestamp(cache()->get('api_bills_last_sync'))->diffForHumans() : 'Never' }}</p>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-                <form action="{{ route('api-sync') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
-                        <i class="fas fa-sync-alt mr-1"></i> Sync Transactions
-                    </button>
-                </form>
-                <form action="{{ route('api-sync-bills') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
-                        <i class="fas fa-sync-alt mr-1"></i> Sync Bills
-                    </button>
-                </form>
-                <form id="clear-cache-form" action="{{ route('dashboard.clear-cache') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="px-4 py-2 bg-gradient-to-r from-red-600 to-orange-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
-                        <i class="fas fa-broom mr-1"></i> Clear Cache
-                    </button>
-                </form>
-                <div class="border-l border-gray-300 dark:border-gray-600 h-8 mx-2"></div>
-                <a href="{{ route('dashboard.export.pdf', ['date_filter' => request('date_filter', 'today'), 'start_date' => request('start_date'), 'end_date' => request('end_date')]) }}" 
-                   class="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
-                    <i class="fas fa-file-pdf mr-1"></i> Export PDF
-                </a>
-                <button id="exportImageBtn" class="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white text-xs font-bold rounded-xl shadow-lg hover:scale-105 transition-all">
-                    <i class="fas fa-image mr-1"></i> Export Image
-                </button>
-            </div>
-        </div>
     </div>
     
     <!-- Period Filter -->
@@ -382,9 +346,6 @@
     </div>
 </div>
 
-<!-- html2canvas for image export -->
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
 <script>
     // Auto-refresh live account balance from ClickPesa API
@@ -410,64 +371,6 @@
     }
     refreshAccountBalance();
     setInterval(refreshAccountBalance, 60000);
-
-    // Auto-sync transactions every second
-    function syncTransactions() {
-        fetch('{{ route('dashboard.sync-transactions') }}', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .catch(() => {});
-    }
-
-    // Auto-sync bills every second
-    function syncBills() {
-        fetch('{{ route('dashboard.sync-bills') }}', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
-            }
-        })
-        .catch(() => {});
-    }
-
-    // Initial sync
-    syncTransactions();
-    syncBills();
-
-    // Auto-sync every second
-    setInterval(syncTransactions, 1000);
-    setInterval(syncBills, 1000);
-
-    // Export to image
-    document.getElementById('exportImageBtn').addEventListener('click', function() {
-        const element = document.getElementById('dashboard-content');
-        this.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Exporting...';
-        this.disabled = true;
-        
-        html2canvas(document.body, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff'
-        }).then(canvas => {
-            const link = document.createElement('a');
-            link.download = 'dashboard-report-{{ $dateFilter }}-' + new Date().toISOString().slice(0,10) + '.png';
-            link.href = canvas.toDataURL();
-            link.click();
-            
-            this.innerHTML = '<i class="fas fa-image mr-1"></i> Export Image';
-            this.disabled = false;
-        }).catch(() => {
-            this.innerHTML = '<i class="fas fa-image mr-1"></i> Export Image';
-            this.disabled = false;
-        });
-    });
 
     // Daily Transactions Chart
     const dailyLabels = @json(array_column($stats['daily_stats'] ?? [], 'date'));

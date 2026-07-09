@@ -222,7 +222,7 @@
             <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
                 <!-- Dashboard -->
                 <a href="{{ route('dashboard.index') }}" 
-                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('dashboard.*') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                   class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('dashboard.index') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
                     <i class="fa-solid fa-gauge-high w-4 text-center"></i>
                     <span>Dashboard</span>
                 </a>

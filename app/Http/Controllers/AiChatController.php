@@ -51,30 +51,49 @@ class AiChatController extends Controller
                 'parts' => [['text' => $request->message]]
             ];
 
-            // Use gemini-1.5-flash which is reliable
-            $response = Http::timeout(60)
-                ->post("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$apiKey}", [
-                    'contents' => $messages,
-                    'generationConfig' => [
-                        'temperature' => 0.7,
-                        'maxOutputTokens' => 1024,
-                    ],
-                ]);
+            // Try multiple models in order
+            $modelsToTry = [
+                ['model' => 'gemini-2.0-flash', 'version' => 'v1beta'],
+                ['model' => 'gemini-1.5-flash-002', 'version' => 'v1beta'],
+                ['model' => 'gemini-1.5-flash', 'version' => 'v1'],
+                ['model' => 'gemini-1.0-pro', 'version' => 'v1'],
+            ];
+            
+            $aiResponse = null;
+            
+            foreach ($modelsToTry as $modelConfig) {
+                try {
+                    $response = Http::timeout(60)
+                        ->post("https://generativelanguage.googleapis.com/{$modelConfig['version']}/models/{$modelConfig['model']}:generateContent?key={$apiKey}", [
+                            'contents' => $messages,
+                            'generationConfig' => [
+                                'temperature' => 0.7,
+                                'maxOutputTokens' => 1024,
+                            ],
+                        ]);
 
-            if (!$response->successful()) {
-                \Illuminate\Support\Facades\Log::error('Gemini API error', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error: ' . ($response->json('error.message') ?? 'Could not reach AI service'),
-                ], $response->status());
+                    if ($response->successful()) {
+                        $result = $response->json();
+                        $aiResponse = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
+                        if ($aiResponse) break;
+                    } else {
+                        \Illuminate\Support\Facades\Log::info("Gemini model {$modelConfig['model']} ({$modelConfig['version']}) failed", [
+                            'status' => $response->status(),
+                            'body' => $response->body(),
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::info("Gemini model {$modelConfig['model']} exception", ['message' => $e->getMessage()]);
+                    continue;
+                }
             }
 
-            $result = $response->json();
-            $aiResponse = $result['candidates'][0]['content']['parts'][0]['text'] ?? 'No response received from AI';
+            if (!$aiResponse) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sorry, AI service temporarily unavailable. Please try again later.',
+                ], 500);
+            }
 
             return response()->json([
                 'success' => true,

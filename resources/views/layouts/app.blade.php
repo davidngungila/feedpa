@@ -93,6 +93,75 @@
     /* Dropdown menus in sidebar */
     .sidebar-dropdown { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
     .sidebar-dropdown.open { max-height: 500px; }
+    
+    /* AI Floating Button */
+    .ai-button {
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        z-index: 50;
+        width: 4.5rem;
+        height: 4.5rem;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 50%;
+        box-shadow: 0 10px 30px rgba(16, 185, 129, 0.4);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid #065f46;
+    }
+    .ai-button:hover {
+        transform: scale(1.1);
+        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.6);
+    }
+    
+    .ai-face {
+        position: relative;
+        width: 3rem;
+        height: 3rem;
+    }
+    
+    .ai-eye {
+        position: absolute;
+        top: 0.875rem;
+        width: 0.75rem;
+        height: 0.75rem;
+        background: white;
+        border-radius: 50%;
+        overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(0,0,0,0.2);
+    }
+    .ai-eye.left {
+        left: 0.375rem;
+    }
+    .ai-eye.right {
+        right: 0.375rem;
+    }
+    
+    .ai-pupil {
+        position: absolute;
+        top: 0.1875rem;
+        left: 0.1875rem;
+        width: 0.375rem;
+        height: 0.375rem;
+        background: #064e3b;
+        border-radius: 50%;
+        transition: transform 0.1s ease;
+    }
+    
+    .ai-mouth {
+        position: absolute;
+        bottom: 0.5rem;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 1.25rem;
+        height: 0.625rem;
+        border: 3px solid white;
+        border-top: none;
+        border-radius: 0 0 999px 999px;
+    }
     </style>
     
     @stack('styles')
@@ -743,14 +812,47 @@
         });
     </script>
 
-    <!-- Floating AI Chat Button -->
+    <!-- Floating AI Chat Button with Eyes -->
     <button 
         onclick="openChat()"
-        class="fixed bottom-8 right-8 z-50 w-14 h-14 bg-gradient-to-r from-green-600 to-green-500 text-white rounded-full shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95 flex items-center justify-center">
-        <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-        </svg>
+        class="ai-button"
+        id="aiButton">
+        <div class="ai-face">
+            <div class="ai-eye left">
+                <div class="ai-pupil" id="leftPupil"></div>
+            </div>
+            <div class="ai-eye right">
+                <div class="ai-pupil" id="rightPupil"></div>
+            </div>
+            <div class="ai-mouth"></div>
+        </div>
     </button>
+    
+    <!-- Eye Tracking Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const leftPupil = document.getElementById('leftPupil');
+            const rightPupil = document.getElementById('rightPupil');
+            const button = document.getElementById('aiButton');
+            
+            if (!leftPupil || !rightPupil || !button) return;
+            
+            document.addEventListener('mousemove', function(e) {
+                const rect = button.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                const distance = Math.min(4, Math.hypot(e.clientX - centerX, e.clientY - centerY) / 50);
+                
+                const offsetX = Math.cos(angle) * distance;
+                const offsetY = Math.sin(angle) * distance;
+                
+                leftPupil.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+                rightPupil.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+            });
+        });
+    </script>
 
     <!-- AI Chat Modal -->
     <div id="chatModal" class="fixed bottom-24 right-8 z-40 w-96 max-w-[90vw] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 hidden">

@@ -53,10 +53,9 @@ class AiChatController extends Controller
 
             // Try multiple models in order
             $modelsToTry = [
-                ['model' => 'gemini-1.5-flash', 'version' => 'v1'],
                 ['model' => 'gemini-2.0-flash', 'version' => 'v1beta'],
-                ['model' => 'gemini-1.5-flash-002', 'version' => 'v1beta'],
-                ['model' => 'gemini-1.0-pro', 'version' => 'v1'],
+                ['model' => 'gemini-1.5-flash', 'version' => 'v1beta'],
+                ['model' => 'gemini-1.5-flash-8b', 'version' => 'v1beta'],
             ];
             
             $aiResponse = null;

@@ -20,11 +20,11 @@ class AiChatController extends Controller
             'history' => 'nullable|array',
         ]);
 
-        $apiKey = SystemSetting::get('gemini_api_key');
+        $apiKey = SystemSetting::get('gemini_api_key') ?? env('GEMINI_API_KEY');
         if (!$apiKey) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gemini API key not configured. Please set it in system settings.',
+                'message' => 'Gemini API key not configured. Please set it in system settings or .env file.',
             ], 400);
         }
 

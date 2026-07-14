@@ -434,7 +434,22 @@
             subOptionModalTitle.textContent = currentSubOptionConfig.title;
             subOptionModalContent.innerHTML = '';
             
-            currentSubOptionConfig.options.forEach(option => {
+            // Get current amount
+            const currentAmount = Number(amountInput.value) || 0;
+            
+            // Filter options if purpose is Akiba
+            let optionsToShow = currentSubOptionConfig.options;
+            if (purpose === 'Akiba') {
+                optionsToShow = optionsToShow.filter(option => {
+                    // Show RDA only if amount > 100,000
+                    if (option === 'RDA') {
+                        return currentAmount > 100000;
+                    }
+                    return true;
+                });
+            }
+            
+            optionsToShow.forEach(option => {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.textContent = option;

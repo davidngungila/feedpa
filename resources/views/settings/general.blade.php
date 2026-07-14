@@ -19,9 +19,9 @@
                             <i class="fas fa-check-circle me-2"></i>
                             System Active
                         </span>
-                        <span class="badge badge-{{ $geminiApiKey ? 'green' : 'yellow' }} px-4 py-1.5 text-xs">
-                            <i class="fas fa-{{ $geminiApiKey ? 'check' : 'clock' }} me-2"></i>
-                            {{ $geminiApiKey ? 'AI Assistant Enabled' : 'AI Assistant Disabled' }}
+                        <span class="badge badge-{{ $groqApiKey ? 'green' : 'yellow' }} px-4 py-1.5 text-xs">
+                            <i class="fas fa-{{ $groqApiKey ? 'check' : 'clock' }} me-2"></i>
+                            {{ $groqApiKey ? 'AI Assistant Enabled' : 'AI Assistant Disabled' }}
                         </span>
                     </div>
                 </div>
@@ -150,26 +150,7 @@
                 </div>
             </div>
             
-            <div class="border-t border-gray-200 dark:border-gray-700 pt-6 mt-6">
-                <h4 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
-                    <i class="fas fa-robot"></i> Gemini AI Configuration
-                </h4>
-                
-                <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
-                    <div class="md:col-span-2">
-                        <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Gemini API Key</div>
-                        <input type="password" name="gemini_api_key" value="{{ old('gemini_api_key', $geminiApiKey) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Enter your Gemini API key">
-                    </div>
-                    <div class="md:col-span-2">
-                        <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Gemini Project Name</div>
-                        <input type="text" name="gemini_project_name" value="{{ old('gemini_project_name', $geminiProjectName) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="projects/your-project-id">
-                    </div>
-                    <div class="md:col-span-2">
-                        <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Gemini Project Number</div>
-                        <input type="text" name="gemini_project_number" value="{{ old('gemini_project_number', $geminiProjectNumber) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="1234567890">
-                    </div>
-                </div>
-            </div>
+
             
             <div class="mt-6">
                 <button type="submit" class="px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-500 text-white font-bold rounded-xl hover:shadow-lg transition-all shadow-lg shadow-primary-900/20">

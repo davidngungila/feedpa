@@ -11,28 +11,12 @@ class SystemSettingSeeder extends Seeder
     {
         $settings = [
             [
-                'key' => 'gemini_api_key',
+                'key' => 'groq_api_key',
                 'value' => '',
                 'type' => 'string',
                 'group' => 'ai',
-                'label' => 'Gemini API Key',
-                'description' => 'API key for Google Gemini AI',
-            ],
-            [
-                'key' => 'gemini_project_name',
-                'value' => '',
-                'type' => 'string',
-                'group' => 'ai',
-                'label' => 'Gemini Project Name',
-                'description' => 'Project name for Google Gemini API',
-            ],
-            [
-                'key' => 'gemini_project_number',
-                'value' => '',
-                'type' => 'number',
-                'group' => 'ai',
-                'label' => 'Gemini Project Number',
-                'description' => 'Project number for Google Gemini API',
+                'label' => 'Groq API Key',
+                'description' => 'API key for Groq AI',
             ],
         ];
 

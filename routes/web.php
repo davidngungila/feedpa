@@ -29,6 +29,8 @@ use App\Http\Controllers\AiChatController;
 |
 */
 
+
+
 Route::get('/', function () {
     return view('public.swahili-payment');
 });

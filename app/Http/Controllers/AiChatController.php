@@ -60,8 +60,15 @@ class AiChatController extends Controller
             ];
             
             $aiResponse = null;
+            $attempts = [];
             
             foreach ($modelsToTry as $modelConfig) {
+                $attempt = [
+                    'model' => $modelConfig['model'],
+                    'version' => $modelConfig['version'],
+                    'success' => false,
+                ];
+                
                 try {
                     $response = Http::timeout(60)
                         ->post("https://generativelanguage.googleapis.com/{$modelConfig['version']}/models/{$modelConfig['model']}:generateContent?key={$apiKey}", [
@@ -72,23 +79,34 @@ class AiChatController extends Controller
                             ],
                         ]);
 
+                    $attempt['status'] = $response->status();
+                    
                     if ($response->successful()) {
                         $result = $response->json();
+                        $attempt['response'] = $result;
                         $aiResponse = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
-                        if ($aiResponse) break;
+                        if ($aiResponse) {
+                            $attempt['success'] = true;
+                            $attempts[] = $attempt;
+                            break;
+                        }
                     } else {
-                        \Illuminate\Support\Facades\Log::info("Gemini model {$modelConfig['model']} ({$modelConfig['version']}) failed", [
-                            'status' => $response->status(),
-                            'body' => $response->body(),
-                        ]);
+                        $attempt['body'] = $response->body();
+                        \Illuminate\Support\Facades\Log::error("Gemini model {$modelConfig['model']} ({$modelConfig['version']}) failed", $attempt);
                     }
                 } catch (\Exception $e) {
-                    \Illuminate\Support\Facades\Log::info("Gemini model {$modelConfig['model']} exception", ['message' => $e->getMessage()]);
-                    continue;
+                    $attempt['exception'] = $e->getMessage();
+                    $attempt['trace'] = $e->getTraceAsString();
+                    \Illuminate\Support\Facades\Log::error("Gemini model {$modelConfig['model']} exception", $attempt);
                 }
+                
+                $attempts[] = $attempt;
             }
 
             if (!$aiResponse) {
+                \Illuminate\Support\Facades\Log::error('AI Chat failed: All models tried without success', [
+                    'attempts' => $attempts,
+                ]);
                 return response()->json([
                     'success' => false,
                     'message' => 'Sorry, AI service temporarily unavailable. Please try again later.',

@@ -336,10 +336,10 @@
                 </div>
 
                 <div class="${isUser
-                    ? 'rounded-2xl rounded-tr-sm bg-gradient-to-br from-primary-700 to-primary-500 text-white px-3.5 py-2.5 shadow-lg shadow-primary-900/15'
-                    : 'rounded-2xl rounded-tl-sm border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-3.5 py-2.5 shadow-sm'}">
+                    ? 'rounded-2xl rounded-tr-sm bg-gradient-to-br from-primary-700 to-primary-500 text-white px-3 py-1.5 shadow-lg shadow-primary-900/15'
+                    : 'rounded-2xl rounded-tl-sm border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-3 py-1.5 shadow-sm'}">
                     ${imageHtml}
-                    <div class="${isUser ? 'text-sm leading-relaxed whitespace-pre-wrap' : 'ai-response-content text-sm leading-relaxed text-primary-950 dark:text-primary-50'}">
+                    <div class="${isUser ? 'text-sm leading-snug whitespace-pre-wrap' : 'ai-response-content text-sm leading-snug text-primary-950 dark:text-primary-50'}">
                         ${isUser ? aiEscapeHtml(text ?? '') : aiFormatRichText(text ?? '')}
                     </div>
                 </div>

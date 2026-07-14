@@ -103,7 +103,6 @@
                     <div>
                         <div class="text-[11px] font-black uppercase tracking-[0.25em] text-primary-600 dark:text-primary-300">AI Assistant</div>
                         <h1 class="text-2xl md:text-3xl font-black text-primary-950 dark:text-white">FEEDTAN AI</h1>
-                        <p class="text-sm text-primary-700/80 dark:text-primary-200">Powered by Groq</p>
                     </div>
                 </div>
 

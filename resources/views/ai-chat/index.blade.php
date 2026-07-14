@@ -12,7 +12,7 @@
             </div>
             <div>
                 <h1 class="text-xl font-bold text-gray-900 dark:text-white">FEEDTAN AI</h1>
-                <p class="text-xs text-gray-500">Powered by Google Gemini</p>
+                <p class="text-xs text-gray-500">Powered by Groq</p>
             </div>
         </div>
     </div>

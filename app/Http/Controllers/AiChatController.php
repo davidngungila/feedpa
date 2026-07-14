@@ -20,11 +20,11 @@ class AiChatController extends Controller
             'history' => 'nullable|array',
         ]);
 
-        $apiKey = SystemSetting::get('gemini_api_key') ?? env('GEMINI_API_KEY');
+        $apiKey = SystemSetting::get('groq_api_key') ?? env('GROQ_API_KEY');
         if (!$apiKey) {
             return response()->json([
                 'success' => false,
-                'message' => 'Gemini API key not configured. Please set it in system settings or .env file.',
+                'message' => 'Groq API key not configured. Please set it in system settings or .env file.',
             ], 400);
         }
 
@@ -33,94 +33,61 @@ class AiChatController extends Controller
             
             // System prompt
             $messages[] = [
-                'role' => 'user',
-                'parts' => [['text' => "You are a helpful AI assistant for Feedtan Digital Payment System. Help users with questions about payments, bills, account statements, and other system features."]]
+                'role' => 'system',
+                'content' => "You are a helpful AI assistant for Feedtan Digital Payment System. Help users with questions about payments, transactions, bills, and other system features."
             ];
 
             if ($request->has('history') && is_array($request->history)) {
                 foreach ($request->history as $item) {
                     $messages[] = [
                         'role' => $item['role'] ?? 'user',
-                        'parts' => [['text' => $item['text'] ?? '']]
+                        'content' => $item['text'] ?? ''
                     ];
                 }
             }
 
             $messages[] = [
                 'role' => 'user',
-                'parts' => [['text' => $request->message]]
+                'content' => $request->message
             ];
 
-            // Try multiple models in order
-            $modelsToTry = [
-                ['model' => 'gemini-2.0-flash', 'version' => 'v1beta'],
-                ['model' => 'gemini-1.5-flash', 'version' => 'v1beta'],
-                ['model' => 'gemini-1.5-flash-8b', 'version' => 'v1beta'],
-            ];
-            
-            $aiResponse = null;
-            $attempts = [];
-            $lastError = null;
-            
-            foreach ($modelsToTry as $modelConfig) {
-                $attempt = [
-                    'model' => $modelConfig['model'],
-                    'version' => $modelConfig['version'],
-                    'success' => false,
-                ];
+            $response = Http::timeout(60)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Content-Type' => 'application/json',
+                ])
+                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                    'model' => 'llama-3.3-70b-versatile',
+                    'messages' => $messages,
+                    'temperature' => 0.7,
+                    'max_tokens' => 1024,
+                ]);
+
+            if ($response->successful()) {
+                $result = $response->json();
+                $aiResponse = $result['choices'][0]['message']['content'] ?? null;
                 
-                try {
-                    $response = Http::timeout(60)
-                        ->post("https://generativelanguage.googleapis.com/{$modelConfig['version']}/models/{$modelConfig['model']}:generateContent?key={$apiKey}", [
-                            'contents' => $messages,
-                            'generationConfig' => [
-                                'temperature' => 0.7,
-                                'maxOutputTokens' => 1024,
-                            ],
-                        ]);
-
-                    $attempt['status'] = $response->status();
-                    
-                    if ($response->successful()) {
-                        $result = $response->json();
-                        $attempt['response'] = $result;
-                        $aiResponse = $result['candidates'][0]['content']['parts'][0]['text'] ?? null;
-                        if ($aiResponse) {
-                            $attempt['success'] = true;
-                            $attempts[] = $attempt;
-                            break;
-                        } else {
-                            $lastError = "Model {$modelConfig['model']} returned no text response: " . json_encode($result);
-                        }
-                    } else {
-                        $attempt['body'] = $response->body();
-                        $lastError = "Model {$modelConfig['model']} failed (status {$response->status()}): " . $response->body();
-                        \Illuminate\Support\Facades\Log::error("Gemini model {$modelConfig['model']} ({$modelConfig['version']}) failed", $attempt);
-                    }
-                } catch (\Exception $e) {
-                    $attempt['exception'] = $e->getMessage();
-                    $attempt['trace'] = $e->getTraceAsString();
-                    $lastError = "Model {$modelConfig['model']} exception: " . $e->getMessage();
-                    \Illuminate\Support\Facades\Log::error("Gemini model {$modelConfig['model']} exception", $attempt);
+                if ($aiResponse) {
+                    return response()->json([
+                        'success' => true,
+                        'response' => $aiResponse,
+                    ]);
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'AI Error: No response text received from Groq.',
+                    ], 500);
                 }
-                
-                $attempts[] = $attempt;
-            }
-
-            if (!$aiResponse) {
-                \Illuminate\Support\Facades\Log::error('AI Chat failed: All models tried without success', [
-                    'attempts' => $attempts,
+            } else {
+                \Illuminate\Support\Facades\Log::error('Groq API failed', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
                 ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'AI Error: ' . ($lastError ?? 'Sorry, AI service temporarily unavailable. Please try again later.'),
+                    'message' => 'AI Error: Groq API failed (status ' . $response->status() . '): ' . $response->body(),
                 ], 500);
             }
-
-            return response()->json([
-                'success' => true,
-                'response' => $aiResponse,
-            ]);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('AI Chat exception', [
                 'message' => $e->getMessage(),

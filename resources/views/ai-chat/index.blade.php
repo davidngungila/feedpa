@@ -163,44 +163,39 @@
                 <section class="flex flex-col ai-chat-container">
                     <div id="aiPageChatMessages" class="ai-chat-messages-wrapper px-5 py-6 md:px-8 md:py-7 space-y-5 bg-white/40 dark:bg-transparent"></div>
 
-                    <div class="border-t border-primary-100 dark:border-dark-border px-4 py-3 md:px-6 bg-white/85 dark:bg-dark-card/85 backdrop-blur-sm">
-                        <div id="aiImagePreviewWrap" class="hidden mb-2"></div>
+                    <div class="border-t border-primary-100 dark:border-dark-border px-3 py-2 md:px-4 bg-white/85 dark:bg-dark-card/85 backdrop-blur-sm">
+                        <div id="aiImagePreviewWrap" class="hidden mb-1.5"></div>
 
-                        <div class="rounded-2xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm p-2.5">
+                        <div class="rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card p-1.5">
                             <textarea
                                 id="aiPageChatInput"
                                 rows="1"
-                                placeholder="Message FEEDTAN AI..."
-                                class="w-full resize-none bg-transparent px-3 py-2 text-sm text-primary-950 dark:text-white placeholder:text-gray-400 focus:outline-none"
-                                style="min-height: 48px; max-height: 180px;"
+                                placeholder="Message..."
+                                class="w-full resize-none bg-transparent px-2.5 py-1.5 text-sm text-primary-950 dark:text-white placeholder:text-gray-400 focus:outline-none"
+                                style="min-height: 36px; max-height: 120px;"
                             ></textarea>
 
-                            <div class="flex flex-col gap-2 border-t border-primary-100 dark:border-dark-border pt-2.5 sm:flex-row sm:items-center sm:justify-between">
-                                <div class="flex flex-wrap items-center gap-1.5">
+                            <div class="flex flex-col gap-1.5 border-t border-primary-100 dark:border-dark-border pt-1.5 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="flex flex-wrap items-center gap-1">
                                     <input id="aiImageInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" class="hidden">
                                     <button
                                         type="button"
                                         id="aiUploadImageBtn"
-                                        class="inline-flex items-center gap-1.5 rounded-xl border border-primary-200 px-3 py-1.5 text-xs font-bold text-primary-800 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
-                                        <i class="fas fa-image"></i>
-                                        <span>Upload Image</span>
+                                        class="inline-flex items-center gap-1 rounded-lg border border-primary-200 px-2 py-1 text-[11px] font-bold text-primary-800 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                                        <i class="fas fa-image text-xs"></i>
+                                        <span>Image</span>
                                     </button>
-                                    <span class="text-[10px] text-gray-500 dark:text-gray-400">PNG, JPG, WEBP, GIF up to 4MB</span>
                                 </div>
 
                                 <button
                                     type="button"
                                     id="aiSendBtn"
-                                    class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-primary-700 to-primary-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-primary-900/20 hover:translate-y-[-0.5px] transition-all disabled:cursor-not-allowed disabled:opacity-60">
-                                    <i class="fas fa-paper-plane"></i>
+                                    class="inline-flex items-center justify-center gap-1 rounded-lg bg-gradient-to-br from-primary-700 to-primary-500 px-3 py-1.5 text-[11px] font-bold text-white shadow-lg shadow-primary-900/20 hover:translate-y-[-0.5px] transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                                    <i class="fas fa-paper-plane text-xs"></i>
                                     <span>Send</span>
                                 </button>
                             </div>
                         </div>
-
-                        <p class="mt-2 text-center text-[10px] text-gray-500 dark:text-gray-400">
-                            FEEDTAN AI can make mistakes. Double-check important financial information.
-                        </p>
                     </div>
                 </section>
             </div>
@@ -300,7 +295,7 @@
     function aiAutoResizeTextarea() {
         const textarea = document.getElementById('aiPageChatInput');
         textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 180) + 'px';
+        textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
     }
 
     function aiScrollToBottom() {

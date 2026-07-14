@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class AiChatController extends Controller
 {
@@ -15,9 +16,10 @@ class AiChatController extends Controller
     
     public function chat(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'message' => 'required|string|max:2000',
-            'history' => 'nullable|array',
+            'history' => 'nullable',
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:4096',
         ]);
 
         $apiKey = SystemSetting::get('groq_api_key') ?? env('GROQ_API_KEY');
@@ -29,6 +31,13 @@ class AiChatController extends Controller
         }
 
         try {
+            $history = $validated['history'] ?? [];
+            if (is_string($history)) {
+                $decodedHistory = json_decode($history, true);
+                $history = is_array($decodedHistory) ? $decodedHistory : [];
+            }
+
+            $imageFile = $request->file('image');
             $messages = [];
             
             // System prompt
@@ -37,8 +46,8 @@ class AiChatController extends Controller
                 'content' => "You are a helpful AI assistant for Feedtan Digital Payment System. Help users with questions about payments, transactions, bills, and other system features."
             ];
 
-            if ($request->has('history') && is_array($request->history)) {
-                foreach ($request->history as $item) {
+            if (is_array($history)) {
+                foreach ($history as $item) {
                     $role = $item['role'] ?? 'user';
                     // Map any invalid roles to valid ones
                     if (!in_array($role, ['system', 'user', 'assistant'])) {
@@ -51,10 +60,33 @@ class AiChatController extends Controller
                 }
             }
 
-            $messages[] = [
+            $userMessage = [
                 'role' => 'user',
-                'content' => $request->message
+                'content' => $request->message,
             ];
+
+            $model = 'llama-3.3-70b-versatile';
+            if ($imageFile) {
+                $mimeType = $imageFile->getMimeType() ?: 'image/jpeg';
+                $base64Image = base64_encode(file_get_contents($imageFile->getRealPath()));
+
+                $userMessage['content'] = [
+                    [
+                        'type' => 'text',
+                        'text' => $request->message,
+                    ],
+                    [
+                        'type' => 'image_url',
+                        'image_url' => [
+                            'url' => "data:{$mimeType};base64,{$base64Image}",
+                        ],
+                    ],
+                ];
+
+                $model = 'meta-llama/llama-4-scout-17b-16e-instruct';
+            }
+
+            $messages[] = $userMessage;
 
             $response = Http::timeout(60)
                 ->withHeaders([
@@ -62,10 +94,10 @@ class AiChatController extends Controller
                     'Content-Type' => 'application/json',
                 ])
                 ->post('https://api.groq.com/openai/v1/chat/completions', [
-                    'model' => 'llama-3.3-70b-versatile',
+                    'model' => $model,
                     'messages' => $messages,
                     'temperature' => 0.7,
-                    'max_tokens' => 1024,
+                    'max_completion_tokens' => 1024,
                 ]);
 
             if ($response->successful()) {
@@ -84,7 +116,7 @@ class AiChatController extends Controller
                     ], 500);
                 }
             } else {
-                \Illuminate\Support\Facades\Log::error('Groq API failed', [
+                Log::error('Groq API failed', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
@@ -94,7 +126,7 @@ class AiChatController extends Controller
                 ], 500);
             }
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('AI Chat exception', [
+            Log::error('AI Chat exception', [
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);

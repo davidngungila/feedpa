@@ -384,20 +384,6 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function clearCache()
-    {
-        \Artisan::call('route:clear');
-        \Artisan::call('cache:clear');
-        \Artisan::call('config:clear');
-        \Artisan::call('view:clear');
-        \Artisan::call('optimize:clear');
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'All caches cleared successfully!',
-        ]);
-    }
-
     public function exportPdf(Request $request)
     {
         // Reuse index method logic to get stats

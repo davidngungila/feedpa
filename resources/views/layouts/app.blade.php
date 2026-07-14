@@ -866,7 +866,7 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="font-semibold text-lg">AI Assistant</h3>
+                        <h3 class="font-semibold text-lg">FEEDTAN AI</h3>
                         <p class="text-sm text-green-100">Powered by Groq</p>
                     </div>
                 </div>

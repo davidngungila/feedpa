@@ -71,6 +71,23 @@
         background: white;
         color: #111827;
     }
+
+    .ai-chat-container {
+        height: calc(100vh - 140px);
+        display: flex;
+        flex-direction: column;
+    }
+
+    @media (max-width: 1280px) {
+        .ai-chat-container {
+            height: calc(100vh - 120px);
+        }
+    }
+
+    .ai-chat-messages-wrapper {
+        flex: 1;
+        overflow-y: auto;
+    }
 </style>
 @endpush
 
@@ -139,8 +156,8 @@
                     </div>
                 </aside>
 
-                <section class="flex flex-col min-h-[70vh]">
-                    <div id="aiPageChatMessages" class="flex-1 overflow-y-auto px-5 py-6 md:px-8 md:py-7 space-y-5 bg-white/40 dark:bg-transparent"></div>
+                <section class="flex flex-col ai-chat-container">
+                    <div id="aiPageChatMessages" class="ai-chat-messages-wrapper px-5 py-6 md:px-8 md:py-7 space-y-5 bg-white/40 dark:bg-transparent"></div>
 
                     <div class="border-t border-primary-100 dark:border-dark-border px-5 py-5 md:px-8 bg-white/85 dark:bg-dark-card/85 backdrop-blur-sm">
                         <div id="aiImagePreviewWrap" class="hidden mb-4"></div>

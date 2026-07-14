@@ -53,14 +53,15 @@ class AiChatController extends Controller
 
             // Try multiple models in order
             $modelsToTry = [
+                ['model' => 'gemini-1.5-flash', 'version' => 'v1'],
                 ['model' => 'gemini-2.0-flash', 'version' => 'v1beta'],
                 ['model' => 'gemini-1.5-flash-002', 'version' => 'v1beta'],
-                ['model' => 'gemini-1.5-flash', 'version' => 'v1'],
                 ['model' => 'gemini-1.0-pro', 'version' => 'v1'],
             ];
             
             $aiResponse = null;
             $attempts = [];
+            $lastError = null;
             
             foreach ($modelsToTry as $modelConfig) {
                 $attempt = [
@@ -89,14 +90,18 @@ class AiChatController extends Controller
                             $attempt['success'] = true;
                             $attempts[] = $attempt;
                             break;
+                        } else {
+                            $lastError = "Model {$modelConfig['model']} returned no text response: " . json_encode($result);
                         }
                     } else {
                         $attempt['body'] = $response->body();
+                        $lastError = "Model {$modelConfig['model']} failed (status {$response->status()}): " . $response->body();
                         \Illuminate\Support\Facades\Log::error("Gemini model {$modelConfig['model']} ({$modelConfig['version']}) failed", $attempt);
                     }
                 } catch (\Exception $e) {
                     $attempt['exception'] = $e->getMessage();
                     $attempt['trace'] = $e->getTraceAsString();
+                    $lastError = "Model {$modelConfig['model']} exception: " . $e->getMessage();
                     \Illuminate\Support\Facades\Log::error("Gemini model {$modelConfig['model']} exception", $attempt);
                 }
                 
@@ -109,7 +114,7 @@ class AiChatController extends Controller
                 ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'Sorry, AI service temporarily unavailable. Please try again later.',
+                    'message' => 'AI Error: ' . ($lastError ?? 'Sorry, AI service temporarily unavailable. Please try again later.'),
                 ], 500);
             }
 
@@ -125,7 +130,7 @@ class AiChatController extends Controller
             
             return response()->json([
                 'success' => false,
-                'message' => 'Sorry, something went wrong. Please try again later.',
+                'message' => 'AI Error: ' . $e->getMessage(),
             ], 500);
         }
     }

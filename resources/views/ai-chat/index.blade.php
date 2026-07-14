@@ -73,14 +73,14 @@
     }
 
     .ai-chat-container {
-        height: calc(100vh - 140px);
+        height: calc(100vh - 100px);
         display: flex;
         flex-direction: column;
     }
 
     @media (max-width: 1280px) {
         .ai-chat-container {
-            height: calc(100vh - 120px);
+            height: calc(100vh - 90px);
         }
     }
 
@@ -88,36 +88,41 @@
         flex: 1;
         overflow-y: auto;
     }
+
+    .ai-sidebar {
+        padding: 1rem !important;
+    }
+
+    .ai-sidebar-section {
+        padding: 0.75rem !important;
+    }
 </style>
 @endpush
 
 @section('content')
 <div class="max-w-6xl mx-auto">
     <div class="ai-page-shell border border-primary-100 dark:border-dark-border rounded-[28px] shadow-xl overflow-hidden">
-        <div class="px-6 py-6 md:px-8 md:py-7 border-b border-primary-100/80 dark:border-dark-border">
-            <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-800 flex items-center justify-center shadow-lg shadow-primary-900/20">
-                        <i class="fas fa-robot text-2xl text-white"></i>
+        <div class="px-4 py-3 md:px-6 md:py-4 border-b border-primary-100/80 dark:border-dark-border">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 via-primary-600 to-primary-800 flex items-center justify-center shadow-lg shadow-primary-900/20">
+                        <i class="fas fa-robot text-xl text-white"></i>
                     </div>
-                    <div>
-                        <div class="text-[11px] font-black uppercase tracking-[0.25em] text-primary-600 dark:text-primary-300">AI Assistant</div>
-                        <h1 class="text-2xl md:text-3xl font-black text-primary-950 dark:text-white">FEEDTAN AI</h1>
-                    </div>
+                    <h1 class="text-lg md:text-xl font-black text-primary-950 dark:text-white">FEEDTAN AI</h1>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-3">
+                <div class="flex flex-wrap items-center gap-2">
                     <button
                         type="button"
                         id="aiExportPdfBtn"
-                        class="inline-flex items-center gap-2 rounded-xl border border-primary-200 bg-white/90 px-4 py-2.5 text-sm font-bold text-primary-800 hover:bg-primary-50 transition-all">
+                        class="inline-flex items-center gap-1.5 rounded-xl border border-primary-200 bg-white/90 px-3 py-2 text-xs font-bold text-primary-800 hover:bg-primary-50 transition-all">
                         <i class="fas fa-file-pdf text-red-500"></i>
                         <span>Export PDF</span>
                     </button>
                     <button
                         type="button"
                         id="aiClearChatBtn"
-                        class="inline-flex items-center gap-2 rounded-xl border border-primary-200 bg-white/90 px-4 py-2.5 text-sm font-bold text-primary-800 hover:bg-primary-50 transition-all">
+                        class="inline-flex items-center gap-1.5 rounded-xl border border-primary-200 bg-white/90 px-3 py-2 text-xs font-bold text-primary-800 hover:bg-primary-50 transition-all">
                         <i class="fas fa-rotate-left"></i>
                         <span>New Chat</span>
                     </button>
@@ -127,27 +132,27 @@
 
         <div id="aiChatExportSurface" class="ai-export-surface">
             <div class="grid grid-cols-1 xl:grid-cols-[300px_minmax(0,1fr)]">
-                <aside class="border-b xl:border-b-0 xl:border-r border-primary-100 dark:border-dark-border bg-white/70 dark:bg-dark-card/60 p-6">
-                    <div class="space-y-5">
-                        <div class="rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-900/40 p-4">
-                            <div class="text-xs font-black uppercase tracking-[0.2em] text-primary-600 dark:text-primary-300">What You Can Do</div>
-                            <ul class="mt-3 space-y-3 text-sm text-primary-900 dark:text-primary-100">
-                                <li class="flex gap-3"><i class="fas fa-comment-dots mt-1 text-primary-500"></i><span>Ask about payments, bills, transactions, and workflows.</span></li>
-                                <li class="flex gap-3"><i class="fas fa-image mt-1 text-primary-500"></i><span>Upload a screenshot or receipt and ask FEEDTAN AI to explain it.</span></li>
-                                <li class="flex gap-3"><i class="fas fa-file-pdf mt-1 text-primary-500"></i><span>Export the current conversation as a PDF.</span></li>
+                <aside class="border-b xl:border-b-0 xl:border-r border-primary-100 dark:border-dark-border bg-white/70 dark:bg-dark-card/60 ai-sidebar">
+                    <div class="space-y-3">
+                        <div class="rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-900/40 ai-sidebar-section">
+                            <div class="text-[11px] font-black uppercase tracking-[0.2em] text-primary-600 dark:text-primary-300">What You Can Do</div>
+                            <ul class="mt-2 space-y-2 text-xs text-primary-900 dark:text-primary-100">
+                                <li class="flex gap-2"><i class="fas fa-comment-dots mt-0.5 text-primary-500"></i><span>Ask about payments, bills, transactions, and workflows.</span></li>
+                                <li class="flex gap-2"><i class="fas fa-image mt-0.5 text-primary-500"></i><span>Upload a screenshot or receipt and ask FEEDTAN AI to explain it.</span></li>
+                                <li class="flex gap-2"><i class="fas fa-file-pdf mt-0.5 text-primary-500"></i><span>Export the current conversation as a PDF.</span></li>
                             </ul>
                         </div>
 
-                        <div class="rounded-2xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card p-4">
-                            <div class="text-xs font-black uppercase tracking-[0.2em] text-primary-600 dark:text-primary-300">Quick Prompts</div>
-                            <div class="mt-3 flex flex-col gap-2">
-                                <button type="button" class="ai-quick-prompt text-left rounded-xl border border-primary-100 dark:border-dark-border px-3 py-3 text-sm text-primary-900 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all" data-prompt="Explain the latest payment flow in simple steps.">
+                        <div class="rounded-2xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card ai-sidebar-section">
+                            <div class="text-[11px] font-black uppercase tracking-[0.2em] text-primary-600 dark:text-primary-300">Quick Prompts</div>
+                            <div class="mt-2 flex flex-col gap-1.5">
+                                <button type="button" class="ai-quick-prompt text-left rounded-xl border border-primary-100 dark:border-dark-border px-2.5 py-2 text-xs text-primary-900 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all" data-prompt="Explain the latest payment flow in simple steps.">
                                     Explain the latest payment flow in simple steps.
                                 </button>
-                                <button type="button" class="ai-quick-prompt text-left rounded-xl border border-primary-100 dark:border-dark-border px-3 py-3 text-sm text-primary-900 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all" data-prompt="Summarize how bill control numbers work in FEEDTAN.">
+                                <button type="button" class="ai-quick-prompt text-left rounded-xl border border-primary-100 dark:border-dark-border px-2.5 py-2 text-xs text-primary-900 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all" data-prompt="Summarize how bill control numbers work in FEEDTAN.">
                                     Summarize how bill control numbers work in FEEDTAN.
                                 </button>
-                                <button type="button" class="ai-quick-prompt text-left rounded-xl border border-primary-100 dark:border-dark-border px-3 py-3 text-sm text-primary-900 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all" data-prompt="Review this screenshot and tell me what stands out.">
+                                <button type="button" class="ai-quick-prompt text-left rounded-xl border border-primary-100 dark:border-dark-border px-2.5 py-2 text-xs text-primary-900 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all" data-prompt="Review this screenshot and tell me what stands out.">
                                     Review this screenshot and tell me what stands out.
                                 </button>
                             </div>
@@ -158,42 +163,42 @@
                 <section class="flex flex-col ai-chat-container">
                     <div id="aiPageChatMessages" class="ai-chat-messages-wrapper px-5 py-6 md:px-8 md:py-7 space-y-5 bg-white/40 dark:bg-transparent"></div>
 
-                    <div class="border-t border-primary-100 dark:border-dark-border px-5 py-5 md:px-8 bg-white/85 dark:bg-dark-card/85 backdrop-blur-sm">
-                        <div id="aiImagePreviewWrap" class="hidden mb-4"></div>
+                    <div class="border-t border-primary-100 dark:border-dark-border px-4 py-3 md:px-6 bg-white/85 dark:bg-dark-card/85 backdrop-blur-sm">
+                        <div id="aiImagePreviewWrap" class="hidden mb-2"></div>
 
-                        <div class="rounded-3xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm p-3">
+                        <div class="rounded-2xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card shadow-sm p-2.5">
                             <textarea
                                 id="aiPageChatInput"
                                 rows="1"
                                 placeholder="Message FEEDTAN AI..."
                                 class="w-full resize-none bg-transparent px-3 py-2 text-sm text-primary-950 dark:text-white placeholder:text-gray-400 focus:outline-none"
-                                style="min-height: 60px; max-height: 220px;"
+                                style="min-height: 48px; max-height: 180px;"
                             ></textarea>
 
-                            <div class="flex flex-col gap-3 border-t border-primary-100 dark:border-dark-border pt-3 sm:flex-row sm:items-center sm:justify-between">
-                                <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex flex-col gap-2 border-t border-primary-100 dark:border-dark-border pt-2.5 sm:flex-row sm:items-center sm:justify-between">
+                                <div class="flex flex-wrap items-center gap-1.5">
                                     <input id="aiImageInput" type="file" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" class="hidden">
                                     <button
                                         type="button"
                                         id="aiUploadImageBtn"
-                                        class="inline-flex items-center gap-2 rounded-xl border border-primary-200 px-3.5 py-2 text-sm font-bold text-primary-800 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
+                                        class="inline-flex items-center gap-1.5 rounded-xl border border-primary-200 px-3 py-1.5 text-xs font-bold text-primary-800 dark:text-primary-100 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all">
                                         <i class="fas fa-image"></i>
                                         <span>Upload Image</span>
                                     </button>
-                                    <span class="text-xs text-gray-500 dark:text-gray-400">PNG, JPG, WEBP, GIF up to 4MB</span>
+                                    <span class="text-[10px] text-gray-500 dark:text-gray-400">PNG, JPG, WEBP, GIF up to 4MB</span>
                                 </div>
 
                                 <button
                                     type="button"
                                     id="aiSendBtn"
-                                    class="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary-700 to-primary-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-primary-900/20 hover:translate-y-[-1px] transition-all disabled:cursor-not-allowed disabled:opacity-60">
+                                    class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-primary-700 to-primary-500 px-4 py-2 text-xs font-bold text-white shadow-lg shadow-primary-900/20 hover:translate-y-[-0.5px] transition-all disabled:cursor-not-allowed disabled:opacity-60">
                                     <i class="fas fa-paper-plane"></i>
                                     <span>Send</span>
                                 </button>
                             </div>
                         </div>
 
-                        <p class="mt-3 text-center text-[11px] text-gray-500 dark:text-gray-400">
+                        <p class="mt-2 text-center text-[10px] text-gray-500 dark:text-gray-400">
                             FEEDTAN AI can make mistakes. Double-check important financial information.
                         </p>
                     </div>
@@ -295,7 +300,7 @@
     function aiAutoResizeTextarea() {
         const textarea = document.getElementById('aiPageChatInput');
         textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 220) + 'px';
+        textarea.style.height = Math.min(textarea.scrollHeight, 180) + 'px';
     }
 
     function aiScrollToBottom() {

@@ -3,18 +3,23 @@
 namespace App\Http\Controllers;
 
 use App\Models\Beneficiary;
+use App\Models\AiChatMessage;
 use App\Models\Payout;
 use App\Models\SystemSetting;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class AiChatController extends Controller
 {
     public function index()
     {
-        return view('ai-chat.index');
+        $user = auth()->user();
+        $chatHistory = $user ? AiChatMessage::where('user_id', $user->id)->latest()->take(100)->get()->reverse() : collect();
+        
+        return view('ai-chat.index', compact('chatHistory'));
     }
     
     public function chat(Request $request)
@@ -41,6 +46,12 @@ class AiChatController extends Controller
             }
 
             $imageFile = $request->file('image');
+            $imagePath = null;
+            
+            // Save uploaded image if present
+            if ($imageFile) {
+                $imagePath = $imageFile->store('ai-chat-images', 'public');
+            }
             $messages = [];
             
             // Build user's system data context
@@ -150,6 +161,22 @@ class AiChatController extends Controller
                 $aiResponse = $result['choices'][0]['message']['content'] ?? null;
                 
                 if ($aiResponse) {
+                    // Save user's message to DB
+                    AiChatMessage::create([
+                        'user_id' => $user->id,
+                        'role' => 'user',
+                        'content' => $request->message,
+                        'image_path' => $imagePath,
+                    ]);
+                    
+                    // Save assistant's response to DB
+                    AiChatMessage::create([
+                        'user_id' => $user->id,
+                        'role' => 'assistant',
+                        'content' => $aiResponse,
+                        'image_path' => null,
+                    ]);
+                    
                     return response()->json([
                         'success' => true,
                         'response' => $aiResponse,

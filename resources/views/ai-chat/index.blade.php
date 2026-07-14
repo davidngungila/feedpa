@@ -161,7 +161,44 @@
                 </aside>
 
                 <section class="flex flex-col ai-chat-container">
-                    <div id="aiPageChatMessages" class="ai-chat-messages-wrapper px-5 py-6 md:px-8 md:py-7 space-y-3 bg-white/40 dark:bg-transparent"></div>
+                    <div id="aiPageChatMessages" class="ai-chat-messages-wrapper px-5 py-6 md:px-8 md:py-7 space-y-3 bg-white/40 dark:bg-transparent">
+                        @foreach($chatHistory as $msg)
+                            <div class="flex {{ $msg->role === 'user' ? 'justify-end' : 'justify-start' }}">
+                                <div class="max-w-[85%] md:max-w-[75%] {{ $msg->role === 'user' ? 'order-2' : '' }}">
+                                    <div class="flex items-center gap-1.5 mb-1.5 {{ $msg->role === 'user' ? 'justify-end' : 'justify-start' }}">
+                                        @if($msg->role !== 'user')
+                                            <span class="text-[11px] font-black uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">FEEDTAN AI</span>
+                                        @endif
+                                        <span class="text-[10px] text-gray-400">{{ $msg->created_at->format('g:i A') }}</span>
+                                    </div>
+                                    <div class="{{ $msg->role === 'user'
+                                        ? 'rounded-2xl rounded-tr-sm bg-gradient-to-br from-primary-700 to-primary-500 text-white px-3 py-1.5 shadow-lg shadow-primary-900/15'
+                                        : 'rounded-2xl rounded-tl-sm border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-3 py-1.5 shadow-sm' }}">
+                                        @if($msg->image_path)
+                                            <img src="{{ asset('storage/' . $msg->image_path) }}" alt="Chat image" class="mb-2 max-h-44 w-full rounded-xl object-cover border border-white/40">
+                                        @endif
+                                        @if($msg->role === 'user')
+                                            <div class="text-sm leading-snug whitespace-pre-wrap">
+                                                {{ $msg->content }}
+                                            </div>
+                                        @else
+                                            <div class="ai-response-content text-sm leading-snug text-primary-950 dark:text-primary-50">
+                                                {!! str_replace("\n", '<br>', e($msg->content)) !!}
+                                            </div>
+                                        @endif
+                                    </div>
+                                    @if($msg->role !== 'user')
+                                        <div class="mt-2 flex justify-start">
+                                            <button type="button" class="ai-copy-response inline-flex items-center gap-1.5 rounded-lg border border-primary-200 px-2.5 py-1.5 text-[11px] font-bold text-primary-700 hover:bg-primary-50 transition-all" data-copy="{{ urlencode($msg->content) }}">
+                                                <i class="fas fa-copy text-xs"></i>
+                                                <span>Copy</span>
+                                            </button>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
 
                     <div class="border-t border-primary-100 dark:border-dark-border px-2 py-1.5 md:px-3 bg-white/85 dark:bg-dark-card/85 backdrop-blur-sm">
                         <div id="aiImagePreviewWrap" class="hidden mb-1"></div>
@@ -207,7 +244,7 @@
 @push('scripts')
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
 <script>
-    let aiPageHistory = [];
+    let aiPageHistory = @json($chatHistory->map(fn($m) => ['role' => $m->role, 'text' => $m->content]));
     let aiPageIsLoading = false;
     let aiPendingImageFile = null;
     let aiPendingImageUrl = null;
@@ -488,6 +525,7 @@
         aiPageHistory = [];
         aiClearPendingImage();
         document.getElementById('aiPageChatMessages').innerHTML = '';
+        // Show welcome message only if no existing history
         aiCreateMessageCard(
             'assistant',
             "Hi there! I'm FEEDTAN AI, your personal assistant. Ask me about payments, bills, transactions, or upload an image for analysis."
@@ -515,7 +553,11 @@
         const input = document.getElementById('aiPageChatInput');
         const fileInput = document.getElementById('aiImageInput');
 
-        aiResetConversation();
+        if (aiPageHistory.length === 0) {
+            aiResetConversation(); // only show welcome if no existing history
+        } else {
+            aiScrollToBottom();
+        }
 
         input.addEventListener('input', aiAutoResizeTextarea);
         input.addEventListener('keydown', function (event) {

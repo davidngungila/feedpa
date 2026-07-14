@@ -39,8 +39,13 @@ class AiChatController extends Controller
 
             if ($request->has('history') && is_array($request->history)) {
                 foreach ($request->history as $item) {
+                    $role = $item['role'] ?? 'user';
+                    // Map any invalid roles to valid ones
+                    if (!in_array($role, ['system', 'user', 'assistant'])) {
+                        $role = $role === 'model' ? 'assistant' : 'user';
+                    }
                     $messages[] = [
-                        'role' => $item['role'] ?? 'user',
+                        'role' => $role,
                         'content' => $item['text'] ?? ''
                     ];
                 }

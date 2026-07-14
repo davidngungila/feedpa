@@ -746,8 +746,8 @@
                 loadingMessage.remove();
                 
                 if (data.success) {
-                    addMessageToChat('model', data.response);
-                    chatHistory.push({role: 'model', text: data.response});
+                    addMessageToChat('assistant', data.response);
+                    chatHistory.push({role: 'assistant', text: data.response});
                 } else {
                     let errorMsg = 'Error: ' + (data.message || 'Something went wrong');
                     if (data.error) {
@@ -760,11 +760,11 @@
                             errorMsg = 'Error: ' + data.message;
                         }
                     }
-                    addMessageToChat('model', errorMsg);
+                    addMessageToChat('assistant', errorMsg);
                 }
             } catch (error) {
                 loadingMessage.remove();
-                addMessageToChat('model', 'Error: ' + error.message);
+                addMessageToChat('assistant', 'Error: ' + error.message);
             }
         }
         

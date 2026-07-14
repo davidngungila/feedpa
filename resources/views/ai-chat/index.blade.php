@@ -317,34 +317,34 @@
 
         const isUser = role === 'user';
         const imageHtml = options.imageUrl
-            ? `<img src="${options.imageUrl}" alt="Uploaded attachment" class="mb-3 max-h-56 w-full rounded-2xl object-cover border border-white/40">`
+            ? `<img src="${options.imageUrl}" alt="Uploaded attachment" class="mb-2 max-h-44 w-full rounded-xl object-cover border border-white/40">`
             : '';
         const copyButton = !isUser
-            ? `<button type="button" class="ai-copy-response inline-flex items-center gap-2 rounded-xl border border-primary-200 px-3 py-2 text-xs font-bold text-primary-700 hover:bg-primary-50 transition-all" data-copy="${encodeURIComponent(text ?? '')}">
-                    <i class="fas fa-copy"></i>
+            ? `<button type="button" class="ai-copy-response inline-flex items-center gap-1.5 rounded-lg border border-primary-200 px-2.5 py-1.5 text-[11px] font-bold text-primary-700 hover:bg-primary-50 transition-all" data-copy="${encodeURIComponent(text ?? '')}">
+                    <i class="fas fa-copy text-xs"></i>
                     <span>Copy</span>
                </button>`
             : '';
 
         row.innerHTML = `
-            <div class="max-w-[88%] md:max-w-[78%] ${isUser ? 'order-2' : ''}">
-                <div class="flex items-center gap-2 mb-2 ${isUser ? 'justify-end' : 'justify-start'}">
+            <div class="max-w-[85%] md:max-w-[75%] ${isUser ? 'order-2' : ''}">
+                <div class="flex items-center gap-1.5 mb-1.5 ${isUser ? 'justify-end' : 'justify-start'}">
                     ${isUser
-                        ? '<span class="text-[11px] font-bold uppercase tracking-[0.18em] text-gray-500">You</span>'
+                        ? '' // remove "You" label
                         : '<span class="text-[11px] font-black uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">FEEDTAN AI</span>'}
-                    <span class="text-[11px] text-gray-400">${aiMessageTime()}</span>
+                    <span class="text-[10px] text-gray-400">${aiMessageTime()}</span>
                 </div>
 
                 <div class="${isUser
-                    ? 'rounded-[24px] rounded-tr-md bg-gradient-to-br from-primary-700 to-primary-500 text-white px-5 py-4 shadow-lg shadow-primary-900/20'
-                    : 'rounded-[24px] rounded-tl-md border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-5 py-4 shadow-sm'}">
+                    ? 'rounded-2xl rounded-tr-sm bg-gradient-to-br from-primary-700 to-primary-500 text-white px-3.5 py-2.5 shadow-lg shadow-primary-900/15'
+                    : 'rounded-2xl rounded-tl-sm border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-3.5 py-2.5 shadow-sm'}">
                     ${imageHtml}
-                    <div class="${isUser ? 'text-sm leading-7 whitespace-pre-wrap' : 'ai-response-content text-sm leading-7 text-primary-950 dark:text-primary-50'}">
+                    <div class="${isUser ? 'text-sm leading-relaxed whitespace-pre-wrap' : 'ai-response-content text-sm leading-relaxed text-primary-950 dark:text-primary-50'}">
                         ${isUser ? aiEscapeHtml(text ?? '') : aiFormatRichText(text ?? '')}
                     </div>
                 </div>
 
-                ${copyButton ? `<div class="mt-3 flex justify-start">${copyButton}</div>` : ''}
+                ${copyButton ? `<div class="mt-2 flex justify-start">${copyButton}</div>` : ''}
             </div>
         `;
 
@@ -359,16 +359,16 @@
         row.id = 'aiPageLoadingCard';
         row.className = 'flex justify-start';
         row.innerHTML = `
-            <div class="max-w-[78%]">
-                <div class="flex items-center gap-2 mb-2">
+            <div class="max-w-[75%]">
+                <div class="flex items-center gap-1.5 mb-1.5">
                     <span class="text-[11px] font-black uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">FEEDTAN AI</span>
-                    <span class="text-[11px] text-gray-400">thinking...</span>
+                    <span class="text-[10px] text-gray-400">thinking...</span>
                 </div>
-                <div class="rounded-[24px] rounded-tl-md border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-5 py-4 shadow-sm">
-                    <div class="flex items-center gap-2">
-                        <span class="h-2.5 w-2.5 rounded-full bg-primary-500 animate-bounce" style="animation-delay:0s;"></span>
-                        <span class="h-2.5 w-2.5 rounded-full bg-primary-500 animate-bounce" style="animation-delay:0.15s;"></span>
-                        <span class="h-2.5 w-2.5 rounded-full bg-primary-500 animate-bounce" style="animation-delay:0.3s;"></span>
+                <div class="rounded-2xl rounded-tl-sm border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-3.5 py-2.5 shadow-sm">
+                    <div class="flex items-center gap-1.5">
+                        <span class="h-2 w-2 rounded-full bg-primary-500 animate-bounce" style="animation-delay:0s;"></span>
+                        <span class="h-2 w-2 rounded-full bg-primary-500 animate-bounce" style="animation-delay:0.15s;"></span>
+                        <span class="h-2 w-2 rounded-full bg-primary-500 animate-bounce" style="animation-delay:0.3s;"></span>
                     </div>
                 </div>
             </div>
@@ -390,15 +390,14 @@
 
         wrap.classList.remove('hidden');
         wrap.innerHTML = `
-            <div class="inline-flex items-center gap-4 rounded-2xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-4 py-3 shadow-sm">
-                <img src="${aiPendingImageUrl}" alt="Selected preview" class="h-16 w-16 rounded-xl object-cover border border-primary-100">
+            <div class="inline-flex items-center gap-3 rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-3 py-2 shadow-sm">
+                <img src="${aiPendingImageUrl}" alt="Selected preview" class="h-12 w-12 rounded-lg object-cover border border-primary-100">
                 <div class="min-w-0">
-                    <div class="text-xs font-black uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">Image Attached</div>
-                    <div class="truncate text-sm font-semibold text-primary-950 dark:text-white">${aiEscapeHtml(aiPendingImageFile.name)}</div>
-                    <div class="text-xs text-gray-500">${Math.round(aiPendingImageFile.size / 1024)} KB</div>
+                    <div class="text-[11px] font-black uppercase tracking-[0.18em] text-primary-600 dark:text-primary-300">Image</div>
+                    <div class="truncate text-xs font-semibold text-primary-950 dark:text-white">${aiEscapeHtml(aiPendingImageFile.name)}</div>
                 </div>
-                <button type="button" id="aiRemoveImageBtn" class="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-50 transition-all">
-                    <i class="fas fa-xmark"></i>
+                <button type="button" id="aiRemoveImageBtn" class="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50 transition-all">
+                    <i class="fas fa-xmark text-xs"></i>
                     <span>Remove</span>
                 </button>
             </div>

@@ -179,7 +179,7 @@
             const submitBtn = document.getElementById('submitBtn');
             
             const steps = [
-                { title: 'Validating...', description: 'Checking your credentials', delay: 400 },
+                { title: 'Authenticating', description: "We're validating your identity, please wait...", delay: 400 },
                 { title: 'Authorizing...', description: 'Verifying your account', delay: 400 }
             ];
 

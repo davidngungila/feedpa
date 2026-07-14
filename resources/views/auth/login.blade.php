@@ -156,16 +156,21 @@
          LOADING SCREEN
          ============================================================ -->
     <div id="loadingScreen" class="fixed inset-0 z-[60] flex items-center justify-center hidden-element">
-        <div class="text-center">
+        <div class="text-center w-full max-w-md px-4">
             <!-- Spinner -->
             <div class="mb-6">
                 <div class="w-16 h-16 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto"></div>
             </div>
             <!-- Step messages -->
-            <div class="space-y-1">
+            <div class="space-y-1 mb-6">
                 <p class="text-lg font-bold text-primary-900" id="currentStep">Validating...</p>
                 <p class="text-sm text-primary-600" id="currentStepDescription">Checking your credentials</p>
             </div>
+            <!-- Progress Bar -->
+            <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div id="progressBar" class="bg-primary-600 h-2.5 rounded-full transition-all duration-75" style="width: 0%"></div>
+            </div>
+            <p class="text-xs text-primary-500 mt-2" id="progressText">0%</p>
         </div>
     </div>
 
@@ -177,6 +182,8 @@
             const currentStepEl = document.getElementById('currentStep');
             const currentStepDescriptionEl = document.getElementById('currentStepDescription');
             const submitBtn = document.getElementById('submitBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
             
             const steps = [
                 { title: 'Authenticating', description: "We're validating your identity, please wait...", delay: 400 },
@@ -256,6 +263,16 @@
                 submitBtn.disabled = true;
                 loginScreen.classList.add('hidden-element');
                 loadingScreen.classList.remove('hidden-element');
+                
+                // Animate progress bar from 0-100%
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += 2;
+                    if (progress > 100) progress = 100;
+                    progressBar.style.width = progress + '%';
+                    progressText.textContent = progress + '%';
+                    if (progress >= 100) clearInterval(progressInterval);
+                }, 8);
                 
                 for (let i = 0; i < steps.length; i++) {
                     currentStepEl.textContent = steps[i].title;

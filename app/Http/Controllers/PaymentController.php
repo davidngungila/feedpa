@@ -1192,6 +1192,7 @@ HTML;
 
         $settledCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['SUCCESS', 'SETTLED'])->count();
         $failedCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['FAILED', 'ERROR'])->count();
+        $processingCount = Transaction::whereIn('type', ['payment', 'billpay'])->whereIn('status', ['PROCESSING', 'PENDING'])->count();
         
         Log::info('Payment history loaded from database', [
             'count' => $displayItems->count(),
@@ -1205,6 +1206,7 @@ HTML;
             'internalDbBalance',
             'settledCount',
             'failedCount',
+            'processingCount',
             'activeStatus',
             'selectedColumns',
             'availableColumns',
@@ -2019,6 +2021,8 @@ HTML;
     {
         if ($activeStatus === 'FAILED') {
             $query->whereIn('status', ['FAILED', 'ERROR']);
+        } elseif ($activeStatus === 'PROCESSING') {
+            $query->whereIn('status', ['PROCESSING', 'PENDING']);
         } else {
             $query->whereIn('status', ['SETTLED', 'SUCCESS']);
         }

@@ -28,6 +28,14 @@
     <!-- Status Tabs -->
     <div class="card p-1">
         <div class="flex gap-1">
+            <a href="{{ request()->fullUrlWithQuery(['status' => 'PROCESSING', 'page' => 1]) }}"
+               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'PROCESSING' ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20' : 'text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/30' }}">
+                <i class="fas fa-clock"></i>
+                PROCESSING
+                <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status')) === 'PROCESSING' ? 'bg-white/20' : 'bg-amber-100 dark:bg-amber-900/40' }}">
+                    {{ number_format($processingCount ?? 0) }}
+                </span>
+            </a>
             <a href="{{ request()->fullUrlWithQuery(['status' => 'SETTLED', 'page' => 1]) }}"
                class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'SETTLED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
                 <i class="fas fa-check-circle"></i>

@@ -414,7 +414,7 @@
         // Polling variables
         let pollingInterval = null;
         let pollingStartTime = null;
-        const POLLING_DURATION = 60000; // 1 minute
+        const POLLING_DURATION = 180000; // 3 minutes (increased for M-Pesa)
         const POLLING_INTERVAL = 3000; // 3 seconds per poll
 
         function formatAmountDisplay(value) {
@@ -914,14 +914,14 @@
                             <div class="w-14 h-14 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-3">
                                 <i class="fas fa-clock text-2xl"></i>
                             </div>
-                            <h3 class="text-lg font-bold">Tulikuwa Tunasubiri Sana</h3>
+                            <h3 class="text-lg font-bold">Malipo Bado Yanaendelea</h3>
                         </div>
                         <div class="p-6 space-y-4">
-                            <p class="text-sm text-slate-600 text-center">Hakuna majibu kuhusiana na hali ya malipo. Unaweza kuangalia hali ya malipo baadaye.</p>
+                            <p class="text-sm text-slate-600 text-center">Malipo yako bado yanaendelea kushughulikiwa. Kwa M-Pesa, malipo huweza kuchukua muda mrefu zaidi. Tafadhali angalia hali ya malipo kwenye ukurasa wa hali ya malipo.</p>
                             <a href="/payments/status?reference=${orderReference}"
                                class="flex items-center justify-center gap-2 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold transition-colors">
                                 <i class="fas fa-eye"></i>
-                                Angalia Hali
+                                Angalia Hali ya Malipo
                             </a>
                             <button type="button" onclick="closeTimeoutModal()"
                                     class="w-full py-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold transition-colors">

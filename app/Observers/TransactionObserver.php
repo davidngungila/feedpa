@@ -174,55 +174,19 @@ class TransactionObserver
         try {
             $whatsappMessage = $this->buildWhatsAppMessage($transaction);
             
-            // Generate PDF receipt for attachment
-            $pdfAttachment = null;
-            try {
-                $pdfAttachment = $this->generatePdfReceipt($transaction);
-                if ($pdfAttachment) {
-                    Log::info('PDF receipt generated and uploaded successfully', [
-                        'transaction_id' => $transaction->id,
-                        'pdf_url' => $pdfAttachment['url']
-                    ]);
-                } else {
-                    Log::warning('PDF receipt generation or upload failed', [
-                        'transaction_id' => $transaction->id
-                    ]);
-                }
-            } catch (\Exception $e) {
-                Log::warning('Failed to generate PDF for WhatsApp attachment: ' . $e->getMessage(), [
-                    'transaction_id' => $transaction->id,
-                    'error' => $e->getMessage()
-                ]);
-                // Continue without PDF attachment
-            }
-
-            // Update message to only mention PDF if attachment succeeded
-            if (!$pdfAttachment) {
-                $whatsappMessage = str_replace("📄 **Your PDF receipt is attached.**\n\n", "", $whatsappMessage);
-            }
-
-            if ($pdfAttachment) {
-                $result = $this->whatsappService->sendDocument(
-                    $transaction->phone,
-                    $pdfAttachment['url'],
-                    $pdfAttachment['filename'],
-                    $whatsappMessage
-                );
-            } else {
-                $result = $this->whatsappService->sendText($transaction->phone, $whatsappMessage);
-            }
+            // Send WhatsApp message with receipt URL (no PDF attachment)
+            $result = $this->whatsappService->sendText($transaction->phone, $whatsappMessage);
 
             if ($result['success'] ?? false) {
                 $transaction->update([
                     'whatsapp_sent' => true,
-                    'whatsapp_message' => $whatsappMessage . (isset($pdfAttachment) ? ' [with PDF receipt]' : ''),
+                    'whatsapp_message' => $whatsappMessage,
                     'whatsapp_sent_at' => now(),
                     'whatsapp_error' => null,
                 ]);
 
                 Log::info('WhatsApp confirmation sent', [
-                    'transaction_id' => $transaction->id,
-                    'with_pdf' => isset($pdfAttachment)
+                    'transaction_id' => $transaction->id
                 ]);
             } else {
                 $transaction->update([
@@ -333,6 +297,7 @@ class TransactionObserver
         $paymentMethod = $transaction->payment_method ?? 'N/A';
         $date = $transaction->created_at ? $transaction->created_at->format('d M Y, H:i:s') : now()->format('d M Y, H:i:s');
         $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment';
+        $receiptUrl = url('/payments/receipt/' . $reference);
 
         $message = "**PAYMENT CONFIRMATION**\n\n";
         $message .= "Thank you! Your payment has been received successfully.\n\n";
@@ -347,7 +312,7 @@ class TransactionObserver
         $message .= "* **Phone:** +{$phone}\n\n";
         $message .= "**Description**\n\n";
         $message .= "* {$description}\n\n";
-        $message .= "📄 **Your PDF receipt is attached.**\n\n";
+        $message .= "📄 **Your PDF receipt:** {$receiptUrl}\n\n";
         $message .= "To make another payment, visit:\n";
         $message .= "https://pay.feedtancmg.org\n\n";
         $message .= "Thank you for choosing **FEEDTAN Community Microfinance Group**.";

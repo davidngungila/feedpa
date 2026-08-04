@@ -176,16 +176,41 @@ class WhatsAppService
                 ];
             }
 
-            $finalContentType = $detectedType ?: 'application/octet-stream';
+            $finalContentType = $detectedType ?: 'application/pdf';
 
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-            ])->timeout(120)
-              ->attach('file', $fileContent, $fileName, ['Content-Type' => $finalContentType])
-              ->post($uploadUrl);
+            // Use cURL for more control over the multipart request
+            $ch = curl_init();
+            $cfile = new \CURLFile($file, $fileName, $finalContentType);
+            
+            $postData = [
+                'file' => $cfile
+            ];
 
-            if ($response->successful()) {
-                $body = $response->json();
+            curl_setopt($ch, CURLOPT_URL, $uploadUrl);
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Authorization: Bearer ' . $apiKey,
+                'Content-Type: multipart/form-data'
+            ]);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+            curl_close($ch);
+
+            if ($error) {
+                Log::error('WhatsApp WasenderAPI uploadFile cURL error: ' . $error);
+                return [
+                    'success' => false,
+                    'message' => 'cURL error: ' . $error,
+                ];
+            }
+
+            if ($httpCode >= 200 && $httpCode < 300) {
+                $body = json_decode($response, true);
                 return [
                     'success' => true,
                     'data'    => $body['data'] ?? $body,
@@ -194,15 +219,15 @@ class WhatsAppService
             }
 
             Log::error('WhatsApp WasenderAPI uploadFile failed', [
-                'status'       => $response->status(),
-                'body'         => $response->body(),
+                'status'       => $httpCode,
+                'body'         => $response,
                 'content_type' => $finalContentType,
             ]);
 
             return [
                 'success' => false,
-                'status'  => $response->status(),
-                'message' => $response->json('message') ?? $response->body() ?? 'Failed to upload file',
+                'status'  => $httpCode,
+                'message' => 'Failed to upload file: ' . $response,
             ];
         } catch (\Exception $e) {
             Log::error('WhatsApp WasenderAPI uploadFile exception: ' . $e->getMessage());

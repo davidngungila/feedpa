@@ -173,18 +173,38 @@ class TransactionObserver
 
         try {
             $whatsappMessage = $this->buildWhatsAppMessage($transaction);
-            $result = $this->whatsappService->sendText($transaction->phone, $whatsappMessage);
+            
+            // Generate PDF receipt for attachment
+            $pdfAttachment = null;
+            try {
+                $pdfAttachment = $this->generatePdfReceipt($transaction);
+            } catch (\Exception $e) {
+                Log::warning('Failed to generate PDF for WhatsApp attachment: ' . $e->getMessage());
+                // Continue without PDF attachment
+            }
+
+            if ($pdfAttachment) {
+                $result = $this->whatsappService->sendDocument(
+                    $transaction->phone,
+                    $pdfAttachment['url'],
+                    $pdfAttachment['filename'],
+                    $whatsappMessage
+                );
+            } else {
+                $result = $this->whatsappService->sendText($transaction->phone, $whatsappMessage);
+            }
 
             if ($result['success'] ?? false) {
                 $transaction->update([
                     'whatsapp_sent' => true,
-                    'whatsapp_message' => $whatsappMessage,
+                    'whatsapp_message' => $whatsappMessage . (isset($pdfAttachment) ? ' [with PDF receipt]' : ''),
                     'whatsapp_sent_at' => now(),
                     'whatsapp_error' => null,
                 ]);
 
                 Log::info('WhatsApp confirmation sent', [
-                    'transaction_id' => $transaction->id
+                    'transaction_id' => $transaction->id,
+                    'with_pdf' => isset($pdfAttachment)
                 ]);
             } else {
                 $transaction->update([
@@ -207,6 +227,80 @@ class TransactionObserver
                 'whatsapp_sent' => false,
                 'whatsapp_error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    private function generatePdfReceipt(Transaction $transaction): ?array
+    {
+        try {
+            $orderReference = $transaction->order_reference;
+            
+            // Get payment data
+            $paymentData = [
+                'id' => $transaction->id,
+                'orderReference' => $transaction->order_reference,
+                'transaction_id' => $transaction->transaction_id,
+                'status' => $transaction->status,
+                'amount' => $transaction->amount,
+                'currency' => $transaction->currency,
+                'phone' => $transaction->phone,
+                'payer_name' => $transaction->payer_name,
+                'customer_name' => $transaction->customer_name,
+                'email' => $transaction->email,
+                'description' => $transaction->description,
+                'type' => $transaction->type,
+                'payment_method' => $transaction->payment_method,
+                'created_at' => $transaction->created_at,
+                'updated_at' => $transaction->updated_at,
+                'collectedAmount' => $transaction->collected_amount ?? $transaction->amount,
+                'collectedCurrency' => $transaction->currency,
+            ];
+
+            // Generate QR code
+            $qrContent = "FEEDTAN DIGITAL PAYMENT SYSTEM\n" .
+                        "Order Reference: " . $orderReference . "\n" .
+                        "Transaction ID: " . ($transaction->transaction_id ?? 'N/A') . "\n" .
+                        "Amount: " . number_format($paymentData['collectedAmount'] ?? 0, 2) . " " . ($paymentData['collectedCurrency'] ?? 'TZS') . "\n" .
+                        "Status: " . $transaction->status . "\n" .
+                        "Phone: " . ($transaction->phone ?? 'N/A') . "\n" .
+                        "Channel: " . ($transaction->payment_method ?? 'N/A') . "\n" .
+                        "Member: " . ($transaction->customer_name ?? 'N/A') . "\n" .
+                        "Payer: " . ($transaction->payer_name ?? 'N/A') . "\n" .
+                        "Description: " . ($transaction->description ?? 'N/A') . "\n" .
+                        "Date: " . ($transaction->created_at ? $transaction->created_at->format('Y-m-d H:i:s') : 'N/A');
+
+            $qrCodeSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
+            $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
+
+            // Generate PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage])
+                ->setPaper('a4', 'portrait')
+                ->setOption('margin-bottom', 20);
+
+            $pdfFileName = 'payment-receipt-' . $orderReference . '.pdf';
+            $tempPdfPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $pdfFileName;
+            file_put_contents($tempPdfPath, $pdf->output());
+
+            // Upload to WhatsApp service
+            $whatsappService = $this->whatsappService;
+            $uploadResult = $whatsappService->uploadFile($tempPdfPath);
+
+            // Clean up temp file
+            if (file_exists($tempPdfPath)) {
+                unlink($tempPdfPath);
+            }
+
+            if ($uploadResult['success'] ?? false) {
+                return [
+                    'url' => $uploadResult['data']['url'] ?? $uploadResult['data']['fileUrl'] ?? null,
+                    'filename' => $pdfFileName
+                ];
+            }
+
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Failed to generate PDF receipt: ' . $e->getMessage());
+            return null;
         }
     }
 
@@ -241,6 +335,10 @@ class TransactionObserver
         $message .= "*Description:*\n";
         $message .= "━━━━━━━━━━━━━━━━━━\n";
         $message .= "{$description}\n\n";
+        $message .= "━━━━━━━━━━━━━━━━━━\n";
+        $message .= "📄 *PDF Receipt attached*\n\n";
+        $message .= "Need to make another payment?\n";
+        $message .= "Visit: https://pay.feedtancmg.org/payment\n\n";
         $message .= "Thank you for using FEEDTAN services! 🙏";
 
         return $message;

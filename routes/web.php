@@ -198,6 +198,133 @@ Route::middleware(['auth'])->group(function () {
         Artisan::call('app:sync-bills-from-api');
         return back()->with('success', 'Bills synced successfully!');
     })->name('api-sync-bills');
+
+    // Test WhatsApp with PDF receipt
+    Route::get('/test-whatsapp-pdf', function () {
+        try {
+            $whatsappService = new \App\Services\WhatsAppService();
+            $phone = '255622239304';
+            
+            // Create a test transaction for demo
+            $testTransaction = \App\Models\Transaction::where('status', 'SETTLED')->latest()->first();
+            
+            if (!$testTransaction) {
+                return response()->json(['error' => 'No settled transaction found for testing'], 404);
+            }
+            
+            // Build WhatsApp message
+            $amount = number_format($testTransaction->amount ?? 0, 0);
+            $currency = $testTransaction->currency ?? 'TZS';
+            $reference = $testTransaction->order_reference ?? 'N/A';
+            $transactionId = $testTransaction->transaction_id ?? 'N/A';
+            $customerName = $testTransaction->customer_name ?? $testTransaction->payer_name ?? 'Mteja';
+            $phoneNum = $testTransaction->phone ?? 'N/A';
+            $paymentMethod = $testTransaction->payment_method ?? 'N/A';
+            $date = $testTransaction->created_at ? $testTransaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
+            $description = $testTransaction->description ?? $testTransaction->resolvedDescription() ?? 'Payment';
+
+            $message = "✅ *PAYMENT CONFIRMATION*\n\n";
+            $message .= "*Payment Details:*\n";
+            $message .= "━━━━━━━━━━━━━━━━━━\n";
+            $message .= "💰 *Amount:* {$amount} {$currency}\n";
+            $message .= "📋 *Reference:* {$reference}\n";
+            $message .= "🆔 *Transaction ID:* {$transactionId}\n";
+            $message .= "📱 *Payment Method:* {$paymentMethod}\n";
+            $message .= "📅 *Date & Time:* {$date}\n\n";
+            $message .= "*Customer Information:*\n";
+            $message .= "━━━━━━━━━━━━━━━━━━\n";
+            $message .= "👤 *Member Name:* {$customerName}\n";
+            $message .= "📞 *Phone:* {$phoneNum}\n\n";
+            $message .= "*Description:*\n";
+            $message .= "━━━━━━━━━━━━━━━━━━\n";
+            $message .= "{$description}\n\n";
+            $message .= "Thank you for using FEEDTAN services! 🙏";
+
+            // Generate PDF receipt
+            $orderReference = $testTransaction->order_reference;
+            $paymentData = [
+                'id' => $testTransaction->id,
+                'orderReference' => $testTransaction->order_reference,
+                'transaction_id' => $testTransaction->transaction_id,
+                'status' => $testTransaction->status,
+                'amount' => $testTransaction->amount,
+                'currency' => $testTransaction->currency,
+                'phone' => $testTransaction->phone,
+                'payer_name' => $testTransaction->payer_name,
+                'customer_name' => $testTransaction->customer_name,
+                'email' => $testTransaction->email,
+                'description' => $testTransaction->description,
+                'type' => $testTransaction->type,
+                'payment_method' => $testTransaction->payment_method,
+                'created_at' => $testTransaction->created_at,
+                'updated_at' => $testTransaction->updated_at,
+                'collectedAmount' => $testTransaction->collected_amount ?? $testTransaction->amount,
+                'collectedCurrency' => $testTransaction->currency,
+            ];
+
+            // Generate QR code
+            $qrContent = "FEEDTAN DIGITAL PAYMENT SYSTEM\n" .
+                        "Order Reference: " . $orderReference . "\n" .
+                        "Transaction ID: " . ($testTransaction->transaction_id ?? 'N/A') . "\n" .
+                        "Amount: " . number_format($paymentData['collectedAmount'] ?? 0, 2) . " " . ($paymentData['collectedCurrency'] ?? 'TZS') . "\n" .
+                        "Status: " . $testTransaction->status . "\n" .
+                        "Phone: " . ($testTransaction->phone ?? 'N/A') . "\n" .
+                        "Channel: " . ($testTransaction->payment_method ?? 'N/A') . "\n" .
+                        "Member: " . ($testTransaction->customer_name ?? 'N/A') . "\n" .
+                        "Payer: " . ($testTransaction->payer_name ?? 'N/A') . "\n" .
+                        "Description: " . ($testTransaction->description ?? 'N/A') . "\n" .
+                        "Date: " . ($testTransaction->created_at ? $testTransaction->created_at->format('Y-m-d H:i:s') : 'N/A');
+
+            $qrCodeSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
+            $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
+
+            // Generate PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage])
+                ->setPaper('a4', 'portrait')
+                ->setOption('margin-bottom', 20);
+
+            $pdfFileName = 'payment-receipt-' . $orderReference . '.pdf';
+            $tempPdfPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $pdfFileName;
+            file_put_contents($tempPdfPath, $pdf->output());
+
+            // Upload to WhatsApp service
+            $uploadResult = $whatsappService->uploadFile($tempPdfPath);
+
+            // Clean up temp file
+            if (file_exists($tempPdfPath)) {
+                unlink($tempPdfPath);
+            }
+
+            if ($uploadResult['success'] ?? false) {
+                $pdfUrl = $uploadResult['data']['url'] ?? $uploadResult['data']['fileUrl'] ?? null;
+                
+                if ($pdfUrl) {
+                    $result = $whatsappService->sendDocument($phone, $pdfUrl, $pdfFileName, $message);
+                    
+                    return response()->json([
+                        'success' => $result['success'] ?? false,
+                        'message' => $result['message'] ?? 'Unknown result',
+                        'data' => $result
+                    ]);
+                }
+            }
+
+            // Fallback to text only
+            $result = $whatsappService->sendText($phone, $message);
+            
+            return response()->json([
+                'success' => $result['success'] ?? false,
+                'message' => $result['message'] ?? 'Unknown result',
+                'data' => $result
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
+        }
+    })->name('test.whatsapp.pdf');
 });
 
 // Public Payment Page

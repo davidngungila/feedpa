@@ -839,17 +839,7 @@
                                     <i class="fas fa-download"></i>
                                     Pakua Rcpt
                                 </a>
-                                <a href="https://wa.me/255${paymentData.phone?.replace(/^0/, '') || ''}?text=Asante! Malipo yako yamekamilika. Kiasi: TZS ${amount}, Reference: ${orderReference}"
-                                   target="_blank"
-                                   class="flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white text-sm font-bold transition-colors">
-                                    <i class="fab fa-whatsapp"></i>
-                                    Tuma Ujumbe WhatsApp
-                                </a>
                             </div>
-                            <button type="button" onclick="closeSuccessModal()"
-                                    class="w-full py-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-bold transition-colors">
-                                Funga
-                            </button>
                         </div>
                     </div>
                 </div>`;

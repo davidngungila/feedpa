@@ -14,6 +14,7 @@ use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\WhatsAppSettingsController;
 use App\Http\Controllers\AiChatController;
+use App\Http\Controllers\Auth\LoginController;
 
 /*
 |--------------------------------------------------------------------------

@@ -183,6 +183,9 @@ class TransactionObserver
         if (strpos($whatsappPhone, '255') !== 0) {
             $whatsappPhone = '255' . $whatsappPhone;
         }
+        
+        // Add + prefix for WhatsApp format
+        $whatsappPhone = '+' . $whatsappPhone;
 
         try {
             $whatsappMessage = $this->buildWhatsAppMessage($transaction);

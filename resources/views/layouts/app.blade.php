@@ -424,6 +424,11 @@
                             <i class="fa-solid fa-circle text-[6px] ml-1"></i>
                             <span>Email Settings</span>
                         </a>
+                        <a href="{{ route('settings.whatsapp') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('settings.whatsapp') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-brands fa-whatsapp text-[6px] ml-1"></i>
+                            <span>WhatsApp Settings</span>
+                        </a>
                         <a href="{{ route('settings.general') }}" 
                            class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('settings.general') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
                             <i class="fa-solid fa-circle text-[6px] ml-1"></i>

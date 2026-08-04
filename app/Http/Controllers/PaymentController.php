@@ -211,6 +211,11 @@ class PaymentController extends Controller
             $whatsappService = new \App\Services\WhatsAppService();
             
             if ($pdfAttachment) {
+                \Illuminate\Support\Facades\Log::info('Sending WhatsApp with PDF attachment', [
+                    'phone' => $whatsappPhone,
+                    'pdf_url' => $pdfAttachment['url'],
+                    'filename' => $pdfAttachment['filename']
+                ]);
                 $result = $whatsappService->sendDocument(
                     $whatsappPhone,
                     $pdfAttachment['url'],
@@ -218,8 +223,17 @@ class PaymentController extends Controller
                     $whatsappMessage
                 );
             } else {
+                \Illuminate\Support\Facades\Log::info('Sending WhatsApp text only', [
+                    'phone' => $whatsappPhone
+                ]);
                 $result = $whatsappService->sendText($whatsappPhone, $whatsappMessage);
             }
+
+            \Illuminate\Support\Facades\Log::info('WhatsApp API response', [
+                'success' => $result['success'] ?? false,
+                'message' => $result['message'] ?? 'No message',
+                'data' => $result['data'] ?? null
+            ]);
 
             if ($result['success'] ?? false) {
                 $transaction->update([
@@ -231,6 +245,11 @@ class PaymentController extends Controller
 
                 return back()->with('success', 'WhatsApp sent successfully!');
             }
+
+            \Illuminate\Support\Facades\Log::error('WhatsApp send failed', [
+                'error' => $result['message'] ?? 'Unknown error',
+                'phone' => $whatsappPhone
+            ]);
 
             return back()->with('error', 'Failed to send WhatsApp: ' . ($result['message'] ?? 'Unknown error'));
         } catch (\Exception $e) {

@@ -147,17 +147,8 @@ class TransactionObserver
             return;
         }
 
-        // Check if WhatsApp already sent
+        // Check if WhatsApp already sent (same logic as SMS)
         if ($transaction->whatsapp_sent) {
-            return;
-        }
-
-        // Check if WhatsApp was attempted recently (within last 10 seconds) to prevent duplicate sends
-        if ($transaction->whatsapp_sent_at && $transaction->whatsapp_sent_at->gt(now()->subSeconds(10))) {
-            Log::info('WhatsApp send attempted recently, skipping to prevent duplicates', [
-                'transaction_id' => $transaction->id,
-                'last_attempt' => $transaction->whatsapp_sent_at
-            ]);
             return;
         }
 
@@ -181,11 +172,6 @@ class TransactionObserver
         }
 
         try {
-            // Mark as attempting to prevent concurrent sends
-            $transaction->update([
-                'whatsapp_sent_at' => now(),
-            ]);
-
             $whatsappMessage = $this->buildWhatsAppMessage($transaction);
             
             // Generate PDF receipt for attachment

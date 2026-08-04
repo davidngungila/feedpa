@@ -143,7 +143,7 @@ class WhatsAppService
                 'timeout' => 120,
             ]);
 
-            $body = json_decode($response->getBody(), true);
+            $body = json_decode((string) $response->getBody(), true);
 
             return [
                 'success' => true,

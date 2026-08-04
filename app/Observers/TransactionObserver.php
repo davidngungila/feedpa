@@ -178,9 +178,27 @@ class TransactionObserver
             $pdfAttachment = null;
             try {
                 $pdfAttachment = $this->generatePdfReceipt($transaction);
+                if ($pdfAttachment) {
+                    Log::info('PDF receipt generated and uploaded successfully', [
+                        'transaction_id' => $transaction->id,
+                        'pdf_url' => $pdfAttachment['url']
+                    ]);
+                } else {
+                    Log::warning('PDF receipt generation or upload failed', [
+                        'transaction_id' => $transaction->id
+                    ]);
+                }
             } catch (\Exception $e) {
-                Log::warning('Failed to generate PDF for WhatsApp attachment: ' . $e->getMessage());
+                Log::warning('Failed to generate PDF for WhatsApp attachment: ' . $e->getMessage(), [
+                    'transaction_id' => $transaction->id,
+                    'error' => $e->getMessage()
+                ]);
                 // Continue without PDF attachment
+            }
+
+            // Update message to only mention PDF if attachment succeeded
+            if (!$pdfAttachment) {
+                $whatsappMessage = str_replace("📄 **Your PDF receipt is attached.**\n\n", "", $whatsappMessage);
             }
 
             if ($pdfAttachment) {

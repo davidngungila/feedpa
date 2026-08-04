@@ -182,29 +182,57 @@ class PaymentController extends Controller
                 return back()->with('error', 'No phone number available for this transaction.');
             }
 
+            // Format phone number for WhatsApp
+            $whatsappPhone = preg_replace('/[^0-9]/', '', $phoneNumber);
+            if (strpos($whatsappPhone, '0') === 0) {
+                $whatsappPhone = '255' . substr($whatsappPhone, 1);
+            }
+            if (strpos($whatsappPhone, '255') !== 0) {
+                $whatsappPhone = '255' . $whatsappPhone;
+            }
+            $whatsappPhone = '+' . $whatsappPhone;
+
             // Build WhatsApp message with full details
             $whatsappMessage = $this->buildWhatsAppMessage($transaction);
 
+            // Generate PDF receipt for attachment
+            $pdfAttachment = null;
+            try {
+                $pdfAttachment = $this->generatePdfReceipt($transaction);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to generate PDF for WhatsApp attachment: ' . $e->getMessage());
+            }
+
+            // Update message to only mention PDF if attachment succeeded
+            if (!$pdfAttachment) {
+                $whatsappMessage = str_replace("📄 **Your PDF receipt is attached.**\n\n", "", $whatsappMessage);
+            }
+
             $whatsappService = new \App\Services\WhatsAppService();
-            $result = $whatsappService->sendText($phoneNumber, $whatsappMessage);
+            
+            if ($pdfAttachment) {
+                $result = $whatsappService->sendDocument(
+                    $whatsappPhone,
+                    $pdfAttachment['url'],
+                    $pdfAttachment['filename'],
+                    $whatsappMessage
+                );
+            } else {
+                $result = $whatsappService->sendText($whatsappPhone, $whatsappMessage);
+            }
 
             if ($result['success'] ?? false) {
                 $transaction->update([
                     'whatsapp_sent' => true,
-                    'whatsapp_message' => $whatsappMessage,
+                    'whatsapp_message' => $whatsappMessage . (isset($pdfAttachment) ? ' [with PDF receipt]' : ''),
                     'whatsapp_sent_at' => now(),
                     'whatsapp_error' => null,
                 ]);
 
                 return back()->with('success', 'WhatsApp sent successfully!');
-            } else {
-                $transaction->update([
-                    'whatsapp_sent' => false,
-                    'whatsapp_error' => $result['message'] ?? 'Unknown error',
-                ]);
-
-                return back()->with('error', 'Failed to send WhatsApp: ' . ($result['message'] ?? 'Unknown error'));
             }
+
+            return back()->with('error', 'Failed to send WhatsApp: ' . ($result['message'] ?? 'Unknown error'));
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Failed to send manual WhatsApp: ' . $e->getMessage(), [
                 'transaction_id' => $transaction->id,
@@ -220,6 +248,76 @@ class PaymentController extends Controller
         }
     }
 
+    private function generatePdfReceipt($transaction): ?array
+    {
+        try {
+            $orderReference = $transaction->order_reference;
+            
+            // Get payment data
+            $paymentData = [
+                'id' => $transaction->id,
+                'orderReference' => $transaction->order_reference,
+                'transaction_id' => $transaction->transaction_id,
+                'status' => $transaction->status,
+                'amount' => $transaction->amount,
+                'currency' => $transaction->currency,
+                'phone' => $transaction->phone,
+                'payer_name' => $transaction->payer_name,
+                'customer_name' => $transaction->customer_name,
+                'email' => $transaction->email,
+                'description' => $transaction->description,
+                'type' => $transaction->type,
+                'payment_method' => $transaction->payment_method,
+                'created_at' => $transaction->created_at,
+                'updated_at' => $transaction->updated_at,
+                'collectedAmount' => $transaction->collected_amount ?? $transaction->amount,
+                'collectedCurrency' => $transaction->currency,
+            ];
+
+            // Generate QR code
+            $qrContent = "FEEDTAN DIGITAL PAYMENT SYSTEM\n" .
+                        "Order Reference: " . $orderReference . "\n" .
+                        "Transaction ID: " . ($transaction->transaction_id ?? 'N/A') . "\n" .
+                        "Amount: " . number_format($paymentData['collectedAmount'] ?? 0, 2) . " " . ($paymentData['collectedCurrency'] ?? 'TZS') . "\n" .
+                        "Status: " . $transaction->status . "\n" .
+                        "Phone: " . ($transaction->phone ?? 'N/A') . "\n" .
+                        "Channel: " . ($transaction->payment_method ?? 'N/A') . "\n" .
+                        "Member: " . ($transaction->customer_name ?? 'N/A') . "\n" .
+                        "Payer: " . ($transaction->payer_name ?? 'N/A') . "\n" .
+                        "Description: " . ($transaction->description ?? 'N/A') . "\n" .
+                        "Date: " . ($transaction->created_at ? $transaction->created_at->format('Y-m-d H:i:s') : 'N/A');
+
+            $qrCodeSvg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
+            $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
+
+            // Generate PDF
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage])
+                ->setPaper('a4', 'portrait')
+                ->setOption('margin-bottom', 20);
+
+            $pdfFileName = 'payment-receipt-' . $orderReference . '.pdf';
+            $pdfPath = public_path('receipts/' . $pdfFileName);
+            
+            // Ensure directory exists
+            if (!file_exists(public_path('receipts'))) {
+                mkdir(public_path('receipts'), 0755, true);
+            }
+            
+            file_put_contents($pdfPath, $pdf->output());
+            
+            // Get public URL
+            $pdfUrl = url('receipts/' . $pdfFileName);
+
+            return [
+                'url' => $pdfUrl,
+                'filename' => $pdfFileName
+            ];
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to generate PDF receipt: ' . $e->getMessage());
+            return null;
+        }
+    }
+
     private function buildWhatsAppMessage($transaction): string
     {
         $amount = number_format($transaction->amount ?? 0, 0);
@@ -227,31 +325,17 @@ class PaymentController extends Controller
         $reference = $transaction->order_reference ?? 'N/A';
         $transactionId = $transaction->transaction_id ?? 'N/A';
         $customerName = $transaction->customer_name ?? $transaction->payer_name ?? 'Mteja';
-        $payerName = $transaction->payer_name ?? 'N/A';
         $phone = $transaction->phone ?? 'N/A';
         $paymentMethod = $transaction->payment_method ?? 'N/A';
-        $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
-        $description = $transaction->description ?? $transaction->resolvedDescription() ?? 'Payment';
+        $date = $transaction->created_at ? $transaction->created_at->format('d M Y, H:i:s') : now()->format('d M Y, H:i:s');
+        $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment';
 
-        $message = "✅ *PAYMENT CONFIRMATION*\n\n";
-        $message .= "*Payment Details:*\n";
-        $message .= "━━━━━━━━━━━━━━━━━━\n";
-        $message .= "💰 *Amount:* {$amount} {$currency}\n";
-        $message .= "📋 *Reference:* {$reference}\n";
-        $message .= "🆔 *Transaction ID:* {$transactionId}\n";
-        $message .= "📱 *Payment Method:* {$paymentMethod}\n";
-        $message .= "📅 *Date & Time:* {$date}\n\n";
-        $message .= "*Customer Information:*\n";
-        $message .= "━━━━━━━━━━━━━━━━━━\n";
-        $message .= "👤 *Member Name:* {$customerName}\n";
-        if ($payerName !== $customerName) {
-            $message .= "💳 *Payer Name:* {$payerName}\n";
-        }
-        $message .= "📞 *Phone:* {$phone}\n\n";
-        $message .= "*Description:*\n";
-        $message .= "━━━━━━━━━━━━━━━━━━\n";
-        $message .= "{$description}\n\n";
-        $message .= "Thank you for using FEEDTAN services! 🙏";
+        $message = "**PAYMENT CONFIRMATION**\n\n";
+        $message .= "Your payment has been successfully received and processed. Below are the details of your transaction.\n\n";
+        $message .= "**Payment Details:** Amount: **{$currency} {$amount}**, Reference: **{$reference}**, Transaction ID: **{$transactionId}**, Payment Method: **{$paymentMethod}**, Date & Time: **{$date}**.\n\n";
+        $message .= "**Customer Information:** Member Name: **{$customerName}**, Phone Number: **{$phone}**.\n\n";
+        $message .= "**Description:** **{$description}**.\n\n";
+        $message .= "Thank you for using **FEEDTAN Community Microfinance Group** services. We appreciate your continued trust and support.";
 
         return $message;
     }

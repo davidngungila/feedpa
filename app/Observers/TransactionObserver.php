@@ -347,22 +347,11 @@ class TransactionObserver
         $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment';
 
         $message = "**PAYMENT CONFIRMATION**\n\n";
-        $message .= "Thank you! Your payment has been received successfully.\n\n";
-        $message .= "**Payment Details**\n\n";
-        $message .= "* **Amount:** {$currency} {$amount}\n";
-        $message .= "* **Reference:** {$reference}\n";
-        $message .= "* **Transaction ID:** {$transactionId}\n";
-        $message .= "* **Payment Method:** {$paymentMethod}\n";
-        $message .= "* **Date & Time:** {$date}\n\n";
-        $message .= "**Customer Information**\n\n";
-        $message .= "* **Member Name:** {$customerName}\n";
-        $message .= "* **Phone:** +{$phone}\n\n";
-        $message .= "**Description**\n\n";
-        $message .= "* {$description}\n\n";
-        $message .= "📄 **Your PDF receipt is attached.**\n\n";
-        $message .= "To make another payment, visit:\n";
-        $message .= "https://pay.feedtancmg.org\n\n";
-        $message .= "Thank you for choosing **FEEDTAN Community Microfinance Group**.";
+        $message .= "Your payment has been successfully received and processed. Below are the details of your transaction.\n\n";
+        $message .= "**Payment Details:** Amount: **{$currency} {$amount}**, Reference: **{$reference}**, Transaction ID: **{$transactionId}**, Payment Method: **{$paymentMethod}**, Date & Time: **{$date}**.\n\n";
+        $message .= "**Customer Information:** Member Name: **{$customerName}**, Phone Number: **{$phone}**.\n\n";
+        $message .= "**Description:** **{$description}**.\n\n";
+        $message .= "Thank you for using **FEEDTAN Community Microfinance Group** services. We appreciate your continued trust and support.";
 
         return $message;
     }

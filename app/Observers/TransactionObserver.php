@@ -171,6 +171,19 @@ class TransactionObserver
             return;
         }
 
+        // Format phone number for WhatsApp (remove +, spaces, dashes, ensure starts with country code)
+        $whatsappPhone = preg_replace('/[^0-9]/', '', $transaction->phone);
+        
+        // Ensure it starts with country code (remove leading 0 if present)
+        if (strpos($whatsappPhone, '0') === 0) {
+            $whatsappPhone = '255' . substr($whatsappPhone, 1);
+        }
+        
+        // Ensure it has country code
+        if (strpos($whatsappPhone, '255') !== 0) {
+            $whatsappPhone = '255' . $whatsappPhone;
+        }
+
         try {
             $whatsappMessage = $this->buildWhatsAppMessage($transaction);
             
@@ -203,13 +216,13 @@ class TransactionObserver
 
             if ($pdfAttachment) {
                 $result = $this->whatsappService->sendDocument(
-                    $transaction->phone,
+                    $whatsappPhone,
                     $pdfAttachment['url'],
                     $pdfAttachment['filename'],
                     $whatsappMessage
                 );
             } else {
-                $result = $this->whatsappService->sendText($transaction->phone, $whatsappMessage);
+                $result = $this->whatsappService->sendText($whatsappPhone, $whatsappMessage);
             }
 
             if ($result['success'] ?? false) {

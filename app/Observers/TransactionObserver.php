@@ -8,6 +8,7 @@ use App\Models\SystemSetting;
 use App\Services\EmailConfigService;
 use App\Services\AppNotificationService;
 use App\Services\MessagingServiceAPI;
+use App\Services\WhatsAppService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -15,17 +16,20 @@ class TransactionObserver
 {
     protected $messagingService;
     protected $notificationService;
+    protected $whatsappService;
 
-    public function __construct(MessagingServiceAPI $messagingService, AppNotificationService $notificationService)
+    public function __construct(MessagingServiceAPI $messagingService, AppNotificationService $notificationService, WhatsAppService $whatsappService)
     {
         $this->messagingService = $messagingService;
         $this->notificationService = $notificationService;
+        $this->whatsappService = $whatsappService;
     }
 
     public function created(Transaction $transaction)
     {
         $this->trySendEmail($transaction);
         $this->trySendSMS($transaction);
+        $this->trySendWhatsApp($transaction);
         $this->tryCreateInAppNotification($transaction);
     }
 
@@ -33,6 +37,7 @@ class TransactionObserver
     {
         $this->trySendEmail($transaction);
         $this->trySendSMS($transaction);
+        $this->trySendWhatsApp($transaction);
         $this->tryCreateInAppNotification($transaction);
     }
 
@@ -133,6 +138,112 @@ class TransactionObserver
                 'sms_error' => $e->getMessage(),
             ]);
         }
+    }
+
+    private function trySendWhatsApp(Transaction $transaction)
+    {
+        // Check if WhatsApp is enabled
+        if (!SystemSetting::get('whatsapp_enabled', false)) {
+            return;
+        }
+
+        // Check if WhatsApp already sent
+        if ($transaction->whatsapp_sent) {
+            return;
+        }
+
+        // Check if transaction is settled (or completed)
+        $status = strtolower($transaction->status ?? '');
+        $allowedStatuses = ['settled', 'completed', 'success', 'successful'];
+        if (!in_array($status, $allowedStatuses)) {
+            Log::info('Transaction status not eligible for WhatsApp alert', [
+                'transaction_id' => $transaction->id,
+                'status' => $status
+            ]);
+            return;
+        }
+
+        // Check if phone number exists
+        if (!$transaction->phone) {
+            Log::info('No phone number for transaction', [
+                'transaction_id' => $transaction->id
+            ]);
+            return;
+        }
+
+        try {
+            $whatsappMessage = $this->buildWhatsAppMessage($transaction);
+            $result = $this->whatsappService->sendText($transaction->phone, $whatsappMessage);
+
+            if ($result['success'] ?? false) {
+                $transaction->update([
+                    'whatsapp_sent' => true,
+                    'whatsapp_message' => $whatsappMessage,
+                    'whatsapp_sent_at' => now(),
+                    'whatsapp_error' => null,
+                ]);
+
+                Log::info('WhatsApp confirmation sent', [
+                    'transaction_id' => $transaction->id
+                ]);
+            } else {
+                $transaction->update([
+                    'whatsapp_sent' => false,
+                    'whatsapp_error' => $result['message'] ?? 'Unknown error',
+                ]);
+
+                Log::error('Failed to send WhatsApp confirmation', [
+                    'transaction_id' => $transaction->id,
+                    'error' => $result['message'] ?? 'Unknown error'
+                ]);
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send WhatsApp confirmation: ' . $e->getMessage(), [
+                'transaction_id' => $transaction->id,
+                'exception' => $e
+            ]);
+
+            $transaction->update([
+                'whatsapp_sent' => false,
+                'whatsapp_error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function buildWhatsAppMessage(Transaction $transaction): string
+    {
+        $amount = number_format($transaction->amount ?? 0, 0);
+        $currency = $transaction->currency ?? 'TZS';
+        $reference = $transaction->order_reference ?? 'N/A';
+        $transactionId = $transaction->transaction_id ?? 'N/A';
+        $customerName = $transaction->customer_name ?? $transaction->payer_name ?? 'Mteja';
+        $payerName = $transaction->payer_name ?? 'N/A';
+        $phone = $transaction->phone ?? 'N/A';
+        $paymentMethod = $transaction->payment_method ?? 'N/A';
+        $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
+        $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment';
+
+        $message = "✅ *PAYMENT CONFIRMATION*\n\n";
+        $message .= "*Payment Details:*\n";
+        $message .= "━━━━━━━━━━━━━━━━━━\n";
+        $message .= "💰 *Amount:* {$amount} {$currency}\n";
+        $message .= "📋 *Reference:* {$reference}\n";
+        $message .= "🆔 *Transaction ID:* {$transactionId}\n";
+        $message .= "📱 *Payment Method:* {$paymentMethod}\n";
+        $message .= "📅 *Date & Time:* {$date}\n\n";
+        $message .= "*Customer Information:*\n";
+        $message .= "━━━━━━━━━━━━━━━━━━\n";
+        $message .= "👤 *Member Name:* {$customerName}\n";
+        if ($payerName !== $customerName) {
+            $message .= "💳 *Payer Name:* {$payerName}\n";
+        }
+        $message .= "📞 *Phone:* {$phone}\n\n";
+        $message .= "*Description:*\n";
+        $message .= "━━━━━━━━━━━━━━━━━━\n";
+        $message .= "{$description}\n\n";
+        $message .= "Thank you for using FEEDTAN services! 🙏";
+
+        return $message;
     }
 
     private function sendTransactionAlertToOfficers(Transaction $transaction)

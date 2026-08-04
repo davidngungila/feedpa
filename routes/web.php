@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PaymentController;
@@ -9,13 +10,9 @@ use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditController;
-use App\Http\Controllers\AppNotificationController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\ReportController;
-use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\BeneficiaryController;
-use App\Http\Controllers\Auth\ForgotPasswordController;
-use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\WhatsAppSettingsController;
 use App\Http\Controllers\AiChatController;
 
 /*
@@ -67,6 +64,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{orderReference}/notes', [PaymentController::class, 'addNote'])->name('notes.add');
         Route::post('/{orderReference}/send-sms', [PaymentController::class, 'sendManualSMS'])->name('send-sms');
         Route::post('/{orderReference}/send-email', [PaymentController::class, 'sendManualEmail'])->name('send-email');
+        Route::post('/{orderReference}/send-whatsapp', [PaymentController::class, 'sendManualWhatsApp'])->name('send-whatsapp');
         Route::post('/{orderReference}/retry', [PaymentController::class, 'retryPayment'])->name('retry');
     });
 
@@ -178,6 +176,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/sms/test', [SettingsController::class, 'testSms'])->name('sms.test');
         Route::get('/email', [SettingsController::class, 'email'])->name('email');
         Route::post('/email/update', [SettingsController::class, 'updateEmail'])->name('email.update');
+        Route::get('/whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp');
+        Route::post('/whatsapp/update', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.update');
+        Route::post('/whatsapp/test', [WhatsAppSettingsController::class, 'testConnection'])->name('whatsapp.test');
+        Route::post('/whatsapp/test-message', [WhatsAppSettingsController::class, 'testWhatsApp'])->name('whatsapp.test-message');
         Route::get('/general', [SettingsController::class, 'general'])->name('general');
         Route::post('/general/update', [SettingsController::class, 'updateGeneral'])->name('general.update');
         Route::post('/users/{user}/toggle-lock', [SettingsController::class, 'toggleUserLock'])->name('users.toggle-lock');

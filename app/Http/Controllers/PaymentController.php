@@ -7,6 +7,7 @@ use App\Models\Payout;
 use App\Services\ClickPesaAPIService;
 use App\Services\MessagingServiceAPI;
 use App\Services\AccountBalanceService;
+use App\Services\WhatsAppService;
 use App\Support\TransactionFieldResolver;
 use Exception;
 use Illuminate\Http\Request;
@@ -22,12 +23,14 @@ class PaymentController extends Controller
     protected ClickPesaAPIService $api;
     protected MessagingServiceAPI $messaging;
     protected AccountBalanceService $accountBalanceService;
+    protected WhatsAppService $whatsApp;
 
-    public function __construct(ClickPesaAPIService $api, MessagingServiceAPI $messaging, AccountBalanceService $accountBalanceService)
+    public function __construct(ClickPesaAPIService $api, MessagingServiceAPI $messaging, AccountBalanceService $accountBalanceService, WhatsAppService $whatsApp)
     {
         $this->api = $api;
         $this->messaging = $messaging;
         $this->accountBalanceService = $accountBalanceService;
+        $this->whatsApp = $whatsApp;
     }
 
     public function addNote(Request $request, $orderReference)
@@ -158,6 +161,99 @@ class PaymentController extends Controller
 
             return back()->with('error', 'Failed to send email: ' . $e->getMessage());
         }
+    }
+
+    public function sendManualWhatsApp(Request $request, $orderReference)
+    {
+        $transaction = Transaction::where('order_reference', $orderReference)->firstOrFail();
+
+        try {
+            // Check if transaction status is SUCCESS or SETTLED
+            if (!in_array($transaction->status, ['SUCCESS', 'SETTLED'])) {
+                return back()->with('error', 'WhatsApp can only be sent for successful/settled transactions.');
+            }
+
+            if ($transaction->whatsapp_sent) {
+                return back()->with('info', 'WhatsApp has already been sent for this transaction.');
+            }
+
+            $phoneNumber = $transaction->phone;
+            if (!$phoneNumber) {
+                return back()->with('error', 'No phone number available for this transaction.');
+            }
+
+            // Build WhatsApp message with full details
+            $whatsappMessage = $this->buildWhatsAppMessage($transaction);
+
+            $whatsappService = new \App\Services\WhatsAppService();
+            $result = $whatsappService->sendText($phoneNumber, $whatsappMessage);
+
+            if ($result['success'] ?? false) {
+                $transaction->update([
+                    'whatsapp_sent' => true,
+                    'whatsapp_message' => $whatsappMessage,
+                    'whatsapp_sent_at' => now(),
+                    'whatsapp_error' => null,
+                ]);
+
+                return back()->with('success', 'WhatsApp sent successfully!');
+            } else {
+                $transaction->update([
+                    'whatsapp_sent' => false,
+                    'whatsapp_error' => $result['message'] ?? 'Unknown error',
+                ]);
+
+                return back()->with('error', 'Failed to send WhatsApp: ' . ($result['message'] ?? 'Unknown error'));
+            }
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send manual WhatsApp: ' . $e->getMessage(), [
+                'transaction_id' => $transaction->id,
+                'error' => $e,
+            ]);
+
+            $transaction->update([
+                'whatsapp_sent' => false,
+                'whatsapp_error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Failed to send WhatsApp: ' . $e->getMessage());
+        }
+    }
+
+    private function buildWhatsAppMessage($transaction): string
+    {
+        $amount = number_format($transaction->amount ?? 0, 0);
+        $currency = $transaction->currency ?? 'TZS';
+        $reference = $transaction->order_reference ?? 'N/A';
+        $transactionId = $transaction->transaction_id ?? 'N/A';
+        $customerName = $transaction->customer_name ?? $transaction->payer_name ?? 'Mteja';
+        $payerName = $transaction->payer_name ?? 'N/A';
+        $phone = $transaction->phone ?? 'N/A';
+        $paymentMethod = $transaction->payment_method ?? 'N/A';
+        $date = $transaction->created_at ? $transaction->created_at->format('d M, Y H:i:s') : now()->format('d M, Y H:i:s');
+        $description = $transaction->description ?? $transaction->resolvedDescription() ?? 'Payment';
+
+        $message = "✅ *PAYMENT CONFIRMATION*\n\n";
+        $message .= "*Payment Details:*\n";
+        $message .= "━━━━━━━━━━━━━━━━━━\n";
+        $message .= "💰 *Amount:* {$amount} {$currency}\n";
+        $message .= "📋 *Reference:* {$reference}\n";
+        $message .= "🆔 *Transaction ID:* {$transactionId}\n";
+        $message .= "📱 *Payment Method:* {$paymentMethod}\n";
+        $message .= "📅 *Date & Time:* {$date}\n\n";
+        $message .= "*Customer Information:*\n";
+        $message .= "━━━━━━━━━━━━━━━━━━\n";
+        $message .= "👤 *Member Name:* {$customerName}\n";
+        if ($payerName !== $customerName) {
+            $message .= "💳 *Payer Name:* {$payerName}\n";
+        }
+        $message .= "📞 *Phone:* {$phone}\n\n";
+        $message .= "*Description:*\n";
+        $message .= "━━━━━━━━━━━━━━━━━━\n";
+        $message .= "{$description}\n\n";
+        $message .= "Thank you for using FEEDTAN services! 🙏";
+
+        return $message;
     }
 
     public function retryPayment(Request $request, $orderReference)
@@ -2025,6 +2121,140 @@ HTML;
             $query->whereIn('status', ['PROCESSING', 'PENDING']);
         } else {
             $query->whereIn('status', ['SETTLED', 'SUCCESS']);
+        }
+    }
+
+    /**
+     * Send transaction receipt via WhatsApp with full details and PDF attachment
+     */
+    public function sendWhatsAppReceipt(Request $request, $orderReference)
+    {
+        $request->validate([
+            'phone' => 'nullable|string'
+        ]);
+
+        $transaction = Transaction::where('order_reference', $orderReference)->first();
+        
+        if (!$transaction) {
+            return back()->with('error', 'Transaction not found.');
+        }
+
+        if (!in_array($transaction->status, ['SUCCESS', 'SETTLED'])) {
+            return back()->with('error', 'WhatsApp receipt can only be sent for successful/settled transactions.');
+        }
+
+        $phone = $request->get('phone', $transaction->phone);
+        if (!$phone) {
+            return back()->with('error', 'No phone number available for this transaction.');
+        }
+
+        try {
+            // Format phone number (Tanzania format)
+            $phone = preg_replace('/[^0-9]/', '', $phone);
+            if (!str_starts_with($phone, '255')) {
+                $phone = '255' . ltrim($phone, '0');
+            }
+
+            // Build payment data for PDF and message
+            $paymentData = [
+                'orderReference' => $transaction->order_reference,
+                'transaction_id' => $transaction->transaction_id,
+                'status' => $transaction->status,
+                'collectedAmount' => $transaction->amount,
+                'collectedCurrency' => $transaction->currency,
+                'paymentPhoneNumber' => $transaction->phone,
+                'channel' => $transaction->payment_method,
+                'customer' => [
+                    'customerName' => $transaction->customer_name ?? $transaction->payer_name,
+                    'customerEmail' => $transaction->email,
+                    'customerPhoneNumber' => $transaction->phone
+                ],
+                'payer_name' => $transaction->payer_name,
+                'customer_name' => $transaction->customer_name,
+                'description' => $transaction->resolvedDescription(),
+                'createdAt' => $transaction->created_at,
+                'id' => $transaction->transaction_id
+            ];
+
+            // Generate QR code
+            $qrContent = "FEEDTAN DIGITAL PAYMENT SYSTEM\n" .
+                       "Order Reference: " . ($paymentData['orderReference'] ?? 'N/A') . "\n" .
+                       "Transaction ID: " . ($paymentData['id'] ?? $paymentData['transaction_id'] ?? 'N/A') . "\n" .
+                       "Amount: " . number_format($paymentData['collectedAmount'] ?? $paymentData['amount'] ?? 0, 2) . " " . ($paymentData['collectedCurrency'] ?? $paymentData['currency'] ?? 'TZS') . "\n" .
+                       "Status: " . ($paymentData['status'] ?? 'UNKNOWN') . "\n" .
+                       "Phone: " . ($paymentData['paymentPhoneNumber'] ?? $paymentData['phone'] ?? 'N/A') . "\n" .
+                       "Channel: " . ($paymentData['channel'] ?? $paymentData['payment_method'] ?? 'N/A') . "\n" .
+                       "Member: " . ($paymentData['customer_name'] ?? $paymentData['customer']['customerName'] ?? 'N/A') . "\n" .
+                       "Payer: " . ($paymentData['payer_name'] ?? 'N/A') . "\n" .
+                       "Date: " . (isset($paymentData['createdAt']) ? \Carbon\Carbon::parse($paymentData['createdAt'])->format('Y-m-d H:i:s') : 'N/A');
+            
+            $qrCodeSvg = QrCode::format('svg')->size(150)->encoding('UTF-8')->errorCorrection('H')->generate($qrContent);
+            $qrCodeImage = 'data:image/svg+xml;base64,' . base64_encode($qrCodeSvg);
+
+            // Generate PDF content (temporary file)
+            $pdf = Pdf::loadView('payments.receipt', ['paymentData' => $paymentData, 'qrCodeImage' => $qrCodeImage])
+                ->setPaper('a4', 'portrait')
+                ->setOption('margin-bottom', 20);
+
+            $pdfFileName = 'payment-receipt-' . $orderReference . '.pdf';
+            $tempPdfPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $pdfFileName;
+            file_put_contents($tempPdfPath, $pdf->output());
+
+            // Build WhatsApp message with full details
+            $memberName = $transaction->customer_name ?? $transaction->payer_name ?? 'Mteja';
+            $amountFormatted = number_format($transaction->amount, 2) . ' ' . $transaction->currency;
+            $dateFormatted = \Carbon\Carbon::parse($transaction->created_at)->format('d M Y, H:i:s');
+
+            $messageText = "🎉 Malipo Yamekamilika! 🎉\n\n";
+            $messageText .= "📍 Mteja: {$memberName}\n";
+            $messageText .= "📅 Tarehe: {$dateFormatted}\n";
+            $messageText .= "💸 Kiasi: TZS {$amountFormatted}\n";
+            $messageText .= "📲 Simu: {$transaction->phone}\n";
+            $messageText .= "📝 Maelezo: " . ($transaction->resolvedDescription() ?? 'Malipo ya FEEDTAN') . "\n";
+            $messageText .= "🏷️ Reference: {$transaction->order_reference}\n";
+            if ($transaction->transaction_id) {
+                $messageText .= "🆔 Transaction ID: {$transaction->transaction_id}\n";
+            }
+            $messageText .= "💳 Njia ya Malipo: " . strtoupper($transaction->payment_method ?? 'USSD') . "\n";
+            $messageText .= "✅ Hali: " . strtoupper($transaction->status) . "\n\n";
+            $messageText .= "Asante kwa kutumia FeedTan CMG!\n";
+            $messageText .= "🌐 https://feedtan.org";
+
+            // Upload PDF to Wasender
+            $uploadResult = $this->whatsApp->uploadFile($tempPdfPath, 'application/pdf');
+
+            // Clean up temp file
+            if (file_exists($tempPdfPath)) {
+                @unlink($tempPdfPath);
+            }
+
+            $sendResult = null;
+            if ($uploadResult['success'] && isset($uploadResult['data']['url'])) {
+                $documentUrl = $uploadResult['data']['url'];
+                $sendResult = $this->whatsApp->sendDocument(
+                    $phone,
+                    $documentUrl,
+                    $pdfFileName,
+                    $messageText
+                );
+            } else {
+                // Send text-only message if upload fails
+                $sendResult = $this->whatsApp->sendText($phone, $messageText);
+            }
+
+            if ($sendResult['success']) {
+                return back()->with('success', 'WhatsApp with receipt sent successfully to ' . $phone . '!');
+            }
+
+            return back()->with('error', 'Failed to send WhatsApp: ' . ($sendResult['message'] ?? 'Unknown error'));
+
+        } catch (\Exception $e) {
+            Log::error('Failed to send WhatsApp receipt: ' . $e->getMessage(), [
+                'order_reference' => $orderReference,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return back()->with('error', 'Failed to send WhatsApp receipt: ' . $e->getMessage());
         }
     }
 }

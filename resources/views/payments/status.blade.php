@@ -270,10 +270,35 @@
                                         <i class="fas fa-envelope"></i> Email
                                     </button>
                                 @endif
+                                
+                                @if(auth()->check())
+                                    @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
+                                        @if(($payment['whatsapp_sent'] ?? false) === false)
+                                            <form action="{{ route('payments.send-whatsapp', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
+                                                @csrf
+                                                <button type="submit" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-xs font-bold hover:bg-green-100 transition-all">
+                                                    <i class="fab fa-whatsapp"></i> Send WhatsApp
+                                                </button>
+                                            </form>
+                                        @else
+                                            <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
+                                                <i class="fab fa-whatsapp"></i> WhatsApp Sent
+                                            </button>
+                                        @endif
+                                    @else
+                                        <button disabled class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gray-100 dark:bg-dark-border border border-gray-200 dark:border-gray-700 text-gray-400 text-xs font-bold cursor-not-allowed">
+                                            <i class="fab fa-whatsapp"></i> Send WhatsApp
+                                        </button>
+                                    @endif
+                                @else
+                                    <button onclick="alert('Sending WhatsApp...')" class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-xs font-bold hover:bg-green-100 transition-all">
+                                        <i class="fab fa-whatsapp"></i> WhatsApp
+                                    </button>
+                                @endif
                             </div>
 
         <!-- SMS & Email Status -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="card p-6 space-y-4">
                 <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
                     <i class="fas fa-sms"></i> SMS Status
@@ -345,6 +370,44 @@
                     @if(($payment['email_message'] ?? false))
                         <div class="p-3 bg-primary-50 dark:bg-dark-900 rounded-lg border border-primary-100 dark:border-dark-border text-xs text-primary-700 dark:text-primary-300">
                             <strong>Recipients:</strong> {{ $payment['email_message'] }}
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="card p-6 space-y-4">
+                <h3 class="text-xs font-black uppercase tracking-widest text-green-600 dark:text-green-400 flex items-center gap-2">
+                    <i class="fab fa-whatsapp"></i> WhatsApp Status
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2">
+                        @if($payment['whatsapp_sent'] ?? false)
+                            <span class="badge badge-green text-xs">
+                                <i class="fas fa-check me-1"></i> Sent
+                            </span>
+                        @elseif($payment['whatsapp_error'] ?? false)
+                            <span class="badge badge-red text-xs">
+                                <i class="fas fa-times me-1"></i> Failed
+                            </span>
+                        @else
+                            <span class="badge badge-yellow text-xs">
+                                <i class="fas fa-clock me-1"></i> Not Sent
+                            </span>
+                        @endif
+                    </div>
+                    @if(($payment['whatsapp_sent_at'] ?? false))
+                        <div class="text-xs text-green-600">
+                            Sent at: {{ \Carbon\Carbon::parse($payment['whatsapp_sent_at'])->format('d M, Y H:i:s') }}
+                        </div>
+                    @endif
+                    @if(($payment['whatsapp_error'] ?? false))
+                        <div class="text-xs text-red-600 font-bold">
+                            Error: {{ $payment['whatsapp_error'] }}
+                        </div>
+                    @endif
+                    @if(($payment['whatsapp_message'] ?? false))
+                        <div class="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-100 dark:border-green-800 text-xs text-green-700 dark:text-green-300">
+                            <strong>Message:</strong> {{ $payment['whatsapp_message'] }}
                         </div>
                     @endif
                 </div>

@@ -49,7 +49,7 @@ class WhatsAppSettingsController extends Controller
         SystemSetting::set('whatsapp_session_api_key', $validated['whatsapp_session_api_key'] ?? null);
         SystemSetting::set('whatsapp_personal_access_token', $validated['whatsapp_personal_access_token'] ?? null);
         SystemSetting::set('whatsapp_base_url', $validated['whatsapp_base_url'] ?? 'https://www.wasenderapi.com/api');
-        SystemSetting::set('whatsapp_enabled', $request->has('whatsapp_enabled'));
+        SystemSetting::set('whatsapp_enabled', filter_var($request->input('whatsapp_enabled', false), FILTER_VALIDATE_BOOLEAN));
 
         return back()->with('success', 'WhatsApp settings updated successfully!');
     }

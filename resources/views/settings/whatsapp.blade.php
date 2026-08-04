@@ -87,7 +87,8 @@
                         </div>
                         <div class="flex flex-col justify-center space-y-2 md:col-span-2">
                             <div class="flex items-center gap-2">
-                                <input type="checkbox" name="whatsapp_enabled" id="whatsapp_enabled" {{ $settings['whatsapp_enabled'] ? 'checked' : '' }} class="w-4 h-4 rounded">
+                                <input type="hidden" name="whatsapp_enabled" value="0">
+                                <input type="checkbox" name="whatsapp_enabled" id="whatsapp_enabled" value="1" {{ $settings['whatsapp_enabled'] ? 'checked' : '' }} class="w-4 h-4 rounded">
                                 <label for="whatsapp_enabled" class="text-sm font-bold text-primary-700 dark:text-primary-300">Enable WhatsApp Notifications</label>
                             </div>
                         </div>

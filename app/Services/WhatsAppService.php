@@ -113,17 +113,60 @@ class WhatsAppService
 
     public function sendDocument(string $to, string $documentUrl, string $fileName, ?string $caption = null, array $options = []): array
     {
-        $payload = array_merge([
-            'to'          => $to,
-            'documentUrl' => $documentUrl,
-            'fileName'    => $fileName,
-        ], $options);
+        $url = rtrim($this->wasenderBaseUrl, '/api') . '/api/send-message';
+        $apiKey = $this->getWasenderApiKey();
 
-        if ($caption) {
-            $payload['text'] = $caption;
+        if (!$apiKey) {
+            Log::error('WhatsApp WasenderAPI sendDocument: No session API key configured');
+            return [
+                'success' => false,
+                'message' => 'Session API Key is not set. Please configure it in WhatsApp settings.',
+            ];
         }
 
-        return $this->sendWasenderRequest($payload);
+        try {
+            $client = new \GuzzleHttp\Client();
+            
+            $payload = [
+                'to' => $to,
+                'text' => $caption ?? '',
+                'documentUrl' => $documentUrl,
+            ];
+
+            $response = $client->post($url, [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Content-Type' => 'application/json',
+                    'Accept' => 'application/json',
+                ],
+                'json' => $payload,
+                'timeout' => 120,
+            ]);
+
+            $body = json_decode($response->getBody(), true);
+
+            return [
+                'success' => true,
+                'data' => $body['data'] ?? $body,
+                'message' => $body['message'] ?? 'Document sent successfully',
+            ];
+        } catch (\GuzzleHttp\Exception\RequestException $e) {
+            $errorMessage = 'Request failed: ' . $e->getMessage();
+            if ($e->hasResponse()) {
+                $errorMessage .= "\nResponse: " . $e->getResponse()->getBody();
+            }
+            Log::error('WhatsApp WasenderAPI sendDocument exception: ' . $errorMessage);
+            return [
+                'success' => false,
+                'message' => $errorMessage,
+            ];
+        } catch (\Exception $e) {
+            Log::error('WhatsApp WasenderAPI sendDocument exception: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
     }
 
     // =========================================================================

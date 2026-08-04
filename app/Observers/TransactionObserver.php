@@ -296,26 +296,22 @@ class TransactionObserver
                 ->setOption('margin-bottom', 20);
 
             $pdfFileName = 'payment-receipt-' . $orderReference . '.pdf';
-            $tempPdfPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $pdfFileName;
-            file_put_contents($tempPdfPath, $pdf->output());
-
-            // Upload to WhatsApp service
-            $whatsappService = $this->whatsappService;
-            $uploadResult = $whatsappService->uploadFile($tempPdfPath);
-
-            // Clean up temp file
-            if (file_exists($tempPdfPath)) {
-                unlink($tempPdfPath);
+            $pdfPath = public_path('receipts/' . $pdfFileName);
+            
+            // Ensure directory exists
+            if (!file_exists(public_path('receipts'))) {
+                mkdir(public_path('receipts'), 0755, true);
             }
+            
+            file_put_contents($pdfPath, $pdf->output());
+            
+            // Get public URL
+            $pdfUrl = url('receipts/' . $pdfFileName);
 
-            if ($uploadResult['success'] ?? false) {
-                return [
-                    'url' => $uploadResult['data']['url'] ?? $uploadResult['data']['fileUrl'] ?? null,
-                    'filename' => $pdfFileName
-                ];
-            }
-
-            return null;
+            return [
+                'url' => $pdfUrl,
+                'filename' => $pdfFileName
+            ];
         } catch (\Exception $e) {
             Log::error('Failed to generate PDF receipt: ' . $e->getMessage());
             return null;

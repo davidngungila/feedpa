@@ -295,7 +295,7 @@ class PaymentController extends Controller
                 ->setPaper('a4', 'portrait')
                 ->setOption('margin-bottom', 20);
 
-            $pdfFileName = 'payment-receipt-' . $orderReference . '.pdf';
+            $pdfFileName = 'payment receipt ' . $orderReference . '.pdf';
             $pdfPath = public_path('receipts/' . $pdfFileName);
             
             // Ensure directory exists
@@ -2280,7 +2280,7 @@ HTML;
                 ->setPaper('a4', 'portrait')
                 ->setOption('margin-bottom', 20);
 
-            $pdfFileName = 'payment-receipt-' . $orderReference . '.pdf';
+            $pdfFileName = 'payment receipt ' . $orderReference . '.pdf';
             $tempPdfPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $pdfFileName;
             file_put_contents($tempPdfPath, $pdf->output());
 

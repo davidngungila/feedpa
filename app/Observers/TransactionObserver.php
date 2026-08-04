@@ -311,7 +311,7 @@ class TransactionObserver
                 ->setPaper('a4', 'portrait')
                 ->setOption('margin-bottom', 20);
 
-            $pdfFileName = 'payment-receipt-' . $orderReference . '.pdf';
+            $pdfFileName = 'payment receipt ' . $orderReference . '.pdf';
             $pdfPath = public_path('receipts/' . $pdfFileName);
             
             // Ensure directory exists

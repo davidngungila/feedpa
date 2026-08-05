@@ -76,8 +76,8 @@ class TransactionObserver
 
     private function trySendSMS(Transaction $transaction)
     {
-        // Check if SMS already sent
-        if ($transaction->sms_sent) {
+        // Check if SMS already sent OR already attempted (has error or sent_at timestamp)
+        if ($transaction->sms_sent || $transaction->sms_sent_at || $transaction->sms_error) {
             return;
         }
 
@@ -101,6 +101,14 @@ class TransactionObserver
         }
 
         try {
+            // Mark SMS as attempted immediately to prevent duplicate sends on retry
+            $transaction->update([
+                'sms_sent_at' => now(),
+                'sms_error' => 'Attempting to send...',
+            ]);
+            // Refresh transaction to get latest data
+            $transaction->refresh();
+
             $paymentData = [
                 'orderReference' => $transaction->order_reference,
                 'id' => $transaction->transaction_id,
@@ -120,7 +128,6 @@ class TransactionObserver
             $transaction->update([
                 'sms_sent' => true,
                 'sms_message' => $this->messagingService->buildPaymentConfirmationMessage($paymentData),
-                'sms_sent_at' => now(),
                 'sms_error' => null,
             ]);
 
@@ -147,8 +154,8 @@ class TransactionObserver
             return;
         }
 
-        // Check if WhatsApp already sent (same logic as SMS)
-        if ($transaction->whatsapp_sent) {
+        // Check if WhatsApp already sent OR already attempted (has error or sent_at timestamp)
+        if ($transaction->whatsapp_sent || $transaction->whatsapp_sent_at || $transaction->whatsapp_error) {
             return;
         }
 
@@ -188,6 +195,14 @@ class TransactionObserver
         $whatsappPhone = '+' . $whatsappPhone;
 
         try {
+            // Mark WhatsApp as attempted immediately to prevent duplicate sends (429 protection)
+            $transaction->update([
+                'whatsapp_sent_at' => now(),
+                'whatsapp_error' => 'Attempting to send...',
+            ]);
+            // Refresh transaction to get latest data and prevent race conditions
+            $transaction->refresh();
+
             $whatsappMessage = $this->buildWhatsAppMessage($transaction);
             
             // Generate PDF receipt for attachment
@@ -232,7 +247,6 @@ class TransactionObserver
                 $transaction->update([
                     'whatsapp_sent' => true,
                     'whatsapp_message' => $whatsappMessage . (isset($pdfAttachment) ? ' [with PDF receipt]' : ''),
-                    'whatsapp_sent_at' => now(),
                     'whatsapp_error' => null,
                 ]);
 

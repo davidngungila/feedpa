@@ -144,11 +144,25 @@ class WhatsAppService
             ]);
 
             $body = json_decode((string) $response->getBody(), true);
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode >= 200 && $statusCode < 300 && (isset($body['success']) || isset($body['status']) || $statusCode === 200)) {
+                return [
+                    'success' => true,
+                    'data' => $body['data'] ?? $body,
+                    'message' => $body['message'] ?? 'Document sent successfully',
+                ];
+            }
+
+            Log::error('WhatsApp WasenderAPI sendDocument failed', [
+                'status' => $statusCode,
+                'body' => (string) $response->getBody(),
+                'payload' => $payload,
+            ]);
 
             return [
-                'success' => true,
-                'data' => $body['data'] ?? $body,
-                'message' => $body['message'] ?? 'Document sent successfully',
+                'success' => false,
+                'message' => $body['message'] ?? (string) $response->getBody() ?? 'Unknown error',
             ];
         } catch (\GuzzleHttp\Exception\RequestException $e) {
             $errorMessage = 'Request failed: ' . $e->getMessage();

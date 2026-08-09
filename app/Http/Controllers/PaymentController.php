@@ -349,12 +349,12 @@ class PaymentController extends Controller
         $date = $transaction->created_at ? $transaction->created_at->format('d M Y, H:i:s') : now()->format('d M Y, H:i:s');
         $description = $transaction->description ?? $transaction->resolved_description ?? 'Payment';
 
-        $message = "**PAYMENT CONFIRMATION**\n\n";
+        $message = "*PAYMENT CONFIRMATION*\n\n";
         $message .= "Your payment has been successfully received and processed. Below are the details of your transaction.\n\n";
-        $message .= "**Payment Details:** Amount: **{$currency} {$amount}**, Reference: **{$reference}**, Transaction ID: **{$transactionId}**, Payment Method: **{$paymentMethod}**, Date & Time: **{$date}**.\n\n";
-        $message .= "**Customer Information:** Member Name: **{$customerName}**, Phone Number: **{$phone}**.\n\n";
-        $message .= "**Description:** **{$description}**.\n\n";
-        $message .= "Thank you for using **FEEDTAN Community Microfinance Group** services. We appreciate your continued trust and support.";
+        $message .= "*Payment Details:* Amount: *{$currency} {$amount}*, Reference: *{$reference}*, Transaction ID: *{$transactionId}*, Payment Method: *{$paymentMethod}*, Date & Time: *{$date}*.\n\n";
+        $message .= "*Customer Information:* Member Name: *{$customerName}*, Phone Number: *{$phone}*.\n\n";
+        $message .= "*Description:* *{$description}*.\n\n";
+        $message .= "Thank you for using *FEEDTAN Community Microfinance Group* services. We appreciate your continued trust and support.";
 
         return $message;
     }

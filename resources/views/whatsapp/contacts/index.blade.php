@@ -176,4 +176,3 @@
     });
 </script>
 @endpush
-@endsection

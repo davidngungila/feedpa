@@ -215,4 +215,3 @@
     });
 </script>
 @endpush
-@endsection

@@ -187,4 +187,3 @@
     });
 </script>
 @endpush
-@endsection

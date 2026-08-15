@@ -106,4 +106,3 @@
     });
 </script>
 @endpush
-@endsection

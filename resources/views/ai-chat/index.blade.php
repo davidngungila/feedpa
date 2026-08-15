@@ -562,7 +562,7 @@
             if (htmlDetected) {
                 aiCreateMessageCard('assistant', 'Your session appears to have expired. Redirecting you to log in...');
                 setTimeout(() => {
-                    window.location.href = '/';
+                    window.location.href = '/entry';
                 }, 1200);
             } else {
                 aiCreateMessageCard('assistant', `Error: ${error.message}`);
@@ -601,7 +601,7 @@
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    window.location.href = '/';
+                    window.location.href = '/entry';
                 }
                 return;
             }

@@ -205,6 +205,11 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/messages/send', [WhatsAppOperationsController::class, 'sendMessagesPost'])->name('messages.send.post');
             Route::post('/messages/send-bulk', [WhatsAppOperationsController::class, 'sendBulkMessages'])->name('messages.send-bulk');
             Route::delete('/messages/{msgId}', [WhatsAppOperationsController::class, 'deleteMessage'])->name('messages.delete');
+            Route::post('/messages/read', [WhatsAppOperationsController::class, 'markMessageRead'])->name('messages.mark-read');
+            Route::post('/messages/decrypt-media', [WhatsAppOperationsController::class, 'decryptMedia'])->name('messages.decrypt-media');
+            Route::get('/messages/{msgId}/info', [WhatsAppOperationsController::class, 'messageInfo'])->name('messages.info');
+            Route::put('/messages/{msgId}', [WhatsAppOperationsController::class, 'editMessage'])->name('messages.edit');
+            Route::post('/messages/{msgId}/resend', [WhatsAppOperationsController::class, 'resendMessage'])->name('messages.resend');
             
             // Manage Contacts
             Route::get('/contacts', [WhatsAppOperationsController::class, 'contacts'])->name('contacts.index');

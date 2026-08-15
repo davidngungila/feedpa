@@ -48,15 +48,27 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
     public function sendMessagesPost(Request $request)
     {
         $validated = $request->validate([
-            'message_type' => 'required|in:text,image,document,video,audio',
+            'message_type' => 'required|in:text,image,document,video,audio,sticker,contact,location,poll,viewOnce,quoted',
             'recipient_type' => 'required|in:contact,group,phone',
             'phone' => 'nullable|string|required_if:recipient_type,phone',
             'contact_id' => 'nullable|exists:contacts,id|required_if:recipient_type,contact',
             'group_id' => 'nullable|exists:whatsapp_groups,id|required_if:recipient_type,group',
-            'text' => 'nullable|string|required_if:message_type,text',
-            'media_url' => 'nullable|url|required_if:message_type,image,document,video,audio',
+            'text' => 'nullable|string',
+            'media_url' => 'nullable|url|required_if:message_type,image,document,video,audio,sticker,viewOnce',
             'caption' => 'nullable|string',
-            'file_name' => 'nullable|string|required_if:message_type,document',
+            'file_name' => 'nullable|string',
+            'contact_name' => 'nullable|string|required_if:message_type,contact',
+            'contact_phone' => 'nullable|string|required_if:message_type,contact',
+            'latitude' => 'nullable|numeric|required_if:message_type,location',
+            'longitude' => 'nullable|numeric|required_if:message_type,location',
+            'location_name' => 'nullable|string',
+            'location_address' => 'nullable|string',
+            'poll_question' => 'nullable|string|required_if:message_type,poll',
+            'poll_options' => 'nullable|array|required_if:message_type,poll',
+            'poll_options.*' => 'string',
+            'poll_multi' => 'nullable|boolean',
+            'media_type' => 'nullable|in:image,video,audio|required_if:message_type,viewOnce',
+            'reply_to' => 'nullable|numeric|required_if:message_type,quoted',
         ]);
 
         try {
@@ -128,60 +140,98 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         }
     }
 
-    protected function sendToPhone(array $data): array
+    protected function buildSendPayload(array $data, string $to): array
     {
-        switch ($data['message_type']) {
+        $type = strtolower((string) ($data['message_type'] ?? 'text'));
+
+        switch ($type) {
             case 'text':
-                return $this->whatsapp->sendText($data['phone'], $data['text']);
+                $payload = ['to' => $to, 'text' => $data['text'] ?? ''];
+                break;
+
             case 'image':
-                return $this->whatsapp->sendImage($data['phone'], $data['media_url'], $data['caption'] ?? '');
-            case 'document':
-                return $this->whatsapp->sendDocument($data['phone'], $data['media_url'], $data['file_name'], $data['caption'] ?? '');
             case 'video':
             case 'audio':
-                $payload = [
-                    'to' => $data['phone'],
-                    $data['message_type'] . 'Url' => $data['media_url'],
-                ];
+            case 'sticker':
+            case 'document':
+                $payload = ['to' => $to, $type . 'Url' => $data['media_url'] ?? ''];
                 if (!empty($data['caption'])) {
                     $payload['text'] = $data['caption'];
                 }
-                return $this->whatsapp->sendWasenderRequest($payload);
+                if ($type === 'document' && !empty($data['file_name'])) {
+                    $payload['fileName'] = $data['file_name'];
+                }
+                break;
+
+            case 'contact':
+                $payload = [
+                    'to'      => $to,
+                    'contact' => [
+                        'name'  => $data['contact_name'] ?? '',
+                        'phone' => $data['contact_phone'] ?? '',
+                    ],
+                ];
+                break;
+
+            case 'location':
+                $location = [
+                    'latitude'  => (float) ($data['latitude'] ?? 0),
+                    'longitude' => (float) ($data['longitude'] ?? 0),
+                ];
+                if (!empty($data['location_name'])) {
+                    $location['name'] = $data['location_name'];
+                }
+                if (!empty($data['location_address'])) {
+                    $location['address'] = $data['location_address'];
+                }
+                $payload = ['to' => $to, 'location' => $location];
+                if (!empty($data['text'])) {
+                    $payload['text'] = $data['text'];
+                }
+                break;
+
+            case 'poll':
+                $payload = [
+                    'to'   => $to,
+                    'poll' => [
+                        'question'    => $data['poll_question'] ?? '',
+                        'options'     => array_values(array_filter(array_map('trim', $data['poll_options'] ?? []))),
+                        'multiSelect' => (bool) ($data['poll_multi'] ?? false),
+                    ],
+                ];
+                break;
+
+            case 'viewOnce':
+                $mediaType = strtolower((string) ($data['media_type'] ?? 'image'));
+                $payload = ['to' => $to, $mediaType . 'Url' => $data['media_url'] ?? '', 'viewOnce' => true];
+                break;
+
+            case 'quoted':
+                $payload = ['to' => $to, 'replyTo' => (int) ($data['reply_to'] ?? 0)];
+                if (!empty($data['text'])) {
+                    $payload['text'] = $data['text'];
+                }
+                break;
+
             default:
-                return ['success' => false, 'message' => 'Invalid message type'];
+                $payload = ['to' => $to, 'text' => $data['text'] ?? ''];
         }
+
+        if (!empty($data['mentions']) && is_array($data['mentions'])) {
+            $payload['mentions'] = array_values(array_filter(array_map('trim', $data['mentions'])));
+        }
+
+        return $payload;
+    }
+
+    protected function sendToPhone(array $data): array
+    {
+        return $this->whatsapp->sendWasenderRequest($this->buildSendPayload($data, $data['phone']));
     }
 
     protected function sendToGroup(array $data, string $groupId): array
     {
-        $payload = ['to' => $groupId];
-        
-        switch ($data['message_type']) {
-            case 'text':
-                $payload['text'] = $data['text'];
-                break;
-            case 'image':
-                $payload['imageUrl'] = $data['media_url'];
-                if (!empty($data['caption'])) {
-                    $payload['text'] = $data['caption'];
-                }
-                break;
-            case 'document':
-                $payload['documentUrl'] = $data['media_url'];
-                if (!empty($data['caption'])) {
-                    $payload['text'] = $data['caption'];
-                }
-                break;
-            case 'video':
-            case 'audio':
-                $payload[$data['message_type'] . 'Url'] = $data['media_url'];
-                if (!empty($data['caption'])) {
-                    $payload['text'] = $data['caption'];
-                }
-                break;
-        }
-
-        return $this->whatsapp->sendWasenderRequest($payload);
+        return $this->whatsapp->sendWasenderRequest($this->buildSendPayload($data, $groupId));
     }
 
     // =========================================================================
@@ -530,15 +580,30 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
     public function sendGroupMessage(Request $request, $jid)
     {
         $validated = $request->validate([
-            'text'     => 'required|string',
+            'message_type' => 'required|in:text,image,video,document,audio,sticker,contact,location,poll,viewOnce,quoted',
+            'text' => 'nullable|string',
             'mentions' => 'nullable|array',
             'mentions.*' => 'string',
+            'media_url' => 'nullable|url|required_if:message_type,image,video,document,audio,sticker,viewOnce',
+            'caption' => 'nullable|string',
+            'file_name' => 'nullable|string',
+            'contact_name' => 'nullable|string|required_if:message_type,contact',
+            'contact_phone' => 'nullable|string|required_if:message_type,contact',
+            'latitude' => 'nullable|numeric|required_if:message_type,location',
+            'longitude' => 'nullable|numeric|required_if:message_type,location',
+            'location_name' => 'nullable|string',
+            'location_address' => 'nullable|string',
+            'poll_question' => 'nullable|string|required_if:message_type,poll',
+            'poll_options' => 'nullable|array|required_if:message_type,poll',
+            'poll_options.*' => 'string',
+            'poll_multi' => 'nullable|boolean',
+            'media_type' => 'nullable|in:image,video,audio|required_if:message_type,viewOnce',
+            'reply_to' => 'nullable|numeric|required_if:message_type,quoted',
         ]);
 
-        $mentions = array_values(array_filter(array_map('trim', $validated['mentions'] ?? [])));
-        $options = $mentions ? ['mentions' => $mentions] : [];
+        $validated['mentions'] = array_values(array_filter(array_map('trim', $validated['mentions'] ?? [])));
 
-        $result = $this->whatsapp->sendText($jid, $validated['text'], $options);
+        $result = $this->whatsapp->sendWasenderRequest($this->buildSendPayload($validated, $jid));
 
         if (!($result['success'] ?? false)) {
             return response()->json([
@@ -550,6 +615,137 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         return response()->json([
             'success' => true,
             'message' => 'Message sent to the group successfully.',
+            'data'    => $result['data'] ?? null,
+        ]);
+    }
+
+    public function editMessage(Request $request, $msgId)
+    {
+        if (!ctype_digit((string) $msgId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid message ID.',
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'text' => 'required|string',
+        ]);
+
+        $result = $this->whatsapp->editMessage((int) $msgId, $validated['text']);
+
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to edit the message.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'] ?? 'Message edited successfully.',
+        ]);
+    }
+
+    public function resendMessage($msgId)
+    {
+        if (!ctype_digit((string) $msgId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid message ID.',
+            ], 422);
+        }
+
+        $result = $this->whatsapp->resendMessage((int) $msgId);
+
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to resend the message.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'] ?? 'Message resend initiated.',
+            'data'    => $result['data'] ?? null,
+        ]);
+    }
+
+    public function messageInfo($msgId)
+    {
+        if (!ctype_digit((string) $msgId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid message ID.',
+            ], 422);
+        }
+
+        $result = $this->whatsapp->getMessageInfo((int) $msgId);
+
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Could not load message info.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $result['data'] ?? null,
+        ]);
+    }
+
+    public function markMessageRead(Request $request)
+    {
+        $validated = $request->validate([
+            'key.id' => 'required|string',
+            'key.remoteJid' => 'required|string',
+            'key.fromMe' => 'nullable|boolean',
+        ]);
+
+        $result = $this->whatsapp->markMessageRead([
+            'id'        => $validated['key']['id'],
+            'remoteJid' => $validated['key']['remoteJid'],
+            'fromMe'    => (bool) ($validated['key']['fromMe'] ?? false),
+        ]);
+
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to mark the message as read.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'] ?? 'Message marked as read.',
+        ]);
+    }
+
+    public function decryptMedia(Request $request)
+    {
+        $data = $request->input('data');
+
+        if (!is_array($data)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The data field must contain the message payload.',
+            ], 422);
+        }
+
+        $result = $this->whatsapp->decryptMedia($data);
+
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to decrypt the media file.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'] ?? 'Media decrypted.',
             'data'    => $result['data'] ?? null,
         ]);
     }

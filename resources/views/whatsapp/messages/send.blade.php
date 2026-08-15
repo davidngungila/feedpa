@@ -46,12 +46,27 @@
                     <!-- Message Type -->
                     <div>
                         <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Message Type</label>
-                        <div class="grid grid-cols-2 md:grid-cols-5 gap-2">
-                            @foreach(['text' => 'Text', 'image' => 'Image', 'document' => 'Document', 'video' => 'Video', 'audio' => 'Audio'] as $value => $label)
+                        <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+                            @php
+                                $sendTypes = [
+                                    'text'      => ['fa-comment-dots', 'Text'],
+                                    'image'     => ['fa-image', 'Image'],
+                                    'video'     => ['fa-video', 'Video'],
+                                    'document'  => ['fa-file-pdf', 'Document'],
+                                    'audio'     => ['fa-music', 'Audio'],
+                                    'sticker'   => ['fa-smile-wink', 'Sticker'],
+                                    'contact'   => ['fa-id-card', 'Contact Card'],
+                                    'location'  => ['fa-map-marker-alt', 'Location'],
+                                    'poll'      => ['fa-poll', 'Poll'],
+                                    'viewOnce'  => ['fa-eye-slash', 'View Once'],
+                                    'quoted'    => ['fa-reply', 'Quoted'],
+                                ];
+                            @endphp
+                            @foreach($sendTypes as $value => [$icon, $label])
                             <label class="cursor-pointer">
                                 <input type="radio" name="message_type" value="{{ $value }}" class="hidden peer message-type" {{ $loop->first ? 'checked' : '' }}>
-                                <div class="px-3 py-2 rounded-xl border border-primary-100 dark:border-primary-800 text-center text-xs font-bold text-primary-700 dark:text-primary-300 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 transition-all">
-                                    <i class="fab fa-{{ $value === 'text' ? 'whatsapp' : ($value === 'image' ? 'image' : ($value === 'document' ? 'file-pdf' : ($value === 'video' ? 'video' : 'music'))) }} block text-base mb-1"></i>
+                                <div class="px-3 py-2 rounded-xl border border-primary-100 dark:border-primary-800 text-center text-[10px] font-bold text-primary-700 dark:text-primary-300 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 transition-all">
+                                    <i class="fas {{ $icon }} block text-base mb-1"></i>
                                     {{ $label }}
                                 </div>
                             </label>
@@ -118,6 +133,73 @@
                         <div>
                             <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Caption</label>
                             <input type="text" name="caption" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Optional caption">
+                        </div>
+                    </div>
+
+                    <!-- Contact Card Fields -->
+                    <div id="contactFields" class="hidden space-y-4">
+                        <div>
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Contact Name</label>
+                            <input type="text" name="contact_name" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g. Support Team">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Contact Phone</label>
+                            <input type="text" name="contact_phone" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="255712345678">
+                        </div>
+                    </div>
+
+                    <!-- Location Fields -->
+                    <div id="locationFields" class="hidden space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <input type="number" step="any" name="latitude" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Latitude (e.g. -6.7924)">
+                            <input type="number" step="any" name="longitude" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Longitude (e.g. 39.2083)">
+                        </div>
+                        <input type="text" name="location_name" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Location name (optional)">
+                        <input type="text" name="location_address" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Address (optional)">
+                        <input type="text" name="text" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Caption (optional)">
+                    </div>
+
+                    <!-- Poll Fields -->
+                    <div id="pollFields" class="hidden space-y-4">
+                        <div>
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Poll Question</label>
+                            <input type="text" name="poll_question" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="What is your favourite option?">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Options (2 to 12, one per line)</label>
+                            <textarea name="poll_options_raw" rows="4" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+                        </div>
+                        <label class="flex items-center gap-2 text-xs font-bold text-primary-700 dark:text-primary-300">
+                            <input type="checkbox" name="poll_multi" value="1" class="rounded text-primary-600 focus:ring-primary-500">
+                            Allow multiple answers
+                        </label>
+                    </div>
+
+                    <!-- View Once Fields -->
+                    <div id="viewOnceFields" class="hidden space-y-4">
+                        <div>
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Media Type</label>
+                            <select name="media_type" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <option value="image">Image</option>
+                                <option value="video">Video</option>
+                                <option value="audio">Audio</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Media URL</label>
+                            <input type="url" name="media_url" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="https://example.com/file.jpg">
+                        </div>
+                    </div>
+
+                    <!-- Quoted Fields -->
+                    <div id="quotedFields" class="hidden space-y-4">
+                        <div>
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Message ID to Reply To</label>
+                            <input type="text" name="reply_to" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="e.g. 1324">
+                        </div>
+                        <div>
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Reply Text</label>
+                            <textarea name="text" rows="3" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Type your reply..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -190,15 +272,32 @@
     document.addEventListener('DOMContentLoaded', function () {
         const messageTypes = document.querySelectorAll('.message-type');
         const textField = document.getElementById('textField');
-        const mediaFields = document.getElementById('mediaFields');
         const fileNameField = document.getElementById('fileNameField');
+
+        const fieldPanels = {
+            text: textField,
+            media: document.getElementById('mediaFields'),
+            contact: document.getElementById('contactFields'),
+            location: document.getElementById('locationFields'),
+            poll: document.getElementById('pollFields'),
+            viewOnce: document.getElementById('viewOnceFields'),
+            quoted: document.getElementById('quotedFields'),
+        };
 
         function updateMessageFields() {
             const selected = document.querySelector('.message-type:checked');
             const type = selected ? selected.value : 'text';
+            const mediaType = ['image', 'video', 'document', 'audio', 'sticker'].includes(type);
 
-            textField.classList.toggle('hidden', type !== 'text');
-            mediaFields.classList.toggle('hidden', type === 'text');
+            Object.keys(fieldPanels).forEach(function (key) {
+                if (fieldPanels[key]) fieldPanels[key].classList.add('hidden');
+            });
+
+            if (mediaType) {
+                fieldPanels.media.classList.remove('hidden');
+            } else if (fieldPanels[type]) {
+                fieldPanels[type].classList.remove('hidden');
+            }
             fileNameField.classList.toggle('hidden', type !== 'document');
         }
 
@@ -284,10 +383,20 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
 
+            const type = (document.querySelector('.message-type:checked') || {}).value || 'text';
+            const data = new FormData(form);
+            const pollRaw = data.get('poll_options_raw');
+            if (type === 'poll' && pollRaw) {
+                data.delete('poll_options_raw');
+                pollRaw.split('\n').map(function (o) { return o.trim(); }).filter(Boolean).forEach(function (o) {
+                    data.append('poll_options[]', o);
+                });
+            }
+
             fetch(form.action, {
                 method: 'POST',
                 headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                body: new FormData(form),
+                body: data,
             })
             .then(function (response) {
                 return response.json().then(function (data) {

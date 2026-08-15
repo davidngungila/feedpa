@@ -264,7 +264,7 @@ class WhatsAppService
 
     public function uploadFile($file, ?string $contentType = null): array
     {
-        $uploadUrl = rtrim($this->wasenderBaseUrl, '/api') . '/api/upload';
+        $uploadUrl = rtrim($this->wasenderBaseUrl, '/') . '/upload';
         $apiKey = $this->getWasenderApiKey();
 
         if (!$apiKey) {
@@ -278,17 +278,14 @@ class WhatsAppService
         try {
             $fileContent = null;
             $detectedType = $contentType;
-            $fileName = 'file';
 
             if (is_string($file) && file_exists($file)) {
                 $fileContent = file_get_contents($file);
-                $fileName = basename($file);
                 if (!$detectedType && function_exists('mime_content_type')) {
                     $detectedType = mime_content_type($file);
                 }
             } elseif ($file instanceof \Illuminate\Http\UploadedFile) {
                 $fileContent = file_get_contents($file->getRealPath());
-                $fileName = $file->getClientOriginalName();
                 if (!$detectedType) {
                     $detectedType = $file->getMimeType();
                 }
@@ -308,58 +305,37 @@ class WhatsAppService
                 ];
             }
 
-            $finalContentType = $detectedType ?: 'application/pdf';
+            $finalContentType = $detectedType ?: 'application/octet-stream';
 
-            // Use cURL for more control over the multipart request
-            $ch = curl_init();
-            $cfile = new \CURLFile($file, $fileName, $finalContentType);
-            
-            $postData = [
-                'file' => $cfile
-            ];
-
-            curl_setopt($ch, CURLOPT_URL, $uploadUrl);
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                'Authorization: Bearer ' . $apiKey,
-                'Content-Type: multipart/form-data'
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $apiKey,
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
+            ])->timeout(120)->post($uploadUrl, [
+                'base64'   => 'data:' . $finalContentType . ';base64,' . base64_encode($fileContent),
+                'mimetype' => $finalContentType,
             ]);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 120);
 
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
+            $body = $response->json() ?? [];
 
-            if ($error) {
-                Log::error('WhatsApp WasenderAPI uploadFile cURL error: ' . $error);
-                return [
-                    'success' => false,
-                    'message' => 'cURL error: ' . $error,
-                ];
-            }
-
-            if ($httpCode >= 200 && $httpCode < 300) {
-                $body = json_decode($response, true);
+            if ($response->successful() && ($body['success'] ?? false) === true) {
                 return [
                     'success' => true,
-                    'data'    => $body['data'] ?? $body,
+                    'data'    => $body['data'] ?? null,
                     'message' => $body['message'] ?? 'File uploaded successfully',
                 ];
             }
 
             Log::error('WhatsApp WasenderAPI uploadFile failed', [
-                'status'       => $httpCode,
-                'body'         => $response,
+                'status'       => $response->status(),
+                'body'         => $response->body(),
                 'content_type' => $finalContentType,
             ]);
 
             return [
                 'success' => false,
-                'status'  => $httpCode,
-                'message' => 'Failed to upload file: ' . $response,
+                'status'  => $response->status(),
+                'message' => $body['message'] ?? $body['error'] ?? $response->body(),
             ];
         } catch (\Exception $e) {
             Log::error('WhatsApp WasenderAPI uploadFile exception: ' . $e->getMessage());
@@ -665,6 +641,158 @@ class WhatsAppService
         }
 
         return $result;
+    }
+
+    // =========================================================================
+    // WASENDER RICH MESSAGE TYPES (POST /api/send-message)
+    // =========================================================================
+
+    public function sendMedia(string $to, string $type, string $url, ?string $caption = null, array $options = []): array
+    {
+        $type = strtolower($type);
+        if (!in_array($type, ['image', 'video', 'audio', 'sticker', 'document'], true)) {
+            throw new InvalidArgumentException("Unsupported media type: {$type}");
+        }
+
+        $payload = array_merge([
+            'to'           => $to,
+            $type . 'Url'  => $url,
+        ], $options);
+
+        if ($caption !== null && $caption !== '') {
+            $payload['text'] = $caption;
+        }
+
+        return $this->sendWasenderRequest($payload);
+    }
+
+    public function sendContactCard(string $to, string $name, string $phone, array $options = []): array
+    {
+        $payload = array_merge([
+            'to'      => $to,
+            'contact' => [
+                'name'  => $name,
+                'phone' => $phone,
+            ],
+        ], $options);
+
+        return $this->sendWasenderRequest($payload);
+    }
+
+    public function sendLocation(string $to, float $latitude, float $longitude, ?string $name = null, ?string $address = null, ?string $caption = null): array
+    {
+        $location = [
+            'latitude'  => $latitude,
+            'longitude' => $longitude,
+        ];
+
+        if ($name !== null && $name !== '') {
+            $location['name'] = $name;
+        }
+
+        if ($address !== null && $address !== '') {
+            $location['address'] = $address;
+        }
+
+        $payload = [
+            'to'       => $to,
+            'location' => $location,
+        ];
+
+        if ($caption !== null && $caption !== '') {
+            $payload['text'] = $caption;
+        }
+
+        return $this->sendWasenderRequest($payload);
+    }
+
+    public function sendPoll(string $to, string $question, array $options, bool $multiSelect = false): array
+    {
+        return $this->sendWasenderRequest([
+            'to'   => $to,
+            'poll' => [
+                'question'    => $question,
+                'options'     => array_values(array_filter(array_map('trim', $options))),
+                'multiSelect' => $multiSelect,
+            ],
+        ]);
+    }
+
+    public function sendQuoted(string $to, int $replyTo, ?string $text = null, array $media = []): array
+    {
+        $payload = [
+            'to'      => $to,
+            'replyTo' => $replyTo,
+        ];
+
+        if ($text !== null && $text !== '') {
+            $payload['text'] = $text;
+        }
+
+        foreach (['imageUrl', 'videoUrl', 'documentUrl', 'audioUrl', 'stickerUrl'] as $key) {
+            if (!empty($media[$key])) {
+                $payload[$key] = $media[$key];
+            }
+        }
+
+        if (!empty($media['fileName'])) {
+            $payload['fileName'] = $media['fileName'];
+        }
+
+        return $this->sendWasenderRequest($payload);
+    }
+
+    public function sendViewOnce(string $to, string $type, string $url): array
+    {
+        $type = strtolower($type);
+        if (!in_array($type, ['image', 'video', 'audio'], true)) {
+            throw new InvalidArgumentException("Unsupported view-once media type: {$type}");
+        }
+
+        return $this->sendWasenderRequest([
+            'to'          => $to,
+            $type . 'Url' => $url,
+            'viewOnce'    => true,
+        ]);
+    }
+
+    // =========================================================================
+    // WASENDER MESSAGE MANAGEMENT
+    // =========================================================================
+
+    public function editMessage(int $msgId, string $text): array
+    {
+        $result = $this->request('PUT', '/messages/' . $msgId, ['text' => $text]);
+
+        if (!($result['success'] ?? false)) {
+            $message = $result['message'] ?? 'Failed to edit the message.';
+            if (is_string($message) && str_contains($message, '<')) {
+                $message = 'Message not found or no longer editable (code ' . ($result['status'] ?? 'unknown') . ').';
+            }
+            $result['message'] = $message;
+        }
+
+        return $result;
+    }
+
+    public function resendMessage(int $msgId): array
+    {
+        return $this->request('POST', '/messages/' . $msgId . '/resend');
+    }
+
+    public function getMessageInfo(int $msgId): array
+    {
+        return $this->request('GET', '/messages/' . $msgId . '/info');
+    }
+
+    public function markMessageRead(array $key): array
+    {
+        return $this->request('POST', '/messages/read', ['key' => $key]);
+    }
+
+    public function decryptMedia(array $data): array
+    {
+        return $this->request('POST', '/decrypt-media', ['data' => $data]);
     }
 
     // =========================================================================

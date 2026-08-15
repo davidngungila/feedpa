@@ -142,17 +142,48 @@
     </div>
 
     <!-- Send Group Message -->
-    <div class="card p-6">
+    <div class="card p-6" id="composerCard">
         <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
             <i class="fas fa-paper-plane"></i> Send Group Message
         </h3>
-        <p class="text-[11px] text-primary-500 mb-4">Send a message directly to this group using its Group ID. To mention members, tick the members below (their <span class="font-mono">@phone</span> handle is added to your message automatically).</p>
+        <p class="text-[11px] text-primary-500 mb-4">Compose any message type for this group. Media must be a publicly accessible URL — use the
+            <a href="{{ route('whatsapp.media.index') }}" class="text-primary-600 underline">Media &amp; Files</a> page to upload a file and copy its URL.
+            For text messages you can mention members via the checkboxes below.</p>
+
         <form id="sendGroupMessageForm" action="{{ route('whatsapp.groups.send-message', $group['jid']) }}" method="POST">
             @csrf
-            <textarea name="text" id="groupMessageText" rows="4" required placeholder="Type your message to the group..."
-                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y"></textarea>
 
-            <div class="mt-4">
+            <p class="text-[10px] text-gray-400 uppercase font-bold mb-2">Message Type</p>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-4">
+                @php
+                    $composerTypes = [
+                        'text'      => ['fa-comment-dots', 'Text'],
+                        'image'     => ['fa-image', 'Image'],
+                        'video'     => ['fa-video', 'Video'],
+                        'document'  => ['fa-file-pdf', 'Document'],
+                        'audio'     => ['fa-music', 'Audio'],
+                        'sticker'   => ['fa-smile-wink', 'Sticker'],
+                        'contact'   => ['fa-id-card', 'Contact Card'],
+                        'location'  => ['fa-map-marker-alt', 'Location'],
+                        'poll'      => ['fa-poll', 'Poll'],
+                        'viewOnce'  => ['fa-eye-slash', 'View Once'],
+                        'quoted'    => ['fa-reply', 'Quoted'],
+                    ];
+                    $composerInputClass = 'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500';
+                @endphp
+                @foreach($composerTypes as $value => [$icon, $label])
+                <label class="cursor-pointer">
+                    <input type="radio" name="message_type" value="{{ $value }}" class="hidden peer composer-type" {{ $loop->first ? 'checked' : '' }}>
+                    <div class="px-3 py-2 rounded-xl border border-primary-100 dark:border-primary-800 text-center text-[10px] font-bold text-primary-700 dark:text-primary-300 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-green-500 transition-all">
+                        <i class="fas {{ $icon }} block text-sm mb-1"></i>
+                        {{ $label }}
+                    </div>
+                </label>
+                @endforeach
+            </div>
+
+            <!-- Mentions (text & quoted) -->
+            <div id="composerMentions" class="mt-2">
                 <p class="text-[10px] text-gray-400 uppercase font-bold mb-2">Mention Members (optional)</p>
                 @php
                     $mentionables = array_filter($group['participants'] ?? [], function ($p) {
@@ -179,6 +210,94 @@
                 @else
                     <p class="text-[11px] text-primary-500">No participant numbers available to mention.</p>
                 @endif
+            </div>
+
+            <!-- Panel: text -->
+            <div class="composer-panel mt-4" data-panel="text">
+                <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Message Text</label>
+                <textarea name="text" id="groupMessageText" rows="4" placeholder="Type your message to the group..."
+                    class="{{ $composerInputClass }} resize-y"></textarea>
+            </div>
+
+            <!-- Panel: media -->
+            <div class="composer-panel hidden mt-4 space-y-3" data-panel="media">
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Media URL</label>
+                    <input type="url" name="media_url" class="{{ $composerInputClass }}" placeholder="https://example.com/file.jpg">
+                </div>
+                <div id="composerFileNameField">
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">File Name (optional)</label>
+                    <input type="text" name="file_name" class="{{ $composerInputClass }}" placeholder="report.pdf">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Caption (optional)</label>
+                    <input type="text" name="caption" class="{{ $composerInputClass }}" placeholder="Caption for the media">
+                </div>
+            </div>
+
+            <!-- Panel: contact -->
+            <div class="composer-panel hidden mt-4 space-y-3" data-panel="contact">
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Contact Name</label>
+                    <input type="text" name="contact_name" class="{{ $composerInputClass }}" placeholder="e.g. Support Team">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Contact Phone</label>
+                    <input type="text" name="contact_phone" class="{{ $composerInputClass }}" placeholder="255712345678">
+                </div>
+            </div>
+
+            <!-- Panel: location -->
+            <div class="composer-panel hidden mt-4 space-y-3" data-panel="location">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input type="number" step="any" name="latitude" class="{{ $composerInputClass }}" placeholder="Latitude (e.g. -6.7924)">
+                    <input type="number" step="any" name="longitude" class="{{ $composerInputClass }}" placeholder="Longitude (e.g. 39.2083)">
+                </div>
+                <input type="text" name="location_name" class="{{ $composerInputClass }}" placeholder="Location name (optional)">
+                <input type="text" name="location_address" class="{{ $composerInputClass }}" placeholder="Address (optional)">
+                <input type="text" name="text" class="{{ $composerInputClass }}" placeholder="Caption (optional)">
+            </div>
+
+            <!-- Panel: poll -->
+            <div class="composer-panel hidden mt-4 space-y-3" data-panel="poll">
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Poll Question</label>
+                    <input type="text" name="poll_question" class="{{ $composerInputClass }}" placeholder="What is your favourite option?">
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Options (2 to 12, one per line)</label>
+                    <textarea name="poll_options_raw" rows="4" class="{{ $composerInputClass }} resize-y" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+                </div>
+                <label class="flex items-center gap-2 text-xs font-bold text-primary-700 dark:text-primary-300">
+                    <input type="checkbox" name="poll_multi" value="1" class="rounded text-primary-600 focus:ring-primary-500">
+                    Allow multiple answers
+                </label>
+            </div>
+
+            <!-- Panel: viewOnce -->
+            <div class="composer-panel hidden mt-4 space-y-3" data-panel="viewOnce">
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Media Type</label>
+                    <select name="media_type" class="{{ $composerInputClass }}">
+                        <option value="image">Image</option>
+                        <option value="video">Video</option>
+                        <option value="audio">Audio</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Media URL</label>
+                    <input type="url" name="media_url" class="{{ $composerInputClass }}" placeholder="https://example.com/file.jpg">
+                </div>
+            </div>
+
+            <!-- Panel: quoted -->
+            <div class="composer-panel hidden mt-4 space-y-3" data-panel="quoted">
+                <div class="p-3 rounded-xl bg-primary-50/60 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Replying to</p>
+                    <p class="text-xs text-primary-700 dark:text-primary-300 font-mono" id="composerReplyToLabel">—</p>
+                </div>
+                <input type="hidden" name="reply_to" id="composerReplyTo" value="">
+                <textarea name="text" rows="3" placeholder="Type your reply..." class="{{ $composerInputClass }} resize-y"></textarea>
             </div>
 
             <div class="mt-4 flex items-center justify-between gap-3">
@@ -259,6 +378,26 @@
                             </td>
                             <td class="px-6 py-3 text-right">
                                 <div class="flex items-center justify-end gap-2">
+                                    @if(!empty($log['id']))
+                                        <button type="button" class="reply-message-btn px-3 py-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold hover:bg-blue-100 transition-all"
+                                                data-msg-id="{{ $log['id'] }}" data-summary="{{ \Illuminate\Support\Str::limit($text, 60) }}" title="Reply to this message">
+                                            <i class="fas fa-reply mr-1"></i> Reply
+                                        </button>
+                                        @if($status === 'failed')
+                                            <button type="button" class="resend-message-btn px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold hover:bg-amber-100 transition-all"
+                                                    data-msg-id="{{ $log['id'] }}" title="Resend this message">
+                                                <i class="fas fa-redo mr-1"></i> Resend
+                                            </button>
+                                        @endif
+                                        <button type="button" class="edit-message-btn px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold hover:bg-indigo-100 transition-all"
+                                                data-msg-id="{{ $log['id'] }}" data-current="{{ $text }}" title="Edit message text">
+                                            <i class="fas fa-edit mr-1"></i> Edit
+                                        </button>
+                                        <button type="button" class="info-message-btn px-3 py-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 text-[10px] font-bold hover:bg-cyan-100 transition-all"
+                                                data-msg-id="{{ $log['id'] }}" title="Fetch live message info">
+                                            <i class="fas fa-server mr-1"></i> Info
+                                        </button>
+                                    @endif
                                     <button type="button" class="view-message-btn px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 text-[10px] font-bold hover:bg-primary-100 transition-all"
                                             data-log='@json($log)'>
                                         <i class="fas fa-eye mr-1"></i> Details
@@ -389,16 +528,41 @@
         const sendForm = document.getElementById('sendGroupMessageForm');
         const sendBtn = document.getElementById('sendGroupMessageBtn');
         const sendResult = document.getElementById('sendGroupMessageResult');
-        const messageText = document.getElementById('groupMessageText');
+
+        function updateComposer() {
+            const selected = document.querySelector('.composer-type:checked');
+            if (!selected) return;
+            const type = selected.value;
+            document.querySelectorAll('.composer-panel').forEach(function (panel) {
+                panel.classList.toggle('hidden', panel.dataset.panel !== type);
+            });
+            const mentions = document.getElementById('composerMentions');
+            if (mentions) mentions.classList.toggle('hidden', type !== 'text' && type !== 'quoted');
+            const fileNameField = document.getElementById('composerFileNameField');
+            if (fileNameField) fileNameField.classList.toggle('hidden', type !== 'document');
+        }
+
+        document.querySelectorAll('.composer-type').forEach(function (radio) {
+            radio.addEventListener('change', updateComposer);
+        });
+        updateComposer();
+
+        function currentTextInput() {
+            const type = (document.querySelector('.composer-type:checked') || {}).value;
+            if (type === 'text') return document.getElementById('groupMessageText');
+            if (type === 'quoted') return document.querySelector('.composer-panel[data-panel="quoted"] textarea[name="text"]');
+            return null;
+        }
 
         if (sendForm && sendBtn && sendResult) {
             document.querySelectorAll('.mention-checkbox').forEach(function (cb) {
                 cb.addEventListener('change', function () {
-                    if (messageText && cb.checked && cb.dataset.phone) {
+                    const input = currentTextInput();
+                    if (input && cb.checked && cb.dataset.phone) {
                         const mention = '@' + cb.dataset.phone + ' ';
-                        if (messageText.value.indexOf(mention) === -1) {
-                            messageText.value = (messageText.value.trimEnd() ? messageText.value.trimEnd() + ' ' : '') + mention;
-                            messageText.focus();
+                        if (input.value.indexOf(mention) === -1) {
+                            input.value = (input.value.trimEnd() ? input.value.trimEnd() + ' ' : '') + mention;
+                            input.focus();
                         }
                     }
                 });
@@ -410,10 +574,18 @@
                 sendBtn.disabled = true;
                 sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sending...';
 
+                const type = (document.querySelector('.composer-type:checked') || {}).value || 'text';
                 const data = new FormData(sendForm);
                 document.querySelectorAll('.mention-checkbox:checked').forEach(function (cb) {
                     data.append('mentions[]', cb.value);
                 });
+                const pollRaw = data.get('poll_options_raw');
+                if (type === 'poll' && pollRaw) {
+                    data.delete('poll_options_raw');
+                    pollRaw.split('\n').map(function (o) { return o.trim(); }).filter(Boolean).forEach(function (o) {
+                        data.append('poll_options[]', o);
+                    });
+                }
 
                 fetch(sendForm.action, {
                     method: 'POST',
@@ -438,7 +610,8 @@
                             '<i class="fas fa-check-circle mr-1"></i>' + (data.message || 'Message sent to the group.') +
                             (info.msgId ? ' (Message ID: <span class="font-mono">' + info.msgId + '</span>)' : '') +
                             '</div>';
-                        messageText.value = '';
+                        sendForm.reset();
+                        updateComposer();
                         document.querySelectorAll('.mention-checkbox').forEach(function (cb) { cb.checked = false; });
                     } else {
                         sendResult.innerHTML = '<div class="p-3 rounded-xl bg-red-50/60 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-xs font-bold text-red-700 dark:text-red-300">' +
@@ -456,6 +629,27 @@
                 });
             });
         }
+
+        function scrollToComposer() {
+            const card = document.getElementById('composerCard');
+            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        document.querySelectorAll('.reply-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const msgId = btn.dataset.msgId;
+                const summary = btn.dataset.summary || '';
+                const replyRadio = document.querySelector('.composer-type[value="quoted"]');
+                if (replyRadio) {
+                    replyRadio.checked = true;
+                    updateComposer();
+                }
+                document.getElementById('composerReplyTo').value = msgId;
+                const label = document.getElementById('composerReplyToLabel');
+                if (label) label.textContent = '#' + msgId + (summary ? ' — ' + summary : '');
+                scrollToComposer();
+            });
+        });
 
         function showToast(message, ok) {
             let toast = document.getElementById('whatsappToast');
@@ -504,6 +698,142 @@
                 })
                 .catch(function () {
                     showToast('Network error. Please try again.', false);
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                });
+            });
+        });
+
+        const editUrl = '{{ route('whatsapp.messages.edit', '__ID__') }}';
+        document.querySelectorAll('.edit-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const msgId = btn.dataset.msgId;
+                const current = btn.dataset.current || '';
+                const newText = prompt('Edit message ' + msgId + ':', current);
+                if (newText === null) return;
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(editUrl.replace('__ID__', msgId), {
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ text: newText }),
+                })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (result.data.success) {
+                        showToast(result.data.message || 'Message edited successfully.', true);
+                        btn.dataset.current = newText;
+                    } else {
+                        showToast(result.data.message || 'Failed to edit the message.', false);
+                    }
+                })
+                .catch(function () {
+                    showToast('Network error. Please try again.', false);
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                });
+            });
+        });
+
+        const resendUrl = '{{ route('whatsapp.messages.resend', '__ID__') }}';
+        document.querySelectorAll('.resend-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const msgId = btn.dataset.msgId;
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(resendUrl.replace('__ID__', msgId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (result.data.success) {
+                        showToast(result.data.message || 'Message resent successfully.', true);
+                    } else {
+                        showToast(result.data.message || 'Failed to resend the message.', false);
+                    }
+                })
+                .catch(function () {
+                    showToast('Network error. Please try again.', false);
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                });
+            });
+        });
+
+        const infoUrl = '{{ route('whatsapp.messages.info', '__ID__') }}';
+        document.querySelectorAll('.info-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const msgId = btn.dataset.msgId;
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(infoUrl.replace('__ID__', msgId), {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (result.data.success) {
+                        const info = result.data.data || {};
+                        const detailsEl = document.getElementById('messageModalDetails');
+                        if (detailsEl) {
+                            const rows = [];
+                            function addRow(label, value) {
+                                rows.push('<div class="px-4 py-3 flex items-start gap-4">' +
+                                    '<p class="w-32 shrink-0 text-[10px] text-gray-400 uppercase font-bold pt-0.5">' + escapeHtml(label) + '</p>' +
+                                    '<p class="text-xs text-primary-900 dark:text-white break-all">' + (value === null || value === undefined || value === '' ? '—' : escapeHtml(value)) + '</p>' +
+                                '</div>');
+                            }
+                            const contentInfo = decodeContent(info.message || info.msg || info.content || info);
+                            if (info.msgId) addRow('Message ID', info.msgId);
+                            if (info.jid || info.to) addRow('To', info.jid || info.to);
+                            if (info.status !== undefined) addRow('Status', info.status);
+                            if (contentInfo.text) addRow('Content', contentInfo.text);
+                            if (info.createdAt) addRow('Created At', info.createdAt);
+                            if (info.updatedAt) addRow('Updated At', info.updatedAt);
+                            detailsEl.innerHTML = rows.join('');
+                        }
+                        document.getElementById('messageModalPayload').textContent = JSON.stringify(result.data.data, null, 2);
+                        showMsgTab('content');
+                        openMessageModal();
+                        showToast(result.data.message || 'Message info fetched.', true);
+                    } else {
+                        showToast(result.data.message || 'Failed to fetch message info.', false);
+                    }
+                })
+                .catch(function () {
+                    showToast('Network error. Please try again.', false);
+                })
+                .finally(function () {
                     btn.disabled = false;
                     btn.innerHTML = original;
                 });

@@ -110,6 +110,22 @@
                             </td>
                             <td class="px-6 py-4 text-right">
                                 <div class="flex items-center justify-end gap-2">
+                                    @if(!empty($log['id']))
+                                        @if($status === 'failed')
+                                            <button type="button" class="resend-message-btn px-3 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 text-[10px] font-bold hover:bg-amber-100 transition-all"
+                                                    data-msg-id="{{ $log['id'] }}" title="Resend this message">
+                                                <i class="fas fa-redo mr-1"></i> Resend
+                                            </button>
+                                        @endif
+                                        <button type="button" class="edit-message-btn px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold hover:bg-indigo-100 transition-all"
+                                                data-msg-id="{{ $log['id'] }}" data-current="{{ $text }}" title="Edit message text">
+                                            <i class="fas fa-edit mr-1"></i> Edit
+                                        </button>
+                                        <button type="button" class="info-message-btn px-3 py-1.5 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600 dark:text-cyan-400 text-[10px] font-bold hover:bg-cyan-100 transition-all"
+                                                data-msg-id="{{ $log['id'] }}" title="Fetch live message info">
+                                            <i class="fas fa-server mr-1"></i> Info
+                                        </button>
+                                    @endif
                                     <button type="button" class="view-message-btn px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 text-[10px] font-bold hover:bg-primary-100 transition-all"
                                             data-log='@json($log)'>
                                         <i class="fas fa-eye mr-1"></i> Details
@@ -219,6 +235,142 @@
                 })
                 .catch(function () {
                     showToast('Network error. Please try again.', false);
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                });
+            });
+        });
+
+        const editUrl = '{{ route('whatsapp.messages.edit', '__ID__') }}';
+        document.querySelectorAll('.edit-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const msgId = btn.dataset.msgId;
+                const current = btn.dataset.current || '';
+                const newText = prompt('Edit message ' + msgId + ':', current);
+                if (newText === null) return;
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(editUrl.replace('__ID__', msgId), {
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify({ text: newText }),
+                })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (result.data.success) {
+                        showToast(result.data.message || 'Message edited successfully.', true);
+                        btn.dataset.current = newText;
+                    } else {
+                        showToast(result.data.message || 'Failed to edit the message.', false);
+                    }
+                })
+                .catch(function () {
+                    showToast('Network error. Please try again.', false);
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                });
+            });
+        });
+
+        const resendUrl = '{{ route('whatsapp.messages.resend', '__ID__') }}';
+        document.querySelectorAll('.resend-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const msgId = btn.dataset.msgId;
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(resendUrl.replace('__ID__', msgId), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (result.data.success) {
+                        showToast(result.data.message || 'Message resent successfully.', true);
+                    } else {
+                        showToast(result.data.message || 'Failed to resend the message.', false);
+                    }
+                })
+                .catch(function () {
+                    showToast('Network error. Please try again.', false);
+                })
+                .finally(function () {
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                });
+            });
+        });
+
+        const infoUrl = '{{ route('whatsapp.messages.info', '__ID__') }}';
+        document.querySelectorAll('.info-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const msgId = btn.dataset.msgId;
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(infoUrl.replace('__ID__', msgId), {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (result.data.success) {
+                        const info = result.data.data || {};
+                        const detailsEl = document.getElementById('messageModalDetails');
+                        if (detailsEl) {
+                            const rows = [];
+                            function addRow(label, value) {
+                                rows.push('<div class="px-4 py-3 flex items-start gap-4">' +
+                                    '<p class="w-32 shrink-0 text-[10px] text-gray-400 uppercase font-bold pt-0.5">' + escapeHtml(label) + '</p>' +
+                                    '<p class="text-xs text-primary-900 dark:text-white break-all">' + (value === null || value === undefined || value === '' ? '—' : escapeHtml(value)) + '</p>' +
+                                '</div>');
+                            }
+                            const contentInfo = decodeContent(info.message || info.msg || info.content || info);
+                            if (info.msgId) addRow('Message ID', info.msgId);
+                            if (info.jid || info.to) addRow('To', info.jid || info.to);
+                            if (info.status !== undefined) addRow('Status', info.status);
+                            if (contentInfo.text) addRow('Content', contentInfo.text);
+                            if (info.createdAt) addRow('Created At', info.createdAt);
+                            if (info.updatedAt) addRow('Updated At', info.updatedAt);
+                            detailsEl.innerHTML = rows.join('');
+                        }
+                        document.getElementById('messageModalPayload').textContent = JSON.stringify(result.data.data, null, 2);
+                        showMsgTab('content');
+                        openMessageModal();
+                        showToast(result.data.message || 'Message info fetched.', true);
+                    } else {
+                        showToast(result.data.message || 'Failed to fetch message info.', false);
+                    }
+                })
+                .catch(function () {
+                    showToast('Network error. Please try again.', false);
+                })
+                .finally(function () {
                     btn.disabled = false;
                     btn.innerHTML = original;
                 });

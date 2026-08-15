@@ -8,6 +8,8 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CallbackController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\BeneficiaryController;
+use App\Http\Controllers\AppNotificationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\PayoutController;
@@ -15,6 +17,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\WhatsAppSettingsController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\SettingsController;
 
 /*
@@ -54,6 +57,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/export/pdf', [DashboardController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/ai-chat', [AiChatController::class, 'index'])->name('ai-chat.index');
         Route::post('/ai-chat', [AiChatController::class, 'chat'])->name('ai-chat');
+        Route::post('/ai-chat/new', [AiChatController::class, 'newSession'])->name('ai-chat.new');
     });
 
     // Payment Routes (Authenticated)
@@ -87,6 +91,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/{orderReference}', [PayoutController::class, 'show'])->name('status');
         Route::post('/{orderReference}/refresh', [PayoutController::class, 'refreshStatus'])->name('refresh');
         Route::post('/{orderReference}/notes', [PayoutController::class, 'addNote'])->name('notes.add');
+        Route::post('/{orderReference}/send-whatsapp', [PayoutController::class, 'sendManualWhatsApp'])->name('send-whatsapp');
         Route::post('/sync', [PayoutController::class, 'syncFromApi'])->name('sync');
         Route::get('/export/pdf', [PayoutController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/export/excel', [PayoutController::class, 'exportExcel'])->name('export.excel');

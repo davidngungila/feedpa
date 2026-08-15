@@ -354,6 +354,13 @@
                     </button>
             @endif
 
+            @if($canManagePayout)
+                <button type="button" id="openWhatsAppModalBtn"
+                        class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white text-xs font-bold shadow-lg shadow-green-900/20 transition-all">
+                    <i class="fab fa-whatsapp"></i> Send WhatsApp
+                </button>
+            @endif
+
             @if(in_array($payout['status'] ?? '', ['SUCCESS', 'SETTLED']))
                 <a href="{{ route('payouts.receipt', $orderReference) }}" target="_blank"
                    class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
@@ -390,4 +397,115 @@
         </div>
     @endif
 </div>
+
+<!-- Send WhatsApp Modal -->
+@if(isset($payout) && $payout && $canManagePayout)
+<div id="whatsappModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
+        <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-5">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fab fa-whatsapp"></i>
+                Send WhatsApp
+            </h3>
+            <p class="text-xs text-green-100 mt-1">
+                {{ $payout['orderReference'] ?? $payout['order_reference'] ?? 'N/A' }}
+            </p>
+        </div>
+
+        <form action="{{ route('payouts.send-whatsapp', $orderReference) }}" method="POST" class="flex-1 flex flex-col">
+            @csrf
+
+            <div class="p-6 space-y-4 overflow-y-auto flex-1">
+                <div>
+                    <label class="text-[10px] text-primary-500 uppercase font-extrabold tracking-widest mb-2 block">
+                        Select Recipients
+                    </label>
+                    <div class="space-y-2 max-h-56 overflow-y-auto pr-1">
+                        @forelse($whatsappRecipients ?? [] as $recipient)
+                            <label class="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-dark-800 border border-gray-200 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-green-900/10 cursor-pointer transition-all">
+                                <input type="checkbox" name="user_ids[]" value="{{ $recipient->id }}"
+                                       class="mt-1 h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500 recipient-check">
+                                <span class="flex-1">
+                                    <span class="block text-sm font-bold text-primary-900 dark:text-white">{{ $recipient->name }}</span>
+                                    <span class="block text-xs text-primary-500">{{ $recipient->phone }}</span>
+                                </span>
+                                <span class="text-[10px] uppercase font-bold text-gray-400">{{ $recipient->position ?? '' }}</span>
+                            </label>
+                        @empty
+                            <p class="text-sm text-gray-500 italic">No users with phone numbers available.</p>
+                        @endforelse
+                    </div>
+                </div>
+
+                <div>
+                    <label for="whatsappMessage" class="text-[10px] text-primary-500 uppercase font-extrabold tracking-widest mb-2 block">
+                        Message
+                    </label>
+                    <textarea id="whatsappMessage" name="message" rows="7"
+                              class="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card px-4 py-3 text-sm text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-xs"
+                              placeholder="Leave blank to use the default payout message">{{ $defaultWhatsAppMessage ?? '' }}</textarea>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-100 dark:border-gray-700 flex gap-3">
+                <button type="button" id="cancelWhatsAppBtn"
+                        class="flex-1 px-4 py-2.5 bg-white dark:bg-gray-600 border border-gray-200 dark:border-gray-500 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-500 transition-all">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white text-sm font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        id="sendWhatsAppBtn" disabled>
+                    <i class="fab fa-whatsapp me-1"></i> Send
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const modal = document.getElementById('whatsappModal');
+    const openBtn = document.getElementById('openWhatsAppModalBtn');
+    const cancelBtn = document.getElementById('cancelWhatsAppBtn');
+    const sendBtn = document.getElementById('sendWhatsAppBtn');
+
+    if (!modal || !openBtn || !cancelBtn) return;
+
+    function updateSendState() {
+        const anyChecked = modal.querySelectorAll('.recipient-check:checked').length > 0;
+        sendBtn.disabled = !anyChecked;
+    }
+
+    openBtn.addEventListener('click', function () {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    });
+
+    cancelBtn.addEventListener('click', function () {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    });
+
+    modal.addEventListener('click', function (e) {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    });
+
+    modal.querySelectorAll('.recipient-check').forEach(function (cb) {
+        cb.addEventListener('change', updateSendState);
+    });
+});
+</script>
+@endpush
+@endif
 @endsection

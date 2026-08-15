@@ -76,8 +76,8 @@ class SyncClickPesaPayouts extends Command
                         'beneficiary_mobile' => $beneficiary['beneficiaryMobileNumber'] ?? null,
                         'beneficiary_email' => $beneficiary['beneficiaryEmail'] ?? null,
                         'notes' => $apiPayout['notes'] ?? null,
-                        'created_at' => isset($apiPayout['createdAt']) ? \Carbon\Carbon::parse($apiPayout['createdAt'])->toDateTimeString() : now(),
-                        'updated_at' => isset($apiPayout['updatedAt']) ? \Carbon\Carbon::parse($apiPayout['updatedAt'])->toDateTimeString() : now(),
+                        'created_at' => \App\Services\ClickPesaAPIService::toLocalDateTime($apiPayout['createdAt'] ?? null) ?? now(),
+                        'updated_at' => \App\Services\ClickPesaAPIService::toLocalDateTime($apiPayout['updatedAt'] ?? null) ?? now(),
                         'callback_data' => $apiPayout,
                         'user_id' => null
                     ]

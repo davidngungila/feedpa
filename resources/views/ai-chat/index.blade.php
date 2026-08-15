@@ -135,6 +135,27 @@
                 <aside class="border-b xl:border-b-0 xl:border-r border-primary-100 dark:border-dark-border bg-white/70 dark:bg-dark-card/60 ai-sidebar">
                     <div class="space-y-3">
                         <div class="rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-900/40 ai-sidebar-section">
+                            <div class="flex items-center justify-between">
+                                <div class="text-[11px] font-black uppercase tracking-[0.2em] text-primary-600 dark:text-primary-300">Chat History</div>
+                            </div>
+                            <div class="mt-2 space-y-1.5 max-h-56 overflow-y-auto pr-1 ai-sessions-list">
+                                @forelse($sessions ?? [] as $sessionItem)
+                                    <a href="{{ route('dashboard.ai-chat.index', ['session' => $sessionItem->id]) }}"
+                                       class="block rounded-xl border px-2.5 py-2 text-xs transition-all {{ (int) ($activeSessionId ?? 0) === (int) $sessionItem->id
+                                           ? 'border-primary-300 bg-white dark:bg-primary-900/40 text-primary-900 dark:text-white shadow-sm'
+                                           : 'border-primary-100 dark:border-dark-border text-primary-800 dark:text-primary-200 hover:bg-primary-50 dark:hover:bg-primary-900/20' }}">
+                                        <span class="block font-bold truncate">{{ $sessionItem->title ?? 'New Chat' }}</span>
+                                        <span class="block text-[10px] text-gray-400 mt-0.5">
+                                            {{ $sessionItem->messages_count ?? 0 }} messages &middot; {{ optional($sessionItem->updated_at)->format('d M Y, H:i') }}
+                                        </span>
+                                    </a>
+                                @empty
+                                    <p class="text-xs text-primary-500 italic">No chats yet.</p>
+                                @endforelse
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl bg-primary-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-900/40 ai-sidebar-section">
                             <div class="text-[11px] font-black uppercase tracking-[0.2em] text-primary-600 dark:text-primary-300">What You Can Do</div>
                             <ul class="mt-2 space-y-2 text-xs text-primary-900 dark:text-primary-100">
                                 <li class="flex gap-2"><i class="fas fa-comment-dots mt-0.5 text-primary-500"></i><span>Ask about payments, bills, transactions, and workflows.</span></li>
@@ -245,6 +266,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" referrerpolicy="no-referrer"></script>
 <script>
     let aiPageHistory = @json($chatHistory->map(fn($m) => ['role' => $m->role, 'text' => $m->content]));
+    let aiPageSessionId = {{ (int) ($activeSessionId ?? 0) }} || null;
     let aiPageIsLoading = false;
     let aiPendingImageFile = null;
     let aiPendingImageUrl = null;
@@ -488,6 +510,10 @@
             formData.append('message', message || 'Please analyze this image.');
             formData.append('history', JSON.stringify(aiPageHistory));
 
+            if (aiPageSessionId) {
+                formData.append('session_id', aiPageSessionId);
+            }
+
             if (aiPendingImageFile) {
                 formData.append('image', aiPendingImageFile);
             }
@@ -504,6 +530,10 @@
             loadingCard.remove();
 
             if (data.success) {
+                if (data.session_id) {
+                    aiPageSessionId = data.session_id;
+                    aiUpdateSessionList();
+                }
                 aiCreateMessageCard('assistant', data.response);
                 aiPageHistory.push({
                     role: 'assistant',
@@ -530,6 +560,39 @@
             'assistant',
             "Hi there! I'm FEEDTAN AI, your personal assistant. Ask me about payments, bills, transactions, or upload an image for analysis."
         );
+    }
+
+    async function aiStartNewChat() {
+        if (aiPageIsLoading) {
+            return;
+        }
+
+        try {
+            const response = await fetch('{{ route('dashboard.ai-chat.new') }}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                }
+            });
+            const data = await response.json();
+            if (data.success && data.session_id) {
+                window.location.href = '{{ route('dashboard.ai-chat.index') }}?session=' + data.session_id;
+            }
+        } catch (error) {
+            console.error('Failed to start new chat:', error);
+        }
+    }
+
+    function aiUpdateSessionList() {
+        const list = document.querySelector('.ai-sessions-list');
+        if (!list) {
+            return;
+        }
+
+        const emptyNote = list.querySelector('p');
+        if (emptyNote && emptyNote.textContent.includes('No chats yet')) {
+            emptyNote.remove();
+        }
     }
 
     async function aiExportPdf() {
@@ -571,7 +634,7 @@
         document.getElementById('aiUploadImageBtn').addEventListener('click', function () {
             fileInput.click();
         });
-        document.getElementById('aiClearChatBtn').addEventListener('click', aiResetConversation);
+        document.getElementById('aiClearChatBtn').addEventListener('click', aiStartNewChat);
         document.getElementById('aiExportPdfBtn').addEventListener('click', aiExportPdf);
 
         fileInput.addEventListener('change', function (event) {

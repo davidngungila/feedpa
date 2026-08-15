@@ -872,7 +872,22 @@ class PayoutController extends Controller
         // Get notes
         $notes = $payout->notes;
 
-        return view('payouts.show', compact('payout', 'payoutData', 'orderReference', 'notes'));
+        // Recipients for manual WhatsApp send (existing users with phone numbers)
+        $whatsappRecipients = User::whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone', 'position']);
+
+        $defaultWhatsAppMessage = $this->buildWhatsAppMessage($payout);
+
+        return view('payouts.show', compact(
+            'payout',
+            'payoutData',
+            'orderReference',
+            'notes',
+            'whatsappRecipients',
+            'defaultWhatsAppMessage'
+        ));
     }
 
     public function addNote(Request $request, string $orderReference)
@@ -889,6 +904,114 @@ class PayoutController extends Controller
         ]);
 
         return back()->with('success', 'Note added successfully!');
+    }
+
+    public function sendManualWhatsApp(Request $request, string $orderReference)
+    {
+        try {
+            if (!SystemSetting::get('whatsapp_enabled', false)) {
+                return back()->with('error', 'WhatsApp is not enabled. Enable it in WhatsApp settings first.');
+            }
+
+            $payout = Payout::where('order_reference', $orderReference)->firstOrFail();
+
+            $userIds = $request->input('user_ids', []);
+            if (empty($userIds)) {
+                return back()->with('error', 'Please select at least one recipient.');
+            }
+
+            $users = User::whereIn('id', $userIds)->get();
+            if ($users->isEmpty()) {
+                return back()->with('error', 'No valid recipients selected.');
+            }
+
+            $message = trim((string) $request->input('message'));
+            if ($message === '') {
+                $message = $this->buildWhatsAppMessage($payout);
+            }
+
+            $sent = 0;
+            $failures = [];
+
+            foreach ($users as $user) {
+                if (!filled($user->phone)) {
+                    $failures[] = "{$user->name} (no phone number)";
+                    continue;
+                }
+
+                $whatsappPhone = $this->formatWhatsAppPhone($user->phone);
+                try {
+                    $result = $this->whatsapp->sendText($whatsappPhone, $message);
+                    if ($result['success'] ?? false) {
+                        $sent++;
+                    } else {
+                        $failures[] = "{$user->name} ({$user->phone}): " . ($result['message'] ?? 'Unknown error');
+                    }
+                } catch (\Exception $e) {
+                    $failures[] = "{$user->name} ({$user->phone}): " . $e->getMessage();
+                    Log::warning('Failed to send payout WhatsApp', [
+                        'user_id' => $user->id,
+                        'payout' => $orderReference,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            Log::info('Manual payout WhatsApp sent', [
+                'payout' => $orderReference,
+                'recipients' => $sent,
+                'failures' => count($failures),
+                'sent_by' => auth()->id(),
+            ]);
+
+            if ($sent === 0) {
+                return back()->with('error', 'Failed to send WhatsApp. ' . implode('; ', $failures));
+            }
+
+            if (!empty($failures)) {
+                return back()->with('warning', "WhatsApp sent to {$sent} recipient(s). Failed for: " . implode('; ', $failures));
+            }
+
+            return back()->with('success', "WhatsApp sent successfully to {$sent} recipient(s)!");
+        } catch (\Exception $e) {
+            Log::error('Failed to send manual payout WhatsApp: ' . $e->getMessage(), [
+                'order_reference' => $orderReference,
+                'error' => $e,
+            ]);
+
+            return back()->with('error', 'Failed to send WhatsApp: ' . $e->getMessage());
+        }
+    }
+
+    protected function buildWhatsAppMessage(Payout $payout): string
+    {
+        $amount = number_format((float) $payout->amount, 0);
+        $currency = $payout->currency ?? 'TZS';
+        $reference = $payout->order_reference ?? 'N/A';
+        $recipient = $payout->recipient_name ?? $payout->beneficiary_account_name ?? 'N/A';
+        $date = $payout->created_at ? $payout->created_at->format('d M Y, H:i:s') : now()->format('d M Y, H:i:s');
+        $description = $payout->resolvedDescription();
+
+        $message = "*PAYOUT STATUS*\n\n";
+        $message .= "Your payout has been processed. Below are the details of your transaction.\n\n";
+        $message .= "*Payout Details:* Amount: *{$currency} {$amount}*, Reference: *{$reference}*, Recipient: *{$recipient}*.\n\n";
+        $message .= "*Date & Time:* *{$date}*.\n\n";
+        $message .= "*Description:* *{$description}*.\n\n";
+        $message .= "Thank you for using *FEEDTAN Community Microfinance Group* services. We appreciate your continued trust and support.";
+
+        return $message;
+    }
+
+    protected function formatWhatsAppPhone(string $phone): string
+    {
+        $whatsappPhone = preg_replace('/[^0-9]/', '', $phone);
+        if (strpos($whatsappPhone, '0') === 0) {
+            $whatsappPhone = '255' . substr($whatsappPhone, 1);
+        }
+        if (strpos($whatsappPhone, '255') !== 0) {
+            $whatsappPhone = '255' . $whatsappPhone;
+        }
+        return '+' . $whatsappPhone;
     }
 
     public function refreshStatus(string $orderReference)
@@ -951,8 +1074,8 @@ class PayoutController extends Controller
                                 'beneficiary_mobile' => $beneficiary['beneficiaryMobileNumber'] ?? null,
                                 'beneficiary_email' => $beneficiary['beneficiaryEmail'] ?? null,
                                 'notes' => $apiPayout['notes'] ?? null,
-                                'created_at' => isset($apiPayout['createdAt']) ? \Carbon\Carbon::parse($apiPayout['createdAt'])->toDateTimeString() : now(),
-                                'updated_at' => isset($apiPayout['updatedAt']) ? \Carbon\Carbon::parse($apiPayout['updatedAt'])->toDateTimeString() : now(),
+                                'created_at' => \App\Services\ClickPesaAPIService::toLocalDateTime($apiPayout['createdAt'] ?? null) ?? now(),
+                                'updated_at' => \App\Services\ClickPesaAPIService::toLocalDateTime($apiPayout['updatedAt'] ?? null) ?? now(),
                                 'callback_data' => $apiPayout,
                                 'user_id' => auth()->check() ? auth()->id() : null
                             ]
@@ -1183,7 +1306,7 @@ class PayoutController extends Controller
             'beneficiary_mobile' => $beneficiary['beneficiaryMobileNumber'] ?? $payout->beneficiary_mobile,
             'beneficiary_email' => $beneficiary['beneficiaryEmail'] ?? $payout->beneficiary_email,
             'notes' => $apiData['notes'] ?? $payout->notes,
-            'updated_at' => isset($apiData['updatedAt']) ? \Carbon\Carbon::parse($apiData['updatedAt'])->toDateTimeString() : now(),
+            'updated_at' => \App\Services\ClickPesaAPIService::toLocalDateTime($apiData['updatedAt'] ?? null) ?? now(),
             'callback_data' => $apiData
         ];
         $payout->update($updateData);

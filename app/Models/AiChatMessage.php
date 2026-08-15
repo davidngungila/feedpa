@@ -9,6 +9,7 @@ class AiChatMessage extends Model
 {
     protected $fillable = [
         'user_id',
+        'chat_session_id',
         'role',
         'content',
         'image_path',
@@ -17,5 +18,10 @@ class AiChatMessage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function session(): BelongsTo
+    {
+        return $this->belongsTo(AiChatSession::class, 'chat_session_id');
     }
 }

@@ -12,6 +12,26 @@ class ClickPesaAPIService
     protected ?string $token = null;
     protected ?int $tokenExpiry = null;
 
+    /**
+     * Parse an API timestamp (typically UTC "Z") into the application timezone
+     * as a MySQL-ready datetime string.
+     */
+    public static function toLocalDateTime(mixed $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($value)
+                ->setTimezone(config('app.timezone'))
+                ->toDateTimeString();
+        } catch (\Throwable $e) {
+            Log::warning('Failed to parse API timestamp', ['value' => $value, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
+
     public function __construct(array $config)
     {
         $this->config = $config;

@@ -542,6 +542,66 @@ class WhatsAppService
         return $result['data'];
     }
 
+    protected function normalizePhone(string $contactId): string
+    {
+        $phone = preg_replace('/@.*$/', '', trim($contactId));
+
+        return preg_replace('/\D/', '', $phone);
+    }
+
+    public function getContactInfoRaw(string $contactId): array
+    {
+        $phone = $this->normalizePhone($contactId);
+
+        if (!$phone) {
+            return ['success' => false, 'message' => 'Invalid contact identifier.'];
+        }
+
+        $key = 'whatsapp.contact.info.' . $phone;
+
+        if (Cache::has($key)) {
+            return Cache::get($key);
+        }
+
+        $result = $this->request('GET', '/contacts/' . rawurlencode($phone));
+
+        if ($result['success'] ?? false) {
+            Cache::put($key, $result, now()->addMinutes(10));
+        }
+
+        return $result;
+    }
+
+    public function getContactInfo(string $contactId): ?array
+    {
+        $result = $this->getContactInfoRaw($contactId);
+
+        if (($result['success'] ?? false) && is_array($result['data'])) {
+            return $result['data'];
+        }
+
+        return null;
+    }
+
+    public function getContactPicture(string $contactId): ?string
+    {
+        $phone = $this->normalizePhone($contactId);
+
+        if (!$phone) {
+            return null;
+        }
+
+        return Cache::remember('whatsapp.contact.picture.' . $phone, now()->addMinutes(10), function () use ($phone) {
+            $result = $this->request('GET', '/contacts/' . rawurlencode($phone) . '/picture');
+
+            if (($result['success'] ?? false) && !empty($result['data']['imgUrl'])) {
+                return $result['data']['imgUrl'];
+            }
+
+            return null;
+        });
+    }
+
     public function addGroupParticipants(string $jid, array $participants): array
     {
         return $this->request('POST', '/groups/' . rawurlencode($jid) . '/participants/add', [

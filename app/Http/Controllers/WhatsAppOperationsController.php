@@ -207,6 +207,26 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         return view('whatsapp.contacts.index', compact('contacts', 'error'));
     }
 
+    public function contactDetails($contact)
+    {
+        $info = $this->whatsapp->getContactInfoRaw($contact);
+
+        if (!($info['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $info['message'] ?? 'Could not load contact details.',
+            ], 404);
+        }
+
+        $data = $info['data'] ?? [];
+        $data['picture'] = $this->whatsapp->getContactPicture($contact);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $data,
+        ]);
+    }
+
     public function createContact()
     {
         $groups = \App\Models\WhatsAppGroup::orderBy('name')->get();

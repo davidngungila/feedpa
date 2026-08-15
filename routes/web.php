@@ -208,6 +208,7 @@ Route::middleware(['auth'])->group(function () {
             // Manage Contacts
             Route::get('/contacts', [WhatsAppOperationsController::class, 'contacts'])->name('contacts.index');
             Route::get('/contacts/create', [WhatsAppOperationsController::class, 'createContact'])->name('contacts.create');
+Route::get('/contacts/{contact}', [WhatsAppOperationsController::class, 'contactDetails'])->name('contacts.show');
             Route::post('/contacts', [WhatsAppOperationsController::class, 'storeContact'])->name('contacts.store');
             Route::get('/contacts/{id}/edit', [WhatsAppOperationsController::class, 'editContact'])->name('contacts.edit');
             Route::put('/contacts/{id}', [WhatsAppOperationsController::class, 'updateContact'])->name('contacts.update');

@@ -154,9 +154,17 @@
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div id="messageModalDetails" class="rounded-xl bg-gray-50 dark:bg-primary-900/20 divide-y divide-primary-100 dark:divide-primary-800 overflow-hidden mb-3"></div>
-        <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Full Payload (JSON)</p>
-        <pre id="messageModalPayload" class="p-3 rounded-xl bg-gray-900 text-green-300 text-[10px] leading-relaxed overflow-x-auto max-h-[40vh]"></pre>
+        <div class="flex gap-1 bg-gray-100 dark:bg-primary-900/20 p-1 rounded-xl w-fit mb-3">
+            <button type="button" data-tab="content" class="msg-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-comment-dots mr-1"></i>Message</button>
+            <button type="button" data-tab="codes" class="msg-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-code mr-1"></i>Codes</button>
+        </div>
+        <div id="msg-tab-content" class="msg-tab-panel">
+            <div id="messageModalDetails" class="rounded-xl bg-gray-50 dark:bg-primary-900/20 divide-y divide-primary-100 dark:divide-primary-800 overflow-hidden"></div>
+        </div>
+        <div id="msg-tab-codes" class="msg-tab-panel hidden">
+            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Full Payload (JSON)</p>
+            <pre id="messageModalPayload" class="p-3 rounded-xl bg-gray-900 text-green-300 text-[10px] leading-relaxed overflow-x-auto max-h-[50vh]"></pre>
+        </div>
     </div>
 </div>
 @endsection
@@ -277,6 +285,25 @@
             if (e.key === 'Escape') closeMessageModal();
         });
 
+        function showMsgTab(name) {
+            document.querySelectorAll('.msg-tab-panel').forEach(function (p) { p.classList.add('hidden'); });
+            document.querySelectorAll('.msg-tab-btn').forEach(function (b) {
+                const active = b.dataset.tab === name;
+                b.classList.toggle('bg-primary-600', active);
+                b.classList.toggle('text-white', active);
+                b.classList.toggle('bg-transparent', !active);
+                b.classList.toggle('text-primary-500', !active);
+            });
+            const panel = document.getElementById('msg-tab-' + name);
+            if (panel) panel.classList.remove('hidden');
+        }
+
+        document.querySelectorAll('.msg-tab-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                showMsgTab(btn.dataset.tab);
+            });
+        });
+
         document.querySelectorAll('.view-message-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
                 const log = btn.dataset.log ? JSON.parse(btn.dataset.log) : {};
@@ -303,6 +330,7 @@
 
                 detailsEl.innerHTML = rows.join('');
                 document.getElementById('messageModalPayload').textContent = JSON.stringify(log, null, 2);
+                showMsgTab('content');
                 openMessageModal();
             });
         });

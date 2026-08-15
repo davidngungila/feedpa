@@ -4,22 +4,30 @@ namespace App\Http\Controllers;
 
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
-class WhatsAppOperationsController extends Controller
+class WhatsAppOperationsController extends Controller implements HasMiddleware
 {
     protected WhatsAppService $whatsapp;
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware(function ($request, $next) {
+                if (!auth()->user()?->is_admin) {
+                    abort(403, 'Admin access required.');
+                }
+                return $next($request);
+            }),
+        ];
+    }
 
     public function __construct(WhatsAppService $whatsapp)
     {
         $this->whatsapp = $whatsapp;
-        $this->middleware(function ($request, $next) {
-            if (!auth()->user()?->is_admin) {
-                abort(403, 'Admin access required.');
-            }
-            return $next($request);
-        });
     }
 
     // =========================================================================

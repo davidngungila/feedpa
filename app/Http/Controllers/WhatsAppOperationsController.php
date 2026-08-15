@@ -353,7 +353,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             $groups[] = [
                 'jid' => $jid,
                 'name' => $group['name'] ?? $meta['subject'] ?? 'Unknown Group',
-                'img_url' => $group['imgUrl'] ?? null,
+                'img_url' => $group['imgUrl'] ?? $this->whatsapp->getGroupPicture($jid),
                 'description' => $meta['desc'] ?? null,
                 'owner' => $meta['owner'] ?? null,
                 'creation' => isset($meta['creation']) ? date('Y-m-d H:i', (int) $meta['creation']) : null,

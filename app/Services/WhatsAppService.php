@@ -6,6 +6,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 use App\Models\SystemSetting;
 use InvalidArgumentException;
 
@@ -462,13 +463,15 @@ class WhatsAppService
 
     public function getGroupPicture(string $jid): ?string
     {
-        $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/picture');
+        return Cache::remember('whatsapp.group_picture.' . md5($jid), now()->addMinutes(10), function () use ($jid) {
+            $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/picture');
 
-        if (($result['success'] ?? false) && !empty($result['data']['imgUrl'])) {
-            return $result['data']['imgUrl'];
-        }
+            if (($result['success'] ?? false) && !empty($result['data']['imgUrl'])) {
+                return $result['data']['imgUrl'];
+            }
 
-        return null;
+            return null;
+        });
     }
 
     public function getContactsRaw(int $page = 1, int $limit = 100, bool $paginated = false): array

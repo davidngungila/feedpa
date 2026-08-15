@@ -166,7 +166,7 @@
     
     @stack('styles')
 </head>
-<body class="h-full main-bg" x-data="{ sidebarOpen: false, openDropdowns: [], profileDropdownOpen: false, notificationDropdownOpen: false, isLoading: true }" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300);">
+<body class="h-full main-bg" x-data="{ sidebarOpen: false, openDropdowns: [], profileDropdownOpen: false, notificationDropdownOpen: false, logoutModalOpen: false, isLoading: true }" @click="($el.tagName === 'A' && $el.href && !$el.href.includes('#')) || ($el.tagName === 'BUTTON' && ($el.closest('form') || $el.getAttribute('type') === 'submit')) ? (isLoading = true) : null" x-init="setTimeout(() => { isLoading = false }, 300);">
     
     <!-- Loading Overlay -->
     <div x-show="isLoading"
@@ -610,14 +610,12 @@
                         </div>
 
                         <div class="border-t border-primary-100">
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" 
-                                        class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 transition-all">
-                                    <i class="fas fa-sign-out-alt w-4"></i>
-                                    <span>Logout</span>
-                                </button>
-                            </form>
+                            <button type="button"
+                                    @click="profileDropdownOpen = false; logoutModalOpen = true"
+                                    class="w-full flex items-center gap-3 px-4 py-2.5 text-xs text-red-600 hover:bg-red-50 transition-all">
+                                <i class="fas fa-sign-out-alt w-4"></i>
+                                <span>Logout</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -628,6 +626,42 @@
                 @include('layouts.flash')
                 @yield('content')
             </main>
+        </div>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div x-show="logoutModalOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="logoutModalOpen = false"></div>
+        <div class="relative w-full max-w-md rounded-2xl bg-white dark:bg-dark-card border border-primary-100 dark:border-dark-border shadow-2xl overflow-hidden"
+             @keydown.escape.window="logoutModalOpen = false">
+            <div class="p-6">
+                <div class="flex items-start gap-4">
+                    <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
+                        <i class="fas fa-sign-out-alt text-xl text-red-600"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-base font-bold text-primary-900 dark:text-white">Confirm Logout</h3>
+                        <p class="mt-1 text-xs text-primary-600 dark:text-primary-300 leading-relaxed">
+                            Are you sure you want to log out of the Feedtan Digital Payment System?
+                            Your session will be terminated and you will need to log in again to continue.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-4 bg-primary-50/70 dark:bg-dark-card/60 border-t border-primary-100 dark:border-dark-border flex items-center justify-end gap-3">
+                <button type="button"
+                        @click="logoutModalOpen = false"
+                        class="px-4 py-2 rounded-lg text-xs font-bold text-primary-700 dark:text-primary-300 bg-white dark:bg-dark-card border border-primary-200 dark:border-dark-border hover:bg-primary-50 transition-all">
+                    Cancel
+                </button>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit"
+                            class="px-4 py-2 rounded-lg text-xs font-bold text-white bg-red-600 hover:bg-red-700 transition-all shadow-sm">
+                        <i class="fas fa-sign-out-alt mr-1.5"></i>Yes, Log Me Out
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 

@@ -2420,8 +2420,14 @@ HTML;
             Log::error('Reconciliation API fetch failed', ['error' => $e->getMessage()]);
         }
 
-        // Normalize API payments by order reference
-        $apiByReference = $apiPayments->mapWithKeys(function ($p) {
+        $successfulStatuses = ['SUCCESS', 'SETTLED', 'COMPLETED'];
+
+        // Normalize API payments by order reference (only successful payments)
+        $apiByReference = $apiPayments
+            ->filter(function ($p) use ($successfulStatuses) {
+                return in_array(strtoupper($p['status'] ?? 'UNKNOWN'), $successfulStatuses);
+            })
+            ->mapWithKeys(function ($p) {
             $ref = $p['orderReference'] ?? $p['id'] ?? null;
             if (!$ref) {
                 return [];
@@ -2441,8 +2447,10 @@ HTML;
             ];
         });
 
-        // All payment-type records in the system
-        $dbTransactions = Transaction::whereIn('type', ['payment', 'billpay', 'ecommerce_payment'])->get();
+        // All successful payment-type records in the system
+        $dbTransactions = Transaction::whereIn('type', ['payment', 'billpay', 'ecommerce_payment'])
+            ->whereIn('status', $successfulStatuses)
+            ->get();
 
         $dbByReference = $dbTransactions->mapWithKeys(function ($t) {
             return [

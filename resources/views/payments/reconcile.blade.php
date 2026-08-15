@@ -11,7 +11,7 @@
                 <i class="fas fa-scale-balanced text-primary-500"></i> Payment Reconciliation
             </h1>
             <p class="text-xs text-primary-500 mt-1">
-                Compare live ClickPesa API payments against records stored in the system.
+                Compare successful (SETTLED/SUCCESS) live ClickPesa API payments against records stored in the system. Failed & processing payments are excluded.
                 Last checked: {{ $fetchedAt->format('d M Y, H:i:s') }}
             </p>
         </div>
@@ -328,7 +328,7 @@
     </div>
 
     <p class="text-[10px] text-gray-400 text-center">
-        <i class="fas fa-info-circle mr-1"></i>Reconciliation compares the latest payment data returned by the ClickPesa API against the local database. Status & amount are matched by order reference.
+        <i class="fas fa-info-circle mr-1"></i>Reconciliation compares successful (SETTLED/SUCCESS) payments returned by the ClickPesa API against the local database. Status & amount are matched by order reference; failed, cancelled and processing payments are excluded.
     </p>
 </div>
 @endsection

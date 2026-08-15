@@ -169,52 +169,6 @@
         </li>
       </ul>
     </li>
-
-    <!-- WhatsApp Operations (Admin Only) -->
-    <li class="menu-item {{ request()->routeIs('whatsapp.*') ? 'active open' : '' }}">
-      <a href="javascript:void(0);" class="menu-link menu-toggle">
-        <i class="menu-icon tf-icons bx bxl-whatsapp"></i>
-        <div data-i18n="WhatsApp Operations">WhatsApp Operations</div>
-      </a>
-      <ul class="menu-sub">
-        <li class="menu-item {{ request()->routeIs('whatsapp.messages.send') ? 'active' : '' }}">
-          <a href="{{ route('whatsapp.messages.send') }}" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-message-square-add"></i>
-            <div data-i18n="Send Messages">Send Messages</div>
-          </a>
-        </li>
-        <li class="menu-item {{ request()->routeIs('whatsapp.contacts.index') ? 'active' : '' }}">
-          <a href="{{ route('whatsapp.contacts.index') }}" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-user-plus"></i>
-            <div data-i18n="Manage Contacts">Manage Contacts</div>
-          </a>
-        </li>
-        <li class="menu-item {{ request()->routeIs('whatsapp.groups.index') ? 'active' : '' }}">
-          <a href="{{ route('whatsapp.groups.index') }}" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-group"></i>
-            <div data-i18n="Manage Groups">Manage Groups</div>
-          </a>
-        </li>
-        <li class="menu-item {{ request()->routeIs('whatsapp.sessions.index') ? 'active' : '' }}">
-          <a href="{{ route('whatsapp.sessions.index') }}" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-cog"></i>
-            <div data-i18n="Manage Sessions">Manage Sessions</div>
-          </a>
-        </li>
-        <li class="menu-item {{ request()->routeIs('whatsapp.webhooks.index') ? 'active' : '' }}">
-          <a href="{{ route('whatsapp.webhooks.index') }}" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-webhook"></i>
-            <div data-i18n="Manage Webhooks">Manage Webhooks</div>
-          </a>
-        </li>
-        <li class="menu-item {{ request()->routeIs('whatsapp.media.index') ? 'active' : '' }}">
-          <a href="{{ route('whatsapp.media.index') }}" class="menu-link">
-            <i class="menu-icon tf-icons bx bx-folder"></i>
-            <div data-i18n="Media & Files">Media & Files</div>
-          </a>
-        </li>
-      </ul>
-    </li>
     @endif
   </ul>
 </aside>

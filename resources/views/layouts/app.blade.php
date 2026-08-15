@@ -441,6 +441,50 @@
                         </a>
                     </div>
                 </div>
+
+                <!-- WhatsApp Operations -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('whatsapp') ? openDropdowns = openDropdowns.filter(d => d !== 'whatsapp') : openDropdowns.push('whatsapp')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('whatsapp.*') ? 'bg-primary-800/60 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-brands fa-whatsapp w-4 text-center"></i>
+                            <span>WhatsApp Operations</span>
+                        </div>
+                        <i :class="openDropdowns.includes('whatsapp') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('whatsapp') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('whatsapp.messages.send') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp.messages.send') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Send Messages</span>
+                        </a>
+                        <a href="{{ route('whatsapp.contacts.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp.contacts.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Manage Contacts</span>
+                        </a>
+                        <a href="{{ route('whatsapp.groups.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp.groups.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Manage Groups</span>
+                        </a>
+                        <a href="{{ route('whatsapp.sessions.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp.sessions.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Manage Sessions</span>
+                        </a>
+                        <a href="{{ route('whatsapp.webhooks.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp.webhooks.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Manage Webhooks</span>
+                        </a>
+                        <a href="{{ route('whatsapp.media.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp.media.index') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Media & Files</span>
+                        </a>
+                    </div>
+                </div>
                 @endif
             </nav>
 

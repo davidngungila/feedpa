@@ -521,13 +521,27 @@
             const response = await fetch('{{ route('dashboard.ai-chat') }}', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
                 },
-                body: formData
+                body: formData,
+                redirect: 'follow'
             });
 
-            const data = await response.json();
             loadingCard.remove();
+
+            if (!response.ok) {
+                const errData = await response.json().catch(() => null);
+                const message = errData?.message || errData?.error || `Request failed (HTTP ${response.status}).`;
+                aiCreateMessageCard('assistant', `Error: ${message}`);
+
+                if (response.status === 401 && errData?.redirect) {
+                    window.location.href = errData.redirect;
+                }
+                return;
+            }
+
+            const data = await response.json();
 
             if (data.success) {
                 if (data.session_id) {
@@ -544,7 +558,15 @@
             }
         } catch (error) {
             loadingCard.remove();
-            aiCreateMessageCard('assistant', `Error: ${error.message}`);
+            const htmlDetected = error instanceof SyntaxError && /Unexpected token|JSON/i.test(error.message);
+            if (htmlDetected) {
+                aiCreateMessageCard('assistant', 'Your session appears to have expired. Redirecting you to log in...');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1200);
+            } else {
+                aiCreateMessageCard('assistant', `Error: ${error.message}`);
+            }
         } finally {
             aiClearPendingImage();
             aiSetLoadingState(false);
@@ -571,9 +593,19 @@
             const response = await fetch('{{ route('dashboard.ai-chat.new') }}', {
                 method: 'POST',
                 headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                redirect: 'follow'
             });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/';
+                }
+                return;
+            }
+
             const data = await response.json();
             if (data.success && data.session_id) {
                 window.location.href = '{{ route('dashboard.ai-chat.index') }}?session=' + data.session_id;

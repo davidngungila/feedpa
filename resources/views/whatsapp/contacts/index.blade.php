@@ -58,7 +58,6 @@
                 <thead class="bg-primary-50 dark:bg-primary-900/20 sticky top-0 z-10">
                     <tr>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Contact</th>
-                        <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Phone / JID</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Display Name</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider text-right">Action</th>
@@ -94,9 +93,6 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4">
-                                <p class="text-xs text-primary-700 dark:text-primary-300 font-mono">{{ $contactId }}</p>
-                            </td>
-                            <td class="px-6 py-4">
                                 <p class="text-xs text-primary-700 dark:text-primary-300">{{ $contact['notify'] ?? '—' }}</p>
                             </td>
                             <td class="px-6 py-4">
@@ -112,7 +108,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-6 py-16 text-center">
+                            <td colspan="4" class="px-6 py-16 text-center">
                                 <i class="fas fa-address-book text-4xl text-primary-300 mb-3 block"></i>
                                 @if($error)
                                     <p class="text-sm font-bold text-primary-500">Could not load contacts</p>

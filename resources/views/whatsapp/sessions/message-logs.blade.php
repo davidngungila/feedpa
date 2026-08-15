@@ -109,12 +109,18 @@
                                 <p class="text-xs text-primary-700 dark:text-primary-300">{{ \Illuminate\Support\Str::limit($log['created_at'] ?? '—', 19) }}</p>
                             </td>
                             <td class="px-6 py-4 text-right">
-                                @if(!empty($log['id']))
-                                    <button type="button" class="delete-message-btn px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-100 transition-all"
-                                            data-msg-id="{{ $log['id'] }}">
-                                        <i class="fas fa-trash-alt mr-1"></i> Delete
+                                <div class="flex items-center justify-end gap-2">
+                                    <button type="button" class="view-message-btn px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 text-[10px] font-bold hover:bg-primary-100 transition-all"
+                                            data-log='@json($log)'>
+                                        <i class="fas fa-eye mr-1"></i> Details
                                     </button>
-                                @endif
+                                    @if(!empty($log['id']))
+                                        <button type="button" class="delete-message-btn px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-100 transition-all"
+                                                data-msg-id="{{ $log['id'] }}">
+                                            <i class="fas fa-trash-alt mr-1"></i> Delete
+                                        </button>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty
@@ -134,6 +140,23 @@
                 {{ $paginator->links() }}
             </div>
         @endif
+    </div>
+</div>
+
+<!-- Message Details Modal -->
+<div id="messageModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="card w-full max-w-2xl p-6 max-h-[85vh] overflow-y-auto">
+        <div class="flex items-start justify-between mb-4">
+            <h3 class="text-sm font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                <i class="fas fa-info-circle"></i> Message Details
+            </h3>
+            <button type="button" id="closeMessageModal" class="p-2 rounded-lg bg-gray-100 dark:bg-primary-900/20 text-primary-500 hover:text-red-500 transition-all">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="messageModalDetails" class="rounded-xl bg-gray-50 dark:bg-primary-900/20 divide-y divide-primary-100 dark:divide-primary-800 overflow-hidden mb-3"></div>
+        <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Full Payload (JSON)</p>
+        <pre id="messageModalPayload" class="p-3 rounded-xl bg-gray-900 text-green-300 text-[10px] leading-relaxed overflow-x-auto max-h-[40vh]"></pre>
     </div>
 </div>
 @endsection
@@ -191,6 +214,96 @@
                     btn.disabled = false;
                     btn.innerHTML = original;
                 });
+            });
+        });
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function decodeContent(contentRaw) {
+            if (Array.isArray(contentRaw)) {
+                return {
+                    text: contentRaw.text || (contentRaw.imageUrl || contentRaw.videoUrl || contentRaw.audioUrl || contentRaw.documentUrl || contentRaw.stickerUrl || 'Media message'),
+                    decoded: contentRaw,
+                };
+            }
+            if (typeof contentRaw === 'object' && contentRaw !== null) {
+                return { text: '', decoded: contentRaw };
+            }
+            let decoded = null;
+            if (typeof contentRaw === 'string' && contentRaw.trim() !== '') {
+                try { decoded = JSON.parse(contentRaw); } catch (e) { decoded = null; }
+            }
+            if (Array.isArray(decoded)) {
+                return {
+                    text: decoded.text || (decoded.imageUrl || decoded.videoUrl || decoded.audioUrl || decoded.documentUrl || decoded.stickerUrl || 'Media message'),
+                    decoded: decoded,
+                };
+            }
+            return { text: contentRaw || '', decoded: decoded };
+        }
+
+        const messageModal = document.getElementById('messageModal');
+        const closeMessageModalBtn = document.getElementById('closeMessageModal');
+
+        function openMessageModal() {
+            if (!messageModal) return;
+            messageModal.classList.remove('hidden');
+            messageModal.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMessageModal() {
+            if (!messageModal) return;
+            messageModal.classList.add('hidden');
+            messageModal.classList.remove('flex');
+            document.body.style.overflow = '';
+        }
+
+        if (closeMessageModalBtn) {
+            closeMessageModalBtn.addEventListener('click', closeMessageModal);
+            messageModal.addEventListener('click', function (e) {
+                if (e.target === messageModal) closeMessageModal();
+            });
+        }
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeMessageModal();
+        });
+
+        document.querySelectorAll('.view-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const log = btn.dataset.log ? JSON.parse(btn.dataset.log) : {};
+                const detailsEl = document.getElementById('messageModalDetails');
+                if (!detailsEl) return;
+
+                const contentInfo = decodeContent(log.content);
+
+                const rows = [];
+                function addRow(label, value) {
+                    rows.push('<div class="px-4 py-3 flex items-start gap-4">' +
+                        '<p class="w-32 shrink-0 text-[10px] text-gray-400 uppercase font-bold pt-0.5">' + escapeHtml(label) + '</p>' +
+                        '<p class="text-xs text-primary-900 dark:text-white break-all">' + (value === null || value === undefined || value === '' ? '—' : escapeHtml(value)) + '</p>' +
+                    '</div>');
+                }
+
+                addRow('Message ID', log.id);
+                addRow('To', log.to);
+                addRow('Status', log.status);
+                addRow('Content', contentInfo.text);
+                if (log.failed_reason) addRow('Failure reason', log.failed_reason);
+                addRow('Created At', log.created_at);
+                if (log.updated_at) addRow('Updated At', log.updated_at);
+
+                detailsEl.innerHTML = rows.join('');
+                document.getElementById('messageModalPayload').textContent = JSON.stringify(log, null, 2);
+                openMessageModal();
             });
         });
     });

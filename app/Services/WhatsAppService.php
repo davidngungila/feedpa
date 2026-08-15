@@ -471,6 +471,32 @@ class WhatsAppService
         return null;
     }
 
+    public function getContactsRaw(int $page = 1, int $limit = 100, bool $paginated = false): array
+    {
+        $query = http_build_query([
+            'paginated' => $paginated ? 'true' : 'false',
+            'page'      => $page,
+            'limit'     => $limit,
+        ]);
+
+        return $this->request('GET', '/contacts?' . $query);
+    }
+
+    public function getContacts(int $page = 1, int $limit = 100, bool $paginated = false): array
+    {
+        $result = $this->getContactsRaw($page, $limit, $paginated);
+
+        if (!($result['success'] ?? false) || !is_array($result['data'] ?? null)) {
+            return [];
+        }
+
+        if (isset($result['data']['items']) && is_array($result['data']['items'])) {
+            return $result['data']['items'];
+        }
+
+        return $result['data'];
+    }
+
     public function addGroupParticipants(string $jid, array $participants): array
     {
         return $this->request('POST', '/groups/' . rawurlencode($jid) . '/participants/add', [

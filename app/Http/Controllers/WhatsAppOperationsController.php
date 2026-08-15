@@ -190,8 +190,21 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
     public function contacts()
     {
-        $contacts = \App\Models\Contact::withCount('groups')->orderBy('name')->paginate(20);
-        return view('whatsapp.contacts.index', compact('contacts'));
+        $result = $this->whatsapp->getContactsRaw();
+        $contacts = [];
+        $error = null;
+
+        if (($result['success'] ?? false) && is_array($result['data'] ?? null)) {
+            if (isset($result['data']['items']) && is_array($result['data']['items'])) {
+                $contacts = $result['data']['items'];
+            } else {
+                $contacts = $result['data'];
+            }
+        } else {
+            $error = $result['message'] ?? 'Could not load contacts from the WhatsApp API.';
+        }
+
+        return view('whatsapp.contacts.index', compact('contacts', 'error'));
     }
 
     public function createContact()

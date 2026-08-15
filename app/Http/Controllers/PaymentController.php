@@ -2486,12 +2486,70 @@ HTML;
             }
         }
 
+        $apiQueryErrors = 0;
         foreach ($dbByReference as $ref => $db) {
-            if (!$apiByReference->has($ref)) {
+            if ($apiByReference->has($ref)) {
+                continue;
+            }
+
+            // Not in the live statement range - verify directly against the API per-reference
+            $apiMatch = null;
+            $queryFailed = false;
+            try {
+                $liveResponse = $this->api->queryPaymentStatus($ref);
+                if (!empty($liveResponse)) {
+                    $liveStatus = strtoupper($liveResponse['status'] ?? 'UNKNOWN');
+                    $liveAmount = (float) ($liveResponse['collectedAmount'] ?? $liveResponse['amount'] ?? 0);
+                    $apiMatch = [
+                        'reference' => $ref,
+                        'status' => $liveStatus,
+                        'amount' => $liveAmount,
+                        'currency' => $liveResponse['collectedCurrency'] ?? $liveResponse['currency'] ?? 'TZS',
+                        'phone' => $liveResponse['customer']['customerPhoneNumber'] ?? $liveResponse['paymentPhoneNumber'] ?? null,
+                        'payer' => $liveResponse['customer']['customerName'] ?? $liveResponse['payer_name'] ?? null,
+                        'method' => $liveResponse['channel'] ?? $liveResponse['paymentMethod'] ?? null,
+                        'created_at' => $liveResponse['createdAt'] ?? $liveResponse['created_at'] ?? null,
+                        'updated_at' => $liveResponse['updatedAt'] ?? $liveResponse['updated_at'] ?? null,
+                    ];
+                }
+            } catch (Exception $e) {
+                // Not found or API error for this reference
+                $queryFailed = true;
+                $apiQueryErrors++;
+            }
+
+            if ($apiMatch) {
+                $statusMatches = $apiMatch['status'] === $db['status'];
+                $amountMatches = abs($apiMatch['amount'] - $db['amount']) < 0.01;
+
+                $row = [
+                    'reference' => $ref,
+                    'api' => $apiMatch,
+                    'db' => $db,
+                    'status_match' => $statusMatches,
+                    'amount_match' => $amountMatches,
+                ];
+
+                if ($statusMatches && $amountMatches) {
+                    $matched->push($row);
+                } elseif (!$statusMatches && !$amountMatches) {
+                    $row['type'] = 'both';
+                    $statusMismatch->push($row);
+                    $amountMismatch->push($row);
+                } elseif (!$statusMatches) {
+                    $row['type'] = 'status';
+                    $statusMismatch->push($row);
+                } else {
+                    $row['type'] = 'amount';
+                    $amountMismatch->push($row);
+                }
+            } else {
+                // Confirmed not present on the live API (or lookup failed)
                 $onlyInDb->push([
                     'reference' => $ref,
                     'api' => null,
                     'db' => $db,
+                    'verified_absent' => !$queryFailed,
                 ]);
             }
         }
@@ -2522,6 +2580,7 @@ HTML;
             'amount_mismatch_count' => $amountMismatch->count(),
             'only_in_api_count' => $onlyInApi->count(),
             'only_in_db_count' => $onlyInDb->count(),
+            'api_query_errors' => $apiQueryErrors,
             'api_total' => $apiTotal,
             'db_total' => $dbTotal,
             'api_only_total' => $sum($onlyInApi, 'api', 'amount'),

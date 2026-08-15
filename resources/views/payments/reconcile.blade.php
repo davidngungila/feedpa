@@ -256,7 +256,10 @@
         <div class="p-4 border-b border-primary-50 dark:border-dark-border bg-amber-50/30 dark:bg-amber-900/10 flex items-center justify-between">
             <div>
                 <p class="text-sm font-bold text-amber-700 dark:text-amber-200"><i class="fas fa-database text-amber-500 mr-2"></i>In System but Missing on ClickPesa API</p>
-                <p class="text-[10px] text-amber-500">These records exist locally but could not be matched to a live ClickPesa payment. They may be locally created, test data, or payments outside the API's current range.</p>
+                <p class="text-[10px] text-amber-500">Each record was checked live against the ClickPesa API (by reference). Records found live on the API were moved to Matched/Mismatches; the rest are confirmed absent from the API — locally created or test data.</p>
+                @if(($summary['api_query_errors'] ?? 0) > 0)
+                    <p class="text-[10px] text-amber-600 mt-1"><i class="fas fa-triangle-exclamation mr-1"></i>{{ $summary['api_query_errors'] }} record(s) could not be verified live (API lookup failed for those references).</p>
+                @endif
             </div>
         </div>
         <div class="overflow-x-auto">
@@ -278,9 +281,15 @@
                         @php $db = $row['db']; @endphp
                         <tr x-show="!search || '{{ strtolower($row['reference'] . ' ' . ($db['payer'] ?? '') . ' ' . ($db['phone'] ?? '')) }}'.includes(search.toLowerCase())" class="hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-colors">
                             <td>
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
-                                    <i class="fas fa-xmark text-[8px]"></i> Not Matched
-                                </span>
+                                @if(($row['verified_absent'] ?? false))
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                                        <i class="fas fa-xmark text-[8px]"></i> Not Matched
+                                    </span>
+                                @else
+                                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                                        <i class="fas fa-question text-[8px]"></i> Unverified
+                                    </span>
+                                @endif
                             </td>
                             <td class="font-mono text-[11px] text-amber-700 dark:text-amber-300">{{ $row['reference'] }}</td>
                             <td class="text-xs font-bold text-primary-900 dark:text-white">{{ $db['payer'] ?? 'N/A' }}</td>

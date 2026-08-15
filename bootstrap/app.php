@@ -20,6 +20,13 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\CheckUserLocked::class,
             \App\Http\Middleware\SessionValidation::class,
         ]);
+
+        // Exclude public webhook callbacks from CSRF verification (they carry their own secret).
+        $middleware->validateCsrfTokens(except: [
+            'webhooks/clickpesa',
+            'webhooks/clickpesa/test',
+            'api/whatsapp/webhook/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {

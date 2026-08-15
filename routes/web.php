@@ -19,6 +19,8 @@ use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\WhatsAppOperationsController;
+use App\Http\Controllers\WhatsAppWebhookReceiveController;
 
 /*
 |--------------------------------------------------------------------------
@@ -195,6 +197,61 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/ai', [SettingsController::class, 'ai'])->name('ai');
         Route::post('/ai/update', [SettingsController::class, 'updateAi'])->name('ai.update');
     });
+
+    // WhatsApp Operations Routes (Admin Only)
+    Route::prefix('whatsapp')->name('whatsapp.')->middleware('auth')->group(function () {
+            // Send Messages
+            Route::get('/messages/send', [WhatsAppOperationsController::class, 'sendMessages'])->name('messages.send');
+            Route::post('/messages/send', [WhatsAppOperationsController::class, 'sendMessagesPost'])->name('messages.send.post');
+            Route::post('/messages/send-bulk', [WhatsAppOperationsController::class, 'sendBulkMessages'])->name('messages.send-bulk');
+            
+            // Manage Contacts
+            Route::get('/contacts', [WhatsAppOperationsController::class, 'contacts'])->name('contacts.index');
+            Route::get('/contacts/create', [WhatsAppOperationsController::class, 'createContact'])->name('contacts.create');
+            Route::post('/contacts', [WhatsAppOperationsController::class, 'storeContact'])->name('contacts.store');
+            Route::get('/contacts/{id}/edit', [WhatsAppOperationsController::class, 'editContact'])->name('contacts.edit');
+            Route::put('/contacts/{id}', [WhatsAppOperationsController::class, 'updateContact'])->name('contacts.update');
+            Route::delete('/contacts/{id}', [WhatsAppOperationsController::class, 'destroyContact'])->name('contacts.destroy');
+            Route::post('/contacts/import', [WhatsAppOperationsController::class, 'importContacts'])->name('contacts.import');
+            Route::get('/contacts/export', [WhatsAppOperationsController::class, 'exportContacts'])->name('contacts.export');
+            
+            // Manage Groups
+            Route::get('/groups', [WhatsAppOperationsController::class, 'groups'])->name('groups.index');
+            Route::get('/groups/create', [WhatsAppOperationsController::class, 'createGroup'])->name('groups.create');
+            Route::post('/groups', [WhatsAppOperationsController::class, 'storeGroup'])->name('groups.store');
+            Route::get('/groups/{id}/edit', [WhatsAppOperationsController::class, 'editGroup'])->name('groups.edit');
+            Route::put('/groups/{id}', [WhatsAppOperationsController::class, 'updateGroup'])->name('groups.update');
+            Route::delete('/groups/{id}', [WhatsAppOperationsController::class, 'destroyGroup'])->name('groups.destroy');
+            Route::post('/groups/{id}/add-members', [WhatsAppOperationsController::class, 'addGroupMembers'])->name('groups.add-members');
+            Route::post('/groups/{id}/remove-member', [WhatsAppOperationsController::class, 'removeGroupMember'])->name('groups.remove-member');
+            
+            // Manage Sessions
+            Route::get('/sessions', [WhatsAppOperationsController::class, 'sessions'])->name('sessions.index');
+            Route::post('/sessions/create', [WhatsAppOperationsController::class, 'createSession'])->name('sessions.create');
+            Route::post('/sessions/{id}/connect', [WhatsAppOperationsController::class, 'connectSession'])->name('sessions.connect');
+            Route::post('/sessions/{id}/disconnect', [WhatsAppOperationsController::class, 'disconnectSession'])->name('sessions.disconnect');
+            Route::post('/sessions/{id}/restart', [WhatsAppOperationsController::class, 'restartSession'])->name('sessions.restart');
+            Route::delete('/sessions/{id}', [WhatsAppOperationsController::class, 'destroySession'])->name('sessions.destroy');
+            Route::get('/sessions/{id}/qr', [WhatsAppOperationsController::class, 'getSessionQr'])->name('sessions.qr');
+            Route::get('/sessions/{id}/status', [WhatsAppOperationsController::class, 'getSessionStatus'])->name('sessions.status');
+            
+            // Manage Webhooks
+            Route::get('/webhooks', [WhatsAppOperationsController::class, 'webhooks'])->name('webhooks.index');
+            Route::get('/webhooks/create', [WhatsAppOperationsController::class, 'createWebhook'])->name('webhooks.create');
+            Route::post('/webhooks', [WhatsAppOperationsController::class, 'storeWebhook'])->name('webhooks.store');
+            Route::post('/webhooks/generate-url', [WhatsAppOperationsController::class, 'generateWebhookUrl'])->name('webhooks.generate-url');
+            Route::post('/webhooks/generate-secret', [WhatsAppOperationsController::class, 'generateWebhookSecret'])->name('webhooks.generate-secret');
+            Route::get('/webhooks/{id}/edit', [WhatsAppOperationsController::class, 'editWebhook'])->name('webhooks.edit');
+            Route::put('/webhooks/{id}', [WhatsAppOperationsController::class, 'updateWebhook'])->name('webhooks.update');
+            Route::delete('/webhooks/{id}', [WhatsAppOperationsController::class, 'destroyWebhook'])->name('webhooks.destroy');
+            Route::post('/webhooks/{id}/test', [WhatsAppOperationsController::class, 'testWebhook'])->name('webhooks.test');
+            
+            // Media & Files
+            Route::get('/media', [WhatsAppOperationsController::class, 'media'])->name('media.index');
+            Route::post('/media/upload', [WhatsAppOperationsController::class, 'uploadMedia'])->name('media.upload');
+            Route::delete('/media/{id}', [WhatsAppOperationsController::class, 'destroyMedia'])->name('media.destroy');
+            Route::get('/media/{id}/download', [WhatsAppOperationsController::class, 'downloadMedia'])->name('media.download');
+    });
     
     // Sync Trigger Routes
     Route::post('/api-sync', function () {
@@ -360,6 +417,13 @@ Route::prefix('payments')->name('payments.')->group(function () {
 Route::prefix('webhooks')->name('webhooks.')->group(function () {
     Route::post('/clickpesa', [CallbackController::class, 'handle'])->name('clickpesa')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
     Route::post('/clickpesa/test', [CallbackController::class, 'test'])->name('clickpesa.test')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+});
+
+// Public WhatsApp Webhook Callback (no auth, no CSRF - called by Wasender API)
+Route::prefix('api/whatsapp')->name('whatsapp.webhook.')->group(function () {
+    Route::post('/webhook/{token}', [WhatsAppWebhookReceiveController::class, 'receive'])
+        ->name('receive')
+        ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 });
 
 // Forgot Password Routes

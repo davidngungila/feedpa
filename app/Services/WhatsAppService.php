@@ -31,7 +31,7 @@ class WhatsAppService
         return $this->wasenderSessionApiKey;
     }
 
-    protected function sendWasenderRequest(array $payload): array
+    public function sendWasenderRequest(array $payload): array
     {
         $apiKey = $this->getWasenderApiKey();
 

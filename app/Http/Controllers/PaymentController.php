@@ -2531,6 +2531,15 @@ HTML;
         $apiTotal = $apiByReference->sum('amount');
         $dbTotal = $dbByReference->sum('amount');
 
+        // Live account balance captured directly from the ClickPesa API
+        $apiLiveBalance = null;
+        try {
+            $tzsBalance = $this->accountBalanceService->getTzsBalance(refresh: true);
+            $apiLiveBalance = $tzsBalance['balance'] ?? null;
+        } catch (Exception $e) {
+            Log::warning('Reconciliation live balance fetch failed', ['error' => $e->getMessage()]);
+        }
+
         $summary = [
             'api_count' => $apiByReference->count(),
             'db_count' => $dbByReference->count(),
@@ -2554,6 +2563,7 @@ HTML;
             'onlyInApi',
             'onlyInDb',
             'summary',
+            'apiLiveBalance',
             'error',
             'fetchedAt'
         ));

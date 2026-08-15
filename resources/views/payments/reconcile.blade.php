@@ -40,10 +40,20 @@
 
     <!-- Summary Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="card p-5 border-l-4 border-l-primary-500">
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-primary-500">Live API Payments</p>
-            <p class="text-2xl font-black text-primary-900 dark:text-white mt-1">{{ number_format($summary['api_count']) }}</p>
-            <p class="text-[11px] text-primary-500 mt-1">TZS {{ number_format($summary['api_total'], 2) }}</p>
+        <div class="card p-5 border-l-4 border-l-primary-500 bg-gradient-to-br from-primary-500 to-primary-700">
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Live API Payments</p>
+            <p class="text-2xl font-black text-white mt-1">{{ number_format($summary['api_count']) }}</p>
+            <p class="text-[11px] text-white/80 mt-1">TZS {{ number_format($summary['api_total'], 2) }}</p>
+            <div class="mt-2 pt-2 border-t border-white/20 flex items-center justify-between">
+                <span class="text-[10px] font-bold text-white/70"><i class="fas fa-bolt mr-1"></i>Live Balance</span>
+                <span class="text-xs font-black text-white">
+                    @if($apiLiveBalance !== null)
+                        TZS {{ number_format($apiLiveBalance, 2) }}
+                    @else
+                        <span class="text-white/70">Unavailable</span>
+                    @endif
+                </span>
+            </div>
         </div>
         <div class="card p-5 border-l-4 border-l-cyan-500">
             <p class="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-600">System Records</p>
@@ -146,6 +156,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>Match</th>
                         <th>Reference</th>
                         <th>Payer</th>
                         <th>Phone</th>
@@ -159,6 +170,11 @@
                     @forelse($matched as $row)
                         @php $api = $row['api']; @endphp
                         <tr x-show="!search || '{{ strtolower($row['reference'] . ' ' . ($api['payer'] ?? '') . ' ' . ($api['phone'] ?? '')) }}'.includes(search.toLowerCase())" class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
+                            <td>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                                    <i class="fas fa-check text-[8px]"></i> Matched
+                                </span>
+                            </td>
                             <td class="font-mono text-[11px] text-primary-700 dark:text-primary-300">{{ $row['reference'] }}</td>
                             <td class="text-xs font-bold text-primary-900 dark:text-white">{{ $api['payer'] ?? 'N/A' }}</td>
                             <td class="text-xs text-primary-600 dark:text-primary-300">{{ $api['phone'] ?? 'N/A' }}</td>
@@ -172,7 +188,7 @@
                             <td class="text-xs text-primary-500">{{ isset($api['created_at']) ? \Illuminate\Support\Carbon::parse($api['created_at'])->format('d M Y H:i') : 'N/A' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center py-8 text-xs text-primary-500 italic">No matched payments found.</td></tr>
+                        <tr><td colspan="8" class="text-center py-8 text-xs text-primary-500 italic">No matched payments found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -191,6 +207,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>Match</th>
                         <th>Reference</th>
                         <th>Payer</th>
                         <th>Phone</th>
@@ -204,6 +221,11 @@
                     @forelse($onlyInApi as $row)
                         @php $api = $row['api']; @endphp
                         <tr x-show="!search || '{{ strtolower($row['reference'] . ' ' . ($api['payer'] ?? '') . ' ' . ($api['phone'] ?? '')) }}'.includes(search.toLowerCase())" class="hover:bg-red-50/30 dark:hover:bg-red-900/10 transition-colors">
+                            <td>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300">
+                                    <i class="fas fa-xmark text-[8px]"></i> Not Matched
+                                </span>
+                            </td>
                             <td class="font-mono text-[11px] text-red-700 dark:text-red-300">{{ $row['reference'] }}</td>
                             <td class="text-xs font-bold text-primary-900 dark:text-white">{{ $api['payer'] ?? 'N/A' }}</td>
                             <td class="text-xs text-primary-600 dark:text-primary-300">{{ $api['phone'] ?? 'N/A' }}</td>
@@ -217,7 +239,7 @@
                             <td class="text-xs text-primary-500">{{ isset($api['created_at']) ? \Illuminate\Support\Carbon::parse($api['created_at'])->format('d M Y H:i') : 'N/A' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center py-8 text-xs text-primary-500 italic">No API-only payments found — the system is up to date.</td></tr>
+                        <tr><td colspan="8" class="text-center py-8 text-xs text-primary-500 italic">No API-only payments found — the system is up to date.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -236,6 +258,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>Match</th>
                         <th>Reference</th>
                         <th>Payer</th>
                         <th>Phone</th>
@@ -249,6 +272,11 @@
                     @forelse($onlyInDb as $row)
                         @php $db = $row['db']; @endphp
                         <tr x-show="!search || '{{ strtolower($row['reference'] . ' ' . ($db['payer'] ?? '') . ' ' . ($db['phone'] ?? '')) }}'.includes(search.toLowerCase())" class="hover:bg-amber-50/30 dark:hover:bg-amber-900/10 transition-colors">
+                            <td>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                                    <i class="fas fa-xmark text-[8px]"></i> Not Matched
+                                </span>
+                            </td>
                             <td class="font-mono text-[11px] text-amber-700 dark:text-amber-300">{{ $row['reference'] }}</td>
                             <td class="text-xs font-bold text-primary-900 dark:text-white">{{ $db['payer'] ?? 'N/A' }}</td>
                             <td class="text-xs text-primary-600 dark:text-primary-300">{{ $db['phone'] ?? 'N/A' }}</td>
@@ -262,7 +290,7 @@
                             <td class="text-xs text-primary-500">{{ isset($db['created_at']) ? \Illuminate\Support\Carbon::parse($db['created_at'])->format('d M Y H:i') : 'N/A' }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center py-8 text-xs text-primary-500 italic">No system-only records found.</td></tr>
+                        <tr><td colspan="8" class="text-center py-8 text-xs text-primary-500 italic">No system-only records found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -279,6 +307,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>Match</th>
                         <th>Reference</th>
                         <th>Field</th>
                         <th>API Value</th>
@@ -289,6 +318,11 @@
                     @forelse($statusMismatch->merge($amountMismatch)->unique('reference') as $row)
                         @php $api = $row['api']; $db = $row['db']; @endphp
                         <tr x-show="!search || '{{ strtolower($row['reference'] . ' ' . ($api['payer'] ?? '') . ' ' . ($db['payer'] ?? '') . ' ' . ($api['phone'] ?? '') . ' ' . ($db['phone'] ?? '')) }}'.includes(search.toLowerCase())" class="hover:bg-orange-50/30 dark:hover:bg-orange-900/10 transition-colors align-top">
+                            <td>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                                    <i class="fas fa-xmark text-[8px]"></i> Not Matched
+                                </span>
+                            </td>
                             <td class="font-mono text-[11px] text-orange-700 dark:text-orange-300 whitespace-nowrap">{{ $row['reference'] }}</td>
                             <td class="text-xs">
                                 @unless($row['status_match'] ?? true)
@@ -320,7 +354,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="4" class="text-center py-8 text-xs text-primary-500 italic">No mismatches found — API and system data agree.</td></tr>
+                        <tr><td colspan="5" class="text-center py-8 text-xs text-primary-500 italic">No mismatches found — API and system data agree.</td></tr>
                     @endforelse
                 </tbody>
             </table>

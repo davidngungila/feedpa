@@ -53,9 +53,9 @@
 
     <!-- Contacts Table -->
     <div class="card overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto overflow-y-auto max-h-[70vh]">
             <table class="w-full text-left">
-                <thead class="bg-primary-50 dark:bg-primary-900/20">
+                <thead class="bg-primary-50 dark:bg-primary-900/20 sticky top-0 z-10">
                     <tr>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Contact</th>
                         <th class="px-6 py-4 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Phone / JID</th>
@@ -84,7 +84,7 @@
                                         @endif
                                     </div>
                                     <div class="min-w-0">
-                                        <p class="text-sm font-bold text-primary-900 dark:text-white truncate">{{ $contact['name'] ?? 'Unknown' }}</p>
+                                        <p class="text-sm font-bold text-primary-900 dark:text-white truncate">{{ $contact['name'] ?? ($contact['notify'] ?? 'Unknown') }}</p>
                                         @if($isBusiness)
                                             <p class="text-[10px] text-primary-400">
                                                 <i class="fas fa-check-circle mr-0.5 text-blue-500"></i> {{ $contact['verifiedName'] }}
@@ -238,7 +238,7 @@
                             : '<div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center"><i class="fab fa-whatsapp text-4xl text-green-600 dark:text-green-400"></i></div>') +
                     '</div>' +
                     '<div class="text-center">' +
-                        '<p class="text-lg font-black text-primary-900 dark:text-white break-all">' + (c.name || 'Unknown') + '</p>' +
+                        '<p class="text-lg font-black text-primary-900 dark:text-white break-all">' + (c.name || c.notify || 'Unknown') + '</p>' +
                         (isBusiness ? '<p class="text-[11px] text-blue-500 mt-0.5"><i class="fas fa-check-circle mr-0.5"></i>' + (c.verifiedName || 'Verified Business') + '</p>' : '') +
                     '</div>' +
                     '<div class="space-y-3 text-xs border-t border-primary-100 dark:border-primary-800 pt-4">' +

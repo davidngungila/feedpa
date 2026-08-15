@@ -25,6 +25,14 @@
         </div>
     @endif
 
+    @if($rateLimited)
+        <div class="card p-4 border-l-4 border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10">
+            <p class="text-xs font-bold text-amber-700 dark:text-amber-300">
+                <i class="fas fa-exclamation-triangle mr-1"></i> The WhatsApp API rate limit was reached while loading group details. Some groups show basic info only - refresh after a minute to load the rest.
+            </p>
+        </div>
+    @endif
+
     @if(!$apiKeyConfigured)
         <div class="card p-4 border-l-4 border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10">
             <p class="text-xs font-bold text-amber-700 dark:text-amber-300">
@@ -57,7 +65,7 @@
                 <p class="text-[11px] text-primary-500 mt-1 line-clamp-2">{{ $group['description'] ?? 'No description' }}</p>
                 <div class="mt-4 pt-4 border-t border-primary-100 dark:border-primary-800 flex items-center justify-between">
                     <span class="text-[10px] font-bold text-primary-500">
-                        <i class="fas fa-user mr-1"></i> {{ $group['participants_count'] }} members
+                        <i class="fas fa-user mr-1"></i> {{ $group['participants_count'] ? $group['participants_count'] . ' members' : 'Members —' }}
                     </span>
                     @if($group['creation'])
                         <span class="text-[10px] text-primary-400">

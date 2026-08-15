@@ -425,18 +425,29 @@ class WhatsAppService
 
     public function getGroups(): array
     {
-        $result = $this->request('GET', '/groups');
+        return Cache::remember('whatsapp.groups.list', now()->addMinutes(2), function () {
+            $result = $this->request('GET', '/groups');
 
-        if (($result['success'] ?? false) && is_array($result['data'])) {
-            return $result['data'];
+            if (($result['success'] ?? false) && is_array($result['data'])) {
+                return $result['data'];
+            }
+
+            return [];
+        });
+    }
+
+    public function isRateLimited(array $result): bool
+    {
+        if (($result['status'] ?? null) === 429) {
+            return true;
         }
 
-        return [];
+        return stripos((string) ($result['message'] ?? ''), 'too many requests') !== false;
     }
 
     public function getGroupMetadata(string $jid): array
     {
-        $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/metadata');
+        $result = $this->getGroupMetadataRaw($jid);
 
         if (($result['success'] ?? false) && is_array($result['data'])) {
             return $result['data'];
@@ -447,14 +458,33 @@ class WhatsAppService
 
     public function getGroupMetadataRaw(string $jid): array
     {
-        return $this->request('GET', '/groups/' . rawurlencode($jid) . '/metadata');
+        $key = 'whatsapp.group.meta.' . md5($jid);
+
+        if (Cache::has($key)) {
+            return Cache::get($key);
+        }
+
+        $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/metadata');
+
+        if ($result['success'] ?? false) {
+            Cache::put($key, $result, now()->addMinutes(10));
+        }
+
+        return $result;
     }
 
     public function getGroupParticipants(string $jid): array
     {
+        $key = 'whatsapp.group.participants.' . md5($jid);
+
+        if (Cache::has($key)) {
+            return Cache::get($key);
+        }
+
         $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/participants');
 
         if (($result['success'] ?? false) && is_array($result['data'])) {
+            Cache::put($key, $result['data'], now()->addMinutes(10));
             return $result['data'];
         }
 
@@ -476,13 +506,25 @@ class WhatsAppService
 
     public function getContactsRaw(int $page = 1, int $limit = 100, bool $paginated = false): array
     {
+        $key = 'whatsapp.contacts.' . $paginated . '.' . $page . '.' . $limit;
+
+        if (Cache::has($key)) {
+            return Cache::get($key);
+        }
+
         $query = http_build_query([
             'paginated' => $paginated ? 'true' : 'false',
             'page'      => $page,
             'limit'     => $limit,
         ]);
 
-        return $this->request('GET', '/contacts?' . $query);
+        $result = $this->request('GET', '/contacts?' . $query);
+
+        if ($result['success'] ?? false) {
+            Cache::put($key, $result, now()->addMinutes(2));
+        }
+
+        return $result;
     }
 
     public function getContacts(int $page = 1, int $limit = 100, bool $paginated = false): array

@@ -345,15 +345,26 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $apiKeyConfigured = $this->whatsapp->hasSessionApiKey();
         $liveGroups = $apiKeyConfigured ? $this->whatsapp->getGroups() : [];
         $groups = [];
+        $rateLimited = false;
 
         foreach ($liveGroups as $group) {
             $jid = $group['jid'] ?? $group['id'] ?? '';
-            $meta = $jid ? $this->whatsapp->getGroupMetadata($jid) : [];
+
+            if (!$rateLimited && $jid) {
+                $metaResult = $this->whatsapp->getGroupMetadataRaw($jid);
+                $meta = ($metaResult['success'] ?? false) && is_array($metaResult['data'] ?? null) ? $metaResult['data'] : [];
+
+                if (!($metaResult['success'] ?? false)) {
+                    $rateLimited = $this->whatsapp->isRateLimited($metaResult);
+                }
+            } else {
+                $meta = [];
+            }
 
             $groups[] = [
                 'jid' => $jid,
                 'name' => $group['name'] ?? $meta['subject'] ?? 'Unknown Group',
-                'img_url' => $group['imgUrl'] ?? $this->whatsapp->getGroupPicture($jid),
+                'img_url' => $group['imgUrl'] ?? ($rateLimited ? null : $this->whatsapp->getGroupPicture($jid)),
                 'description' => $meta['desc'] ?? null,
                 'owner' => $meta['owner'] ?? null,
                 'creation' => isset($meta['creation']) ? date('Y-m-d H:i', (int) $meta['creation']) : null,
@@ -362,7 +373,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             ];
         }
 
-        return view('whatsapp.groups.index', compact('groups', 'apiKeyConfigured'));
+        return view('whatsapp.groups.index', compact('groups', 'apiKeyConfigured', 'rateLimited'));
     }
 
     public function groupDetails($jid)

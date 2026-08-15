@@ -451,10 +451,34 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
         $result = $this->whatsapp->addGroupParticipants($jid, $participants);
 
+        $items = [];
+        foreach (($result['data'] ?? []) as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $status = (string) ($item['status'] ?? '');
+            $phone = $item['content']['attrs']['phone_number'] ?? $item['jid'] ?? '';
+            $phone = preg_replace('/@s\.whatsapp\.net$/', '', $phone);
+
+            $message = match ($status) {
+                '200' => 'Added',
+                '403' => 'Not authorized - the connected WhatsApp number needs admin rights in the group',
+                '409' => 'Already a member of this group',
+                default => $item['content']['attrs']['error'] ?? $item['message'] ?? 'Failed (code ' . $status . ')',
+            };
+
+            $items[] = [
+                'status' => (int) $status,
+                'jid'    => $phone,
+                'message'=> $message,
+            ];
+        }
+
         return response()->json([
             'success' => $result['success'] ?? false,
             'message' => $result['message'] ?? 'Failed to add participants.',
-            'data'    => $result['data'] ?? null,
+            'data'    => $items,
         ], ($result['success'] ?? false) ? 200 : 400);
     }
 

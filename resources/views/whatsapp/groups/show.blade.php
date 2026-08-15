@@ -250,11 +250,14 @@
                             const ok = item.status === 200;
                             const cls = ok
                                 ? 'border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-900/10'
-                                : 'border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/10';
-                            const badgeCls = ok ? 'badge-green' : 'badge-red';
+                                : 'border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/10';
+                            const badgeCls = ok ? 'badge-green' : 'badge-amber';
                             return '<div class="flex items-center justify-between gap-3 p-3 rounded-xl border ' + cls + '">' +
-                                '<p class="text-xs font-bold text-primary-900 dark:text-white font-mono">' + (item.jid || '') + '</p>' +
-                                '<span class="badge ' + badgeCls + '">' + (ok ? 'Added' : (item.message || 'Failed')) + '</span>' +
+                                '<div class="min-w-0">' +
+                                    '<p class="text-xs font-bold text-primary-900 dark:text-white font-mono">' + (item.jid || '') + '</p>' +
+                                    '<p class="text-[10px] text-primary-500 mt-0.5">' + (item.message || '') + '</p>' +
+                                '</div>' +
+                                '<span class="badge ' + badgeCls + ' whitespace-nowrap">' + (ok ? 'Added' : 'Not added') + '</span>' +
                             '</div>';
                         }).join('');
 

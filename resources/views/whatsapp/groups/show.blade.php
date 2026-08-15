@@ -519,37 +519,43 @@
                 .replace(/'/g, '&#39;');
         }
 
-        function decodeContent(contentRaw) {
-            if (Array.isArray(contentRaw)) {
-                return {
-                    text: contentRaw.text || trimUrlList([
-                        contentRaw.imageUrl, contentRaw.videoUrl, contentRaw.audioUrl,
-                        contentRaw.documentUrl, contentRaw.stickerUrl,
-                    ]) || 'Media message',
-                    decoded: contentRaw,
-                };
+        function extractContentText(v, depth) {
+            if (v === null || v === undefined || depth > 5) return null;
+            if (typeof v === 'string') return v;
+            if (typeof v !== 'object') return null;
+            if (Array.isArray(v)) {
+                for (const item of v) {
+                    const t = extractContentText(item, depth + 1);
+                    if (t) return t;
+                }
+                return null;
             }
-            if (typeof contentRaw === 'object' && contentRaw !== null) {
-                return { text: '', decoded: contentRaw };
+            for (const key of ['text', 'message', 'body', 'caption', 'description', 'name']) {
+                if (v[key] !== undefined) {
+                    const t = extractContentText(v[key], depth + 1);
+                    if (t) return t;
+                }
             }
-            let decoded = null;
-            if (typeof contentRaw === 'string' && contentRaw.trim() !== '') {
-                try { decoded = JSON.parse(contentRaw); } catch (e) { decoded = null; }
-            }
-            if (Array.isArray(decoded)) {
-                return {
-                    text: decoded.text || trimUrlList([
-                        decoded.imageUrl, decoded.videoUrl, decoded.audioUrl,
-                        decoded.documentUrl, decoded.stickerUrl,
-                    ]) || 'Media message',
-                    decoded: decoded,
-                };
-            }
-            return { text: contentRaw || '', decoded: decoded };
+            return null;
         }
 
-        function trimUrlList(items) {
-            return (items || []).filter(Boolean).join(', ');
+        function mediaUrlText(obj) {
+            if (!obj || typeof obj !== 'object') return '';
+            return (obj.imageUrl || obj.videoUrl || obj.audioUrl || obj.documentUrl || obj.stickerUrl) || '';
+        }
+
+        function decodeContent(contentRaw) {
+            let parsed = contentRaw;
+            if (typeof contentRaw === 'string' && contentRaw.trim() !== '') {
+                try { parsed = JSON.parse(contentRaw); } catch (e) { parsed = contentRaw; }
+            }
+            let text = '';
+            if (Array.isArray(parsed) || (parsed && typeof parsed === 'object')) {
+                text = extractContentText(parsed, 0) || mediaUrlText(parsed);
+            } else if (parsed !== null && parsed !== undefined) {
+                text = String(parsed);
+            }
+            return { text: text, decoded: parsed };
         }
 
         const messageModal = document.getElementById('messageModal');

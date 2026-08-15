@@ -41,7 +41,12 @@
     <!-- Summary Cards -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="card p-5 border-l-4 border-l-primary-500 bg-gradient-to-br from-primary-500 to-primary-700">
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Live API Payments</p>
+            <div class="flex items-center justify-between">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Live API Payments</p>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 text-white text-[9px] font-black uppercase tracking-wider">
+                    <i class="fas fa-circle text-[6px] animate-pulse"></i> Live from API
+                </span>
+            </div>
             <p class="text-2xl font-black text-white mt-1">{{ number_format($summary['api_count']) }}</p>
             <p class="text-[11px] text-white/80 mt-1">TZS {{ number_format($summary['api_total'], 2) }}</p>
             <div class="mt-2 pt-2 border-t border-white/20 flex items-center justify-between">

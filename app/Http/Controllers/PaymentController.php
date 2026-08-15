@@ -2379,56 +2379,30 @@ HTML;
         $fetchedAt = now();
 
         try {
-            $perPage = 100;
-            $page = 1;
-            $maxPages = 100;
-            $seenRefs = [];
-
-            while ($page <= $maxPages) {
-                $response = $this->api->queryAllPayments([
-                    'limit' => $perPage,
-                    'page' => $page,
-                    'orderBy' => 'DESC',
-                    'sortBy' => 'createdAt',
-                ]);
-
-                $batch = $response['data'] ?? (is_array($response) ? $response : []);
-                $batch = is_array($batch) ? $batch : [];
-
-                if (empty($batch)) {
-                    break;
-                }
-
-                $batchRefs = array_map(fn($p) => $p['orderReference'] ?? $p['id'] ?? null, $batch);
-                $uniqueBatchRefs = array_values(array_unique($batchRefs));
-
-                // Guard against pagination that keeps returning the same page
-                if (!empty($seenRefs) && count($uniqueBatchRefs) > 0 && count(array_intersect($seenRefs, $uniqueBatchRefs)) === count($uniqueBatchRefs)) {
-                    break;
-                }
-
-                $seenRefs = array_merge($seenRefs, $uniqueBatchRefs);
-                $apiPayments = $apiPayments->merge($batch);
-
-                if (count($batch) < $perPage) {
-                    break;
-                }
-                $page++;
-            }
+            // Fetch live directly from the ClickPesa account statement API (single live call, no DB)
+            $response = $this->api->getAccountStatement('TZS');
+            $apiPayments = collect($response['transactions'] ?? []);
         } catch (Exception $e) {
             $error = 'Failed to fetch payments from ClickPesa API: ' . $e->getMessage();
             Log::error('Reconciliation API fetch failed', ['error' => $e->getMessage()]);
         }
 
         $successfulStatuses = ['SUCCESS', 'SETTLED', 'COMPLETED'];
+        $paymentTypes = ['payment', 'billpay', 'ecommerce_payment'];
 
-        // Normalize API payments by order reference (only successful payments)
+        // Normalize live API transactions by order reference (successful payments only, exclude payouts/debits)
         $apiByReference = $apiPayments
-            ->filter(function ($p) use ($successfulStatuses) {
-                return in_array(strtoupper($p['status'] ?? 'UNKNOWN'), $successfulStatuses);
+            ->filter(function ($p) use ($successfulStatuses, $paymentTypes) {
+                $status = strtoupper($p['status'] ?? 'UNKNOWN');
+                if (!in_array($status, $successfulStatuses)) {
+                    return false;
+                }
+                $type = strtolower($p['type'] ?? 'payment');
+                $isWithdrawal = $p['is_withdrawal'] ?? false;
+                return in_array($type, $paymentTypes) && !$isWithdrawal && $type !== 'payout' && $type !== 'debit';
             })
             ->mapWithKeys(function ($p) {
-            $ref = $p['orderReference'] ?? $p['id'] ?? null;
+            $ref = $p['orderReference'] ?? $p['reference'] ?? $p['id'] ?? null;
             if (!$ref) {
                 return [];
             }
@@ -2441,8 +2415,8 @@ HTML;
                     'phone' => $p['customer']['customerPhoneNumber'] ?? $p['paymentPhoneNumber'] ?? null,
                     'payer' => $p['customer']['customerName'] ?? $p['payer_name'] ?? null,
                     'method' => $p['channel'] ?? $p['paymentMethod'] ?? null,
-                    'created_at' => $p['createdAt'] ?? null,
-                    'updated_at' => $p['updatedAt'] ?? null,
+                    'created_at' => $p['createdAt'] ?? $p['created_at'] ?? null,
+                    'updated_at' => $p['updatedAt'] ?? $p['updated_at'] ?? null,
                 ],
             ];
         });

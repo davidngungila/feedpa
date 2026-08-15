@@ -255,6 +255,11 @@
                             <i class="fa-solid fa-circle text-[6px] ml-1"></i>
                             <span>Payment History</span>
                         </a>
+                        <a href="{{ route('payments.reconcile') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('payments.reconcile') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Reconciliation</span>
+                        </a>
                     </div>
                 </div>
 

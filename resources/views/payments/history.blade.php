@@ -152,6 +152,24 @@
         </form>
     </div>
 
+    <!-- Reconciliation Card -->
+    <div class="card p-5 bg-gradient-to-br from-primary-500/10 to-cyan-500/10 border border-primary-200 dark:border-dark-border">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300">
+                    <i class="fas fa-scale-balanced"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm text-primary-900 dark:text-white">Payment Reconciliation</h3>
+                    <p class="text-[11px] text-primary-500 mt-0.5">Compare live ClickPesa API payments against the records stored in this system, and spot missing or mismatched transactions.</p>
+                </div>
+            </div>
+            <a href="{{ route('payments.reconcile') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap">
+                <i class="fas fa-rotate-right"></i> Run Reconciliation
+            </a>
+        </div>
+    </div>
+
     <!-- Transactions Table -->
     <div class="card overflow-hidden">
         <div class="p-4 border-b border-primary-50 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30">

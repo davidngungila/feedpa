@@ -64,6 +64,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('payments')->name('payments.')->group(function () {
         Route::get('/create', [PaymentController::class, 'create'])->name('create');
         Route::get('/history', [PaymentController::class, 'history'])->name('history');
+        Route::get('/reconcile', [PaymentController::class, 'reconcile'])->name('reconcile');
         Route::get('/export/pdf', [PaymentController::class, 'exportPdf'])->name('export.pdf');
         Route::get('/export/excel', [PaymentController::class, 'exportExcel'])->name('export.excel');
         Route::post('/resend-ussd', [PaymentController::class, 'resendUssd'])->name('resend-ussd');

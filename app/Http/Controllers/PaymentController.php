@@ -2368,4 +2368,186 @@ HTML;
             return back()->with('error', 'Failed to send WhatsApp receipt: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Reconcile live ClickPesa API payments against records stored in the system.
+     */
+    public function reconcile(Request $request)
+    {
+        $apiPayments = collect();
+        $error = null;
+        $fetchedAt = now();
+
+        try {
+            $perPage = 100;
+            $page = 1;
+            $maxPages = 100;
+            $seenRefs = [];
+
+            while ($page <= $maxPages) {
+                $response = $this->api->queryAllPayments([
+                    'limit' => $perPage,
+                    'page' => $page,
+                    'orderBy' => 'DESC',
+                    'sortBy' => 'createdAt',
+                ]);
+
+                $batch = $response['data'] ?? (is_array($response) ? $response : []);
+                $batch = is_array($batch) ? $batch : [];
+
+                if (empty($batch)) {
+                    break;
+                }
+
+                $batchRefs = array_map(fn($p) => $p['orderReference'] ?? $p['id'] ?? null, $batch);
+                $uniqueBatchRefs = array_values(array_unique($batchRefs));
+
+                // Guard against pagination that keeps returning the same page
+                if (!empty($seenRefs) && count($uniqueBatchRefs) > 0 && count(array_intersect($seenRefs, $uniqueBatchRefs)) === count($uniqueBatchRefs)) {
+                    break;
+                }
+
+                $seenRefs = array_merge($seenRefs, $uniqueBatchRefs);
+                $apiPayments = $apiPayments->merge($batch);
+
+                if (count($batch) < $perPage) {
+                    break;
+                }
+                $page++;
+            }
+        } catch (Exception $e) {
+            $error = 'Failed to fetch payments from ClickPesa API: ' . $e->getMessage();
+            Log::error('Reconciliation API fetch failed', ['error' => $e->getMessage()]);
+        }
+
+        // Normalize API payments by order reference
+        $apiByReference = $apiPayments->mapWithKeys(function ($p) {
+            $ref = $p['orderReference'] ?? $p['id'] ?? null;
+            if (!$ref) {
+                return [];
+            }
+            return [
+                $ref => [
+                    'reference' => $ref,
+                    'status' => strtoupper($p['status'] ?? 'UNKNOWN'),
+                    'amount' => (float) ($p['collectedAmount'] ?? $p['amount'] ?? 0),
+                    'currency' => $p['collectedCurrency'] ?? $p['currency'] ?? 'TZS',
+                    'phone' => $p['customer']['customerPhoneNumber'] ?? $p['paymentPhoneNumber'] ?? null,
+                    'payer' => $p['customer']['customerName'] ?? $p['payer_name'] ?? null,
+                    'method' => $p['channel'] ?? $p['paymentMethod'] ?? null,
+                    'created_at' => $p['createdAt'] ?? null,
+                    'updated_at' => $p['updatedAt'] ?? null,
+                ],
+            ];
+        });
+
+        // All payment-type records in the system
+        $dbTransactions = Transaction::whereIn('type', ['payment', 'billpay', 'ecommerce_payment'])->get();
+
+        $dbByReference = $dbTransactions->mapWithKeys(function ($t) {
+            return [
+                $t->order_reference => [
+                    'reference' => $t->order_reference,
+                    'status' => strtoupper($t->status ?? 'UNKNOWN'),
+                    'amount' => (float) ($t->amount ?? 0),
+                    'currency' => $t->currency ?? 'TZS',
+                    'phone' => $t->phone,
+                    'payer' => $t->payer_name ?? $t->customer_name,
+                    'method' => $t->payment_method,
+                    'created_at' => $t->created_at?->toDateTimeString(),
+                    'updated_at' => $t->updated_at?->toDateTimeString(),
+                ],
+            ];
+        });
+
+        // Categorize the reconciliation
+        $matched = collect();
+        $statusMismatch = collect();
+        $amountMismatch = collect();
+        $onlyInApi = collect();
+        $onlyInDb = collect();
+
+        foreach ($apiByReference as $ref => $api) {
+            $db = $dbByReference->get($ref);
+            if (!$db) {
+                $onlyInApi->push([
+                    'reference' => $ref,
+                    'api' => $api,
+                    'db' => null,
+                ]);
+                continue;
+            }
+
+            $statusMatches = $api['status'] === $db['status'];
+            $amountMatches = abs($api['amount'] - $db['amount']) < 0.01;
+
+            $row = [
+                'reference' => $ref,
+                'api' => $api,
+                'db' => $db,
+                'status_match' => $statusMatches,
+                'amount_match' => $amountMatches,
+            ];
+
+            if ($statusMatches && $amountMatches) {
+                $matched->push($row);
+            } elseif (!$statusMatches && !$amountMatches) {
+                $row['type'] = 'both';
+                $statusMismatch->push($row);
+                $amountMismatch->push($row);
+            } elseif (!$statusMatches) {
+                $row['type'] = 'status';
+                $statusMismatch->push($row);
+            } else {
+                $row['type'] = 'amount';
+                $amountMismatch->push($row);
+            }
+        }
+
+        foreach ($dbByReference as $ref => $db) {
+            if (!$apiByReference->has($ref)) {
+                $onlyInDb->push([
+                    'reference' => $ref,
+                    'api' => null,
+                    'db' => $db,
+                ]);
+            }
+        }
+
+        $sum = function (Collection $rows, string $source, string $field) {
+            return $rows->sum(function ($row) use ($source, $field) {
+                return $row[$source][$field] ?? 0;
+            });
+        };
+
+        $apiTotal = $apiByReference->sum('amount');
+        $dbTotal = $dbByReference->sum('amount');
+
+        $summary = [
+            'api_count' => $apiByReference->count(),
+            'db_count' => $dbByReference->count(),
+            'matched_count' => $matched->count(),
+            'status_mismatch_count' => $statusMismatch->count(),
+            'amount_mismatch_count' => $amountMismatch->count(),
+            'only_in_api_count' => $onlyInApi->count(),
+            'only_in_db_count' => $onlyInDb->count(),
+            'api_total' => $apiTotal,
+            'db_total' => $dbTotal,
+            'api_only_total' => $sum($onlyInApi, 'api', 'amount'),
+            'db_only_total' => $sum($onlyInDb, 'db', 'amount'),
+            'status_mismatch_total' => $sum($statusMismatch, 'api', 'amount'),
+            'amount_mismatch_total' => $sum($amountMismatch, 'api', 'amount'),
+        ];
+
+        return view('payments.reconcile', compact(
+            'matched',
+            'statusMismatch',
+            'amountMismatch',
+            'onlyInApi',
+            'onlyInDb',
+            'summary',
+            'error',
+            'fetchedAt'
+        ));
+    }
 }

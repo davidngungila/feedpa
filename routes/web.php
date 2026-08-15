@@ -222,6 +222,7 @@ Route::get('/contacts/{contact}', [WhatsAppOperationsController::class, 'contact
             Route::post('/groups', [WhatsAppOperationsController::class, 'storeGroup'])->name('groups.store');
             Route::get('/groups/{jid}', [WhatsAppOperationsController::class, 'groupDetails'])->name('groups.details');
             Route::post('/groups/{jid}/participants/add', [WhatsAppOperationsController::class, 'addGroupParticipants'])->name('groups.add-participants');
+            Route::post('/groups/{jid}/send-message', [WhatsAppOperationsController::class, 'sendGroupMessage'])->name('groups.send-message');
             Route::get('/groups/{id}/edit', [WhatsAppOperationsController::class, 'editGroup'])->name('groups.edit');
             Route::put('/groups/{id}', [WhatsAppOperationsController::class, 'updateGroup'])->name('groups.update');
             Route::delete('/groups/{id}', [WhatsAppOperationsController::class, 'destroyGroup'])->name('groups.destroy');

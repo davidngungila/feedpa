@@ -138,6 +138,56 @@
         <div id="addParticipantsResult" class="mt-4 hidden"></div>
     </div>
 
+    <!-- Send Group Message -->
+    <div class="card p-6">
+        <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2 mb-4">
+            <i class="fas fa-paper-plane"></i> Send Group Message
+        </h3>
+        <p class="text-[11px] text-primary-500 mb-4">Send a message directly to this group using its Group ID. To mention members, tick the members below (their <span class="font-mono">@phone</span> handle is added to your message automatically).</p>
+        <form id="sendGroupMessageForm" action="{{ route('whatsapp.groups.send-message', $group['jid']) }}" method="POST">
+            @csrf
+            <textarea name="text" id="groupMessageText" rows="4" required placeholder="Type your message to the group..."
+                class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y"></textarea>
+
+            <div class="mt-4">
+                <p class="text-[10px] text-gray-400 uppercase font-bold mb-2">Mention Members (optional)</p>
+                @php
+                    $mentionables = array_filter($group['participants'] ?? [], function ($p) {
+                        return !empty($p['jid']) || !empty($p['pn']);
+                    });
+                @endphp
+                @if(count($mentionables) > 0)
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-52 overflow-y-auto p-3 rounded-xl bg-gray-50 dark:bg-primary-900/20">
+                        @foreach($mentionables as $p)
+                            @php
+                                $pn = $p['pn'] ?? preg_replace('/@s\.whatsapp\.net$/', '', $p['jid']);
+                                $mentionJid = !empty($p['jid']) ? $p['jid'] : ($pn . '@s.whatsapp.net');
+                                $label = $p['name'] ?? $p['id'] ?? $pn;
+                            @endphp
+                            <label class="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-primary-400 transition-colors">
+                                <input type="checkbox" value="{{ $mentionJid }}" data-phone="{{ $pn }}" class="mention-checkbox rounded text-primary-600 focus:ring-primary-500">
+                                <span class="min-w-0">
+                                    <span class="block text-xs font-bold text-primary-900 dark:text-white truncate">{{ $label }}</span>
+                                    <span class="block text-[10px] text-primary-500 font-mono">{{ '@' . $pn }}</span>
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-[11px] text-primary-500">No participant numbers available to mention.</p>
+                @endif
+            </div>
+
+            <div class="mt-4 flex items-center justify-between gap-3">
+                <p class="text-[10px] text-primary-400">Message will be sent to <span class="font-mono">{{ $group['jid'] }}</span></p>
+                <button type="submit" id="sendGroupMessageBtn" class="px-6 py-2 rounded-xl bg-green-600 hover:bg-green-500 text-white text-xs font-bold transition-all">
+                    <i class="fas fa-paper-plane mr-1"></i> Send Message
+                </button>
+            </div>
+        </form>
+        <div id="sendGroupMessageResult" class="mt-4 hidden"></div>
+    </div>
+
     <!-- Message Logs for this group -->
     <div class="card overflow-hidden">
         <div class="p-6 border-b border-primary-100 dark:border-dark-border flex items-center justify-between">
@@ -275,6 +325,77 @@
                 .finally(function () {
                     btn.disabled = false;
                     btn.innerHTML = original;
+                });
+            });
+        }
+
+        const sendForm = document.getElementById('sendGroupMessageForm');
+        const sendBtn = document.getElementById('sendGroupMessageBtn');
+        const sendResult = document.getElementById('sendGroupMessageResult');
+        const messageText = document.getElementById('groupMessageText');
+
+        if (sendForm && sendBtn && sendResult) {
+            document.querySelectorAll('.mention-checkbox').forEach(function (cb) {
+                cb.addEventListener('change', function () {
+                    if (messageText && cb.checked && cb.dataset.phone) {
+                        const mention = '@' + cb.dataset.phone + ' ';
+                        if (messageText.value.indexOf(mention) === -1) {
+                            messageText.value = (messageText.value.trimEnd() ? messageText.value.trimEnd() + ' ' : '') + mention;
+                            messageText.focus();
+                        }
+                    }
+                });
+            });
+
+            sendForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const original = sendBtn.innerHTML;
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Sending...';
+
+                const data = new FormData(sendForm);
+                document.querySelectorAll('.mention-checkbox:checked').forEach(function (cb) {
+                    data.append('mentions[]', cb.value);
+                });
+
+                fetch(sendForm.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                    body: data,
+                })
+                .then(function (response) {
+                    return response.json().then(function (json) {
+                        return { ok: response.ok, data: json };
+                    });
+                })
+                .then(function (result) {
+                    const data = result.data;
+                    sendResult.classList.remove('hidden');
+
+                    if (data.success) {
+                        const info = data.data || {};
+                        sendResult.innerHTML = '<div class="p-3 rounded-xl bg-green-50/60 dark:bg-green-900/10 border border-green-200 dark:border-green-800 text-xs font-bold text-green-700 dark:text-green-300">' +
+                            '<i class="fas fa-check-circle mr-1"></i>' + (data.message || 'Message sent to the group.') +
+                            (info.msgId ? ' (Message ID: <span class="font-mono">' + info.msgId + '</span>)' : '') +
+                            '</div>';
+                        messageText.value = '';
+                        document.querySelectorAll('.mention-checkbox').forEach(function (cb) { cb.checked = false; });
+                    } else {
+                        sendResult.innerHTML = '<div class="p-3 rounded-xl bg-red-50/60 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-xs font-bold text-red-700 dark:text-red-300">' +
+                            '<i class="fas fa-exclamation-circle mr-1"></i>' + (data.message || 'Failed to send the message.') + '</div>';
+                    }
+                })
+                .catch(function () {
+                    sendResult.classList.remove('hidden');
+                    sendResult.innerHTML = '<div class="p-3 rounded-xl bg-red-50/60 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-xs font-bold text-red-700 dark:text-red-300">' +
+                        '<i class="fas fa-exclamation-circle mr-1"></i> Network error. Please try again.</div>';
+                })
+                .finally(function () {
+                    sendBtn.disabled = false;
+                    sendBtn.innerHTML = original;
                 });
             });
         }

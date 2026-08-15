@@ -513,6 +513,33 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         ], ($result['success'] ?? false) ? 200 : 400);
     }
 
+    public function sendGroupMessage(Request $request, $jid)
+    {
+        $validated = $request->validate([
+            'text'     => 'required|string',
+            'mentions' => 'nullable|array',
+            'mentions.*' => 'string',
+        ]);
+
+        $mentions = array_values(array_filter(array_map('trim', $validated['mentions'] ?? [])));
+        $options = $mentions ? ['mentions' => $mentions] : [];
+
+        $result = $this->whatsapp->sendText($jid, $validated['text'], $options);
+
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to send the message to the group.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Message sent to the group successfully.',
+            'data'    => $result['data'] ?? null,
+        ]);
+    }
+
     public function createGroup()
     {
         $contacts = \App\Models\Contact::orderBy('name')->get();

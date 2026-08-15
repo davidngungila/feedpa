@@ -755,6 +755,13 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         return view('whatsapp.webhooks.create', compact('sessions', 'events', 'canonicalUrl', 'personalTokenConfigured'));
     }
 
+    public function webhookLogs()
+    {
+        $logs = \App\Models\WhatsAppWebhookLog::orderByDesc('id')->paginate(25);
+
+        return view('whatsapp.webhooks.events', compact('logs'));
+    }
+
     protected function webhookEvents(): array
     {
         return [

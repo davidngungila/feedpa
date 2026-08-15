@@ -64,7 +64,8 @@
                 <tbody class="divide-y divide-primary-100 dark:divide-primary-800">
                     @forelse($items as $log)
                         @php
-                            $decoded = json_decode((string) ($log['content'] ?? ''), true);
+                            $contentRaw = $log['content'] ?? '';
+                            $decoded = is_array($contentRaw) ? $contentRaw : json_decode((string) $contentRaw, true);
                             if (is_array($decoded)) {
                                 $text = $decoded['text'] ?? trim(implode(', ', array_filter([
                                     $decoded['imageUrl'] ?? null,
@@ -77,7 +78,7 @@
                                     $text = 'Media message (' . implode(', ', array_keys($decoded)) . ')';
                                 }
                             } else {
-                                $text = (string) ($log['content'] ?? '');
+                                $text = (string) $contentRaw;
                             }
                             $status = strtolower((string) ($log['status'] ?? 'unknown'));
                             $statusClass = match($status) {

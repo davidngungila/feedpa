@@ -12,9 +12,14 @@
             </h2>
             <p class="text-xs text-primary-500 mt-1">Webhook configuration captured live from WhatsApp sessions</p>
         </div>
-        <a href="{{ route('whatsapp.webhooks.create') }}" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
-            <i class="fas fa-plus mr-1"></i> Configure Webhook
-        </a>
+        <div class="flex gap-2">
+            <a href="{{ route('whatsapp.webhooks.events') }}" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-primary-900/20 hover:bg-gray-200 text-primary-700 text-xs font-bold transition-all">
+                <i class="fas fa-bolt mr-1"></i> Webhook Events
+            </a>
+            <a href="{{ route('whatsapp.webhooks.create') }}" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
+                <i class="fas fa-plus mr-1"></i> Configure Webhook
+            </a>
+        </div>
     </div>
 
     @if(session('success'))

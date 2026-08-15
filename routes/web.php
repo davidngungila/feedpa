@@ -241,6 +241,7 @@ Route::get('/contacts/{contact}', [WhatsAppOperationsController::class, 'contact
             
             // Manage Webhooks
             Route::get('/webhooks', [WhatsAppOperationsController::class, 'webhooks'])->name('webhooks.index');
+Route::get('/webhooks/events', [WhatsAppOperationsController::class, 'webhookLogs'])->name('webhooks.events');
             Route::get('/webhooks/create', [WhatsAppOperationsController::class, 'createWebhook'])->name('webhooks.create');
             Route::post('/webhooks', [WhatsAppOperationsController::class, 'storeWebhook'])->name('webhooks.store');
             Route::post('/webhooks/generate-url', [WhatsAppOperationsController::class, 'generateWebhookUrl'])->name('webhooks.generate-url');

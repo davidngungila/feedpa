@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\WhatsAppWebhook;
+use App\Models\WhatsAppWebhookLog;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -92,6 +93,17 @@ class WhatsAppWebhookReceiveController extends Controller
 
     protected function processPayload(Request $request, string $source): \Illuminate\Http\JsonResponse
     {
+        try {
+            WhatsAppWebhookLog::create([
+                'source'  => $source,
+                'event'   => (string) ($request->input('event') ?? 'unknown'),
+                'payload' => $request->all(),
+                'headers' => $request->headers->all(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp webhook log save failed: ' . $e->getMessage());
+        }
+
         Log::info('WhatsApp webhook received', [
             'source' => $source,
             'event' => $request->input('event', 'unknown'),

@@ -211,13 +211,28 @@
                         <th class="px-6 py-3 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Content</th>
                         <th class="px-6 py-3 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-3 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider">Sent At</th>
+                        <th class="px-6 py-3 text-[10px] font-black text-primary-700 dark:text-primary-300 uppercase tracking-wider text-right">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-primary-100 dark:divide-primary-800">
                     @forelse($messageLogs as $log)
                         @php
-                            $decoded = json_decode((string) ($log['content'] ?? ''), true);
-                            $text = is_array($decoded) ? ($decoded['text'] ?? json_encode($decoded)) : (string) ($log['content'] ?? '');
+                            $contentRaw = $log['content'] ?? '';
+                            $decoded = is_array($contentRaw) ? $contentRaw : json_decode((string) $contentRaw, true);
+                            if (is_array($decoded)) {
+                                $text = $decoded['text'] ?? trim(implode(', ', array_filter([
+                                    $decoded['imageUrl'] ?? null,
+                                    $decoded['videoUrl'] ?? null,
+                                    $decoded['audioUrl'] ?? null,
+                                    $decoded['documentUrl'] ?? null,
+                                    $decoded['stickerUrl'] ?? null,
+                                ])));
+                                if ($text === '' && $decoded) {
+                                    $text = 'Media message (' . implode(', ', array_keys($decoded)) . ')';
+                                }
+                            } else {
+                                $text = (string) $contentRaw;
+                            }
                             $status = strtolower((string) ($log['status'] ?? 'unknown'));
                             $statusClass = match($status) {
                                 'sent' => 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
@@ -242,10 +257,18 @@
                             <td class="px-6 py-3">
                                 <p class="text-xs text-primary-700 dark:text-primary-300">{{ \Illuminate\Support\Str::limit($log['created_at'] ?? '—', 19) }}</p>
                             </td>
+                            <td class="px-6 py-3 text-right">
+                                @if(!empty($log['id']))
+                                    <button type="button" class="delete-message-btn px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-100 transition-all"
+                                            data-msg-id="{{ $log['id'] }}">
+                                        <i class="fas fa-trash-alt mr-1"></i> Delete
+                                    </button>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center">
+                            <td colspan="5" class="px-6 py-12 text-center">
                                 <i class="fas fa-scroll text-3xl text-primary-300 mb-3 block"></i>
                                 @if(!$personalTokenConfigured)
                                     <p class="text-sm font-bold text-primary-500">Message logs unavailable</p>
@@ -402,6 +425,59 @@
                 });
             });
         }
+
+        function showToast(message, ok) {
+            let toast = document.getElementById('whatsappToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'whatsappToast';
+                document.body.appendChild(toast);
+            }
+            toast.textContent = message;
+            toast.className = 'fixed top-4 right-4 z-[110] px-4 py-3 rounded-xl text-xs font-bold shadow-xl transition-all ' + (ok ? 'bg-green-600 text-white' : 'bg-red-600 text-white');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(function () { toast.remove(); }, 4000);
+        }
+
+        const deleteUrl = '{{ route('whatsapp.messages.delete', '__ID__') }}';
+        document.querySelectorAll('.delete-message-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const msgId = btn.dataset.msgId;
+                if (!confirm('Delete message ' + msgId + ' for everyone? This usually only works shortly after the message was sent.')) return;
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                fetch(deleteUrl.replace('__ID__', msgId), {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    if (result.data.success) {
+                        showToast(result.data.message || 'Message deleted successfully.', true);
+                        const row = btn.closest('tr');
+                        if (row) row.remove();
+                    } else {
+                        showToast(result.data.message || 'Failed to delete the message.', false);
+                        btn.disabled = false;
+                        btn.innerHTML = original;
+                    }
+                })
+                .catch(function () {
+                    showToast('Network error. Please try again.', false);
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                });
+            });
+        });
     });
 </script>
 @endpush

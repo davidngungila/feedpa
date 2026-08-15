@@ -554,6 +554,30 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         ]);
     }
 
+    public function deleteMessage($msgId)
+    {
+        if (!ctype_digit((string) $msgId)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid message ID.',
+            ], 422);
+        }
+
+        $result = $this->whatsapp->deleteMessage((int) $msgId);
+
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to delete the message.',
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'] ?? 'Message deleted successfully.',
+        ]);
+    }
+
     public function createGroup()
     {
         $contacts = \App\Models\Contact::orderBy('name')->get();

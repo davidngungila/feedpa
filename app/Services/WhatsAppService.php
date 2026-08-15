@@ -652,6 +652,21 @@ class WhatsAppService
         ];
     }
 
+    public function deleteMessage(int|string $msgId): array
+    {
+        $result = $this->request('DELETE', '/messages/' . rawurlencode((string) $msgId));
+
+        if (!($result['success'] ?? false)) {
+            $message = $result['message'] ?? 'Failed to delete the message.';
+            if (is_string($message) && str_contains($message, '<')) {
+                $message = 'Message not found or no longer deletable (code ' . ($result['status'] ?? 'unknown') . ').';
+            }
+            $result['message'] = $message;
+        }
+
+        return $result;
+    }
+
     // =========================================================================
     // LIVE SESSIONS (captured from Wasender API using Personal Access Token)
     // =========================================================================

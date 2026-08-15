@@ -204,6 +204,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/messages/send', [WhatsAppOperationsController::class, 'sendMessages'])->name('messages.send');
             Route::post('/messages/send', [WhatsAppOperationsController::class, 'sendMessagesPost'])->name('messages.send.post');
             Route::post('/messages/send-bulk', [WhatsAppOperationsController::class, 'sendBulkMessages'])->name('messages.send-bulk');
+            Route::delete('/messages/{msgId}', [WhatsAppOperationsController::class, 'deleteMessage'])->name('messages.delete');
             
             // Manage Contacts
             Route::get('/contacts', [WhatsAppOperationsController::class, 'contacts'])->name('contacts.index');

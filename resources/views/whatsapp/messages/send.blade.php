@@ -276,6 +276,9 @@
             document.getElementById('sendResultsModal').classList.add('hidden');
         }
 
+        window.openSendResultsModal = openSendResultsModal;
+        window.closeSendResultsModal = closeSendResultsModal;
+
         form.addEventListener('submit', function (e) {
             e.preventDefault();
             submitBtn.disabled = true;

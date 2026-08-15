@@ -55,6 +55,15 @@
         </div>
     @endif
 
+    @if(!$personalTokenConfigured)
+        <div class="card p-4 border-l-4 border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10">
+            <p class="text-xs font-bold text-amber-700 dark:text-amber-300">
+                <i class="fas fa-exclamation-triangle mr-1"></i> The WhatsApp Personal Access Token is not configured.
+                <a href="{{ route('settings.whatsapp') }}" class="underline">Configure it in WhatsApp settings</a> to manage sessions from here.
+            </p>
+        </div>
+    @endif
+
     <!-- Sessions Table -->
     <div class="card overflow-hidden">
         <div class="p-6 border-b border-primary-100 dark:border-dark-border">
@@ -172,8 +181,14 @@
         const createBtn = document.getElementById('createSessionBtn');
         if (createBtn) {
             createBtn.addEventListener('click', function () {
+                const name = prompt('Session name (used on Wasender dashboard):', 'feedtan-session');
+                if (!name) return;
+
                 createBtn.disabled = true;
                 createBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Creating...';
+
+                const formData = new FormData();
+                formData.append('name', name);
 
                 fetch('{{ route('whatsapp.sessions.create') }}', {
                     method: 'POST',
@@ -181,6 +196,7 @@
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Accept': 'application/json',
                     },
+                    body: formData,
                 })
                 .then(response => response.json())
                 .then(data => {

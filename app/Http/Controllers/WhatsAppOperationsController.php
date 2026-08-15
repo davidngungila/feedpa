@@ -327,8 +327,27 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
     public function groups()
     {
-        $groups = \App\Models\WhatsAppGroup::withCount('contacts')->orderBy('name')->paginate(20);
-        return view('whatsapp.groups.index', compact('groups'));
+        $apiKeyConfigured = $this->whatsapp->hasSessionApiKey();
+        $liveGroups = $apiKeyConfigured ? $this->whatsapp->getGroups() : [];
+        $groups = [];
+
+        foreach ($liveGroups as $group) {
+            $jid = $group['jid'] ?? '';
+            $meta = $jid ? $this->whatsapp->getGroupMetadata($jid) : [];
+
+            $groups[] = [
+                'jid' => $jid,
+                'name' => $group['name'] ?? $meta['subject'] ?? 'Unknown Group',
+                'img_url' => $group['imgUrl'] ?? null,
+                'description' => $meta['desc'] ?? null,
+                'owner' => $meta['owner'] ?? null,
+                'creation' => isset($meta['creation']) ? date('Y-m-d H:i', (int) $meta['creation']) : null,
+                'participants_count' => count($meta['participants'] ?? []),
+                'participants' => $meta['participants'] ?? [],
+            ];
+        }
+
+        return view('whatsapp.groups.index', compact('groups', 'apiKeyConfigured'));
     }
 
     public function createGroup()
@@ -423,50 +442,86 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
     {
         $sessions = $this->whatsapp->getSessions();
         $sessionInfo = $this->whatsapp->getSessionInfo();
-        
-        return view('whatsapp.sessions.index', compact('sessions', 'sessionInfo'));
+        $personalTokenConfigured = $this->whatsapp->hasPersonalAccessToken();
+
+        return view('whatsapp.sessions.index', compact('sessions', 'sessionInfo', 'personalTokenConfigured'));
     }
 
-    public function createSession()
+    public function createSession(Request $request)
     {
-        // This would integrate with Wasender API to create a new session
-        return response()->json(['success' => true, 'message' => 'Session creation initiated. Check Wasender dashboard.']);
+        $result = $this->whatsapp->createSession($request->only(['name', 'phone_number']));
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'Session creation failed.',
+            'data'    => $result['data'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     public function connectSession($id)
     {
-        // Connect session logic
-        return response()->json(['success' => true, 'message' => 'Session connect initiated.']);
+        $result = $this->whatsapp->connectSession((int) $id);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'Session connect failed.',
+            'data'    => $result['data'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     public function disconnectSession($id)
     {
-        // Disconnect session logic
-        return response()->json(['success' => true, 'message' => 'Session disconnected.']);
+        $result = $this->whatsapp->disconnectSession((int) $id);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'Session disconnect failed.',
+            'data'    => $result['data'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     public function restartSession($id)
     {
-        // Restart session logic
-        return response()->json(['success' => true, 'message' => 'Session restarted.']);
+        $result = $this->whatsapp->restartSession((int) $id);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'Session restart failed.',
+            'data'    => $result['data'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     public function destroySession($id)
     {
-        // Delete session logic
-        return response()->json(['success' => true, 'message' => 'Session deleted.']);
+        $result = $this->whatsapp->deleteSession((int) $id);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'Session delete failed.',
+            'data'    => $result['data'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     public function getSessionQr($id)
     {
-        // Get QR code for session
-        return response()->json(['success' => true, 'qr_code' => 'base64_qr_data']);
+        $result = $this->whatsapp->getSessionQr((int) $id);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'Failed to fetch QR code.',
+            'data'    => $result['data'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     public function getSessionStatus($id)
     {
-        // Get session status
-        return response()->json(['success' => true, 'status' => 'connected']);
+        $result = $this->whatsapp->getSessionStatus((int) $id);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'Failed to fetch session status.',
+            'data'    => $result['data'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     // =========================================================================
@@ -475,13 +530,61 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
     public function webhooks()
     {
-        $webhooks = \App\Models\WhatsAppWebhook::orderBy('created_at', 'desc')->paginate(20);
-        return view('whatsapp.webhooks.index', compact('webhooks'));
+        $personalTokenConfigured = $this->whatsapp->hasPersonalAccessToken();
+        $sessions = $personalTokenConfigured ? $this->whatsapp->getSessions() : [];
+        $webhooks = [];
+
+        foreach ($sessions as $session) {
+            $details = $this->whatsapp->getSessionDetails((int) ($session['id'] ?? 0));
+
+            $webhooks[] = array_merge($session, [
+                'webhook_url'      => $details['webhook_url'] ?? null,
+                'webhook_enabled'  => (bool) ($details['webhook_enabled'] ?? false),
+                'webhook_events'   => $details['webhook_events'] ?? [],
+                'webhook_secret'   => $details['webhook_secret'] ?? null,
+                'api_key'          => $details['api_key'] ?? null,
+            ]);
+        }
+
+        return view('whatsapp.webhooks.index', compact('webhooks', 'personalTokenConfigured'));
     }
 
     public function createWebhook()
     {
-        return view('whatsapp.webhooks.create');
+        $sessions = $this->whatsapp->getSessions();
+        $events = $this->webhookEvents();
+        $canonicalUrl = rtrim(config('app.url', url('/')), '/') . '/api/whatsapp/webhook';
+
+        return view('whatsapp.webhooks.create', compact('sessions', 'events', 'canonicalUrl'));
+    }
+
+    protected function webhookEvents(): array
+    {
+        return [
+            'messages.received',
+            'messages-group.received',
+            'messages-newsletter.received',
+            'messages-personal.received',
+            'call',
+            'message.sent',
+            'session.status',
+            'qrcode.updated',
+            'passkey.updated',
+            'messages.upsert',
+            'messages.update',
+            'messages.delete',
+            'message-receipt.update',
+            'messages.reaction',
+            'chats.upsert',
+            'chats.update',
+            'chats.delete',
+            'groups.upsert',
+            'groups.update',
+            'group-participants.update',
+            'contacts.upsert',
+            'contacts.update',
+            'poll.results',
+        ];
     }
 
     public function generateWebhookUrl()
@@ -506,63 +609,103 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
     public function storeWebhook(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'url' => 'required|url|max:500',
-            'events' => 'required|array|min:1',
-            'events.*' => 'in:message_received,message_sent,message_delivered,message_read,session_status,contact_update,group_update',
-            'secret' => 'nullable|string|max:255',
-            'token' => 'nullable|string|max:64',
-            'is_active' => 'boolean',
+            'session_id' => 'required|integer',
+            'webhook_url' => 'required|url|max:500',
+            'webhook_enabled' => 'nullable|boolean',
+            'events' => 'nullable|array',
+            'events.*' => 'string',
+            'webhook_secret' => 'nullable|string|max:255',
         ]);
 
-        $validated['token'] = $validated['token'] ?? \Illuminate\Support\Str::random(40);
-        $validated['secret'] = $validated['secret'] ?? 'whsec_' . \Illuminate\Support\Str::random(32);
+        $payload = [
+            'webhook_url' => $validated['webhook_url'],
+            'webhook_enabled' => (bool) ($validated['webhook_enabled'] ?? false),
+            'webhook_events' => $validated['events'] ?? [],
+        ];
 
-        $webhook = \App\Models\WhatsAppWebhook::create($validated);
+        if (!empty($validated['webhook_secret'])) {
+            $payload['webhook_secret'] = $validated['webhook_secret'];
+        }
 
-        return redirect()->route('whatsapp.webhooks.index')->with('success', 'Webhook created successfully!');
+        $result = $this->whatsapp->updateSession((int) $validated['session_id'], $payload);
+
+        if (($result['success'] ?? false)) {
+            return redirect()->route('whatsapp.webhooks.index')
+                ->with('success', 'Webhook configured on WhatsApp session successfully!');
+        }
+
+        return back()->with('error', 'Failed to configure webhook: ' . ($result['message'] ?? 'Unknown error'))
+            ->withInput();
     }
 
     public function editWebhook($id)
     {
-        $webhook = \App\Models\WhatsAppWebhook::findOrFail($id);
-        return view('whatsapp.webhooks.edit', compact('webhook'));
+        $session = $this->whatsapp->getSessionDetails((int) $id);
+        $sessions = $this->whatsapp->getSessions();
+        $events = $this->webhookEvents();
+        $canonicalUrl = rtrim(config('app.url', url('/')), '/') . '/api/whatsapp/webhook';
+
+        return view('whatsapp.webhooks.edit', compact('session', 'sessions', 'events', 'canonicalUrl'));
     }
 
     public function updateWebhook(Request $request, $id)
     {
-        $webhook = \App\Models\WhatsAppWebhook::findOrFail($id);
-
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'url' => 'required|url|max:500',
-            'events' => 'required|array|min:1',
-            'events.*' => 'in:message_received,message_sent,message_delivered,message_read,session_status,contact_update,group_update',
-            'secret' => 'nullable|string|max:255',
-            'token' => 'nullable|string|max:64',
-            'is_active' => 'boolean',
+            'webhook_url' => 'required|url|max:500',
+            'webhook_enabled' => 'nullable|boolean',
+            'events' => 'nullable|array',
+            'events.*' => 'string',
+            'webhook_secret' => 'nullable|string|max:255',
         ]);
 
-        $validated['token'] = $validated['token'] ?? $webhook->token ?? \Illuminate\Support\Str::random(40);
-        $validated['secret'] = $validated['secret'] ?? $webhook->secret ?? 'whsec_' . \Illuminate\Support\Str::random(32);
+        $payload = [
+            'webhook_url' => $validated['webhook_url'],
+            'webhook_enabled' => (bool) ($validated['webhook_enabled'] ?? false),
+            'webhook_events' => $validated['events'] ?? [],
+        ];
 
-        $webhook->update($validated);
+        if (!empty($validated['webhook_secret'])) {
+            $payload['webhook_secret'] = $validated['webhook_secret'];
+        }
 
-        return redirect()->route('whatsapp.webhooks.index')->with('success', 'Webhook updated successfully!');
+        $result = $this->whatsapp->updateSession((int) $id, $payload);
+
+        if (($result['success'] ?? false)) {
+            return redirect()->route('whatsapp.webhooks.index')
+                ->with('success', 'Webhook configuration updated successfully!');
+        }
+
+        return back()->with('error', 'Failed to update webhook: ' . ($result['message'] ?? 'Unknown error'))
+            ->withInput();
     }
 
     public function destroyWebhook($id)
     {
-        $webhook = \App\Models\WhatsAppWebhook::findOrFail($id);
-        $webhook->delete();
-        return response()->json(['success' => true, 'message' => 'Webhook deleted successfully!']);
+        $result = $this->whatsapp->updateSession((int) $id, [
+            'webhook_enabled' => false,
+        ]);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => ($result['success'] ?? false)
+                ? 'Webhook disabled on session successfully.'
+                : ($result['message'] ?? 'Failed to disable webhook.'),
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     public function testWebhook($id)
     {
-        $webhook = \App\Models\WhatsAppWebhook::findOrFail($id);
-        
-        // Send test payload
+        $session = $this->whatsapp->getSessionDetails((int) $id);
+
+        $webhookUrl = $session['webhook_url'] ?? null;
+
+        if (!$webhookUrl) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No webhook URL configured for this session.',
+            ], 400);
+        }
+
         $testPayload = [
             'event' => 'test',
             'timestamp' => now()->toISOString(),
@@ -574,8 +717,8 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
                 'Content-Type' => 'application/json',
-                'X-Webhook-Secret' => $webhook->secret,
-            ])->post($webhook->url, $testPayload);
+                'X-Webhook-Signature' => $session['webhook_secret'] ?? '',
+            ])->post($webhookUrl, $testPayload);
 
             return response()->json([
                 'success' => $response->successful(),

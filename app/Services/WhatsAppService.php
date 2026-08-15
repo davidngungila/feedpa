@@ -17,7 +17,7 @@ class WhatsAppService
 
     public function __construct()
     {
-        $this->wasenderBaseUrl = config('services.whatsapp.wasender_base_url', 'https://www.wasenderapi.com/api');
+        $this->wasenderBaseUrl = SystemSetting::get('whatsapp_base_url') ?? config('services.whatsapp.wasender_base_url', 'https://www.wasenderapi.com/api');
         $this->wasenderSessionApiKey = SystemSetting::get('whatsapp_session_api_key') ?? config('services.whatsapp.session_api_key');
         $this->wasenderPersonalAccessToken = SystemSetting::get('whatsapp_personal_access_token') ?? config('services.whatsapp.personal_access_token');
     }
@@ -29,6 +29,80 @@ class WhatsAppService
     protected function getWasenderApiKey(): ?string
     {
         return $this->wasenderSessionApiKey;
+    }
+
+    public function hasSessionApiKey(): bool
+    {
+        return !empty($this->wasenderSessionApiKey);
+    }
+
+    public function hasPersonalAccessToken(): bool
+    {
+        return !empty($this->wasenderPersonalAccessToken);
+    }
+
+    protected function request(string $method, string $path, array $data = [], bool $usePersonalToken = false): array
+    {
+        $token = $usePersonalToken ? $this->wasenderPersonalAccessToken : $this->wasenderSessionApiKey;
+
+        if (!$token) {
+            $label = $usePersonalToken ? 'Personal access token' : 'Session API key';
+            Log::error("WhatsApp WasenderAPI {$method} {$path}: {$label} not configured");
+            return [
+                'success' => false,
+                'message' => "{$label} is not set. Please configure it in WhatsApp settings.",
+            ];
+        }
+
+        try {
+            $http = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $token,
+                'Content-Type'  => 'application/json',
+                'Accept'        => 'application/json',
+            ])->timeout(30);
+
+            $url = $this->wasenderBaseUrl . $path;
+
+            $response = match (strtoupper($method)) {
+                'GET'    => $http->get($url),
+                'POST'   => $http->post($url, $data),
+                'PUT'    => $http->put($url, $data),
+                'DELETE' => $http->delete($url),
+                default  => $http->get($url),
+            };
+
+            $body = $response->json() ?? [];
+
+            if ($response->successful() && ($body['success'] ?? false) === true) {
+                return [
+                    'success' => true,
+                    'data'    => $body['data'] ?? null,
+                    'message' => $body['message'] ?? 'Request completed successfully',
+                    'status'  => $response->status(),
+                    'response' => $body,
+                ];
+            }
+
+            Log::error('WhatsApp WasenderAPI request failed', [
+                'method' => $method,
+                'path'   => $path,
+                'status' => $response->status(),
+                'body'   => $response->body(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => $body['message'] ?? $body['error'] ?? $response->body(),
+                'status'  => $response->status(),
+                'response' => $body,
+            ];
+        } catch (\Exception $e) {
+            Log::error("WhatsApp WasenderAPI {$method} {$path} exception", ['message' => $e->getMessage()]);
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
     }
 
     public function sendWasenderRequest(array $payload): array
@@ -342,5 +416,86 @@ class WhatsAppService
             Log::error('WhatsApp WasenderAPI getSessionInfo exception: ' . $e->getMessage());
             return null;
         }
+    }
+
+    // =========================================================================
+    // LIVE GROUPS (captured from Wasender API)
+    // =========================================================================
+
+    public function getGroups(): array
+    {
+        $result = $this->request('GET', '/groups');
+
+        if (($result['success'] ?? false) && is_array($result['data'])) {
+            return $result['data'];
+        }
+
+        return [];
+    }
+
+    public function getGroupMetadata(string $jid): array
+    {
+        $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/metadata');
+
+        if (($result['success'] ?? false) && is_array($result['data'])) {
+            return $result['data'];
+        }
+
+        return [];
+    }
+
+    // =========================================================================
+    // LIVE SESSIONS (captured from Wasender API using Personal Access Token)
+    // =========================================================================
+
+    public function getSessionDetails(int $id): array
+    {
+        $result = $this->request('GET', '/whatsapp-sessions/' . $id, [], true);
+
+        if (($result['success'] ?? false) && is_array($result['data'])) {
+            return $result['data'];
+        }
+
+        return [];
+    }
+
+    public function createSession(array $data = []): array
+    {
+        return $this->request('POST', '/whatsapp-sessions', $data, true);
+    }
+
+    public function updateSession(int $id, array $data = []): array
+    {
+        return $this->request('PUT', '/whatsapp-sessions/' . $id, $data, true);
+    }
+
+    public function connectSession(int $id): array
+    {
+        return $this->request('POST', '/whatsapp-sessions/' . $id . '/connect', [], true);
+    }
+
+    public function disconnectSession(int $id): array
+    {
+        return $this->request('POST', '/whatsapp-sessions/' . $id . '/disconnect', [], true);
+    }
+
+    public function restartSession(int $id): array
+    {
+        return $this->request('POST', '/whatsapp-sessions/' . $id . '/restart', [], true);
+    }
+
+    public function deleteSession(int $id): array
+    {
+        return $this->request('DELETE', '/whatsapp-sessions/' . $id, [], true);
+    }
+
+    public function getSessionQr(int $id): array
+    {
+        return $this->request('GET', '/whatsapp-sessions/' . $id . '/qrcode', [], true);
+    }
+
+    public function getSessionStatus(int $id): array
+    {
+        return $this->request('GET', '/whatsapp-sessions/' . $id, [], true);
     }
 }

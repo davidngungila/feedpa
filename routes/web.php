@@ -421,8 +421,11 @@ Route::prefix('webhooks')->name('webhooks.')->group(function () {
 
 // Public WhatsApp Webhook Callback (no auth, no CSRF - called by Wasender API)
 Route::prefix('api/whatsapp')->name('whatsapp.webhook.')->group(function () {
-    Route::post('/webhook/{token}', [WhatsAppWebhookReceiveController::class, 'receive'])
+    Route::post('/webhook', [WhatsAppWebhookReceiveController::class, 'receive'])
         ->name('receive')
+        ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+    Route::post('/webhook/{token}', [WhatsAppWebhookReceiveController::class, 'receive'])
+        ->name('receive.token')
         ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 });
 

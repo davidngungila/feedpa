@@ -18,21 +18,47 @@
     </div>
 
     <div class="card p-6">
+        @if(!$personalTokenConfigured)
+            <div class="mb-5 p-4 rounded-xl border-l-4 border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10">
+                <p class="text-xs font-bold text-amber-700 dark:text-amber-300">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> The WhatsApp Personal Access Token is not configured.
+                    <a href="{{ route('settings.whatsapp') }}" class="underline">Add it in WhatsApp settings</a> to load the session list and save webhook changes.
+                </p>
+            </div>
+        @elseif(empty($sessions))
+            <div class="mb-5 p-4 rounded-xl border-l-4 border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10">
+                <p class="text-xs font-bold text-amber-700 dark:text-amber-300">
+                    <i class="fas fa-exclamation-triangle mr-1"></i> No WhatsApp sessions were found on your Wasender account. Create one in the Wasender dashboard first.
+                </p>
+            </div>
+        @endif
+
         <form method="POST" action="{{ route('whatsapp.webhooks.store') }}">
             @csrf
             <div class="space-y-4">
                 <div>
                     <label class="text-[10px] text-gray-400 uppercase font-bold mb-1 block">WhatsApp Session *</label>
-                    <select name="session_id" required class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-                        <option value="">Select a session</option>
-                        @foreach($sessions as $session)
-                            <option value="{{ $session['id'] }}" {{ old('session_id') == $session['id'] ? 'selected' : '' }}>
-                                {{ $session['name'] ?? ('Session ' . $session['id']) }}
-                                @if(!empty($session['phone_number'])) ({{ $session['phone_number'] }}) @endif
-                            </option>
-                        @endforeach
+                    <select name="session_id" id="sessionSelect" {{ empty($sessions) ? 'disabled' : '' }} class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        @if(empty($sessions))
+                            <option value="">No sessions available</option>
+                        @else
+                            <option value="">Select a session</option>
+                            @foreach($sessions as $session)
+                                <option value="{{ $session['id'] }}" {{ old('session_id') == $session['id'] ? 'selected' : '' }}>
+                                    {{ $session['name'] ?? ('Session ' . $session['id']) }}
+                                    @if(!empty($session['phone_number'])) ({{ $session['phone_number'] }}) @endif
+                                    @if(!empty($session['status'])) — {{ ucfirst(strtolower($session['status'])) }} @endif
+                                </option>
+                            @endforeach
+                        @endif
                     </select>
                     @error('session_id') <p class="text-[10px] text-red-500 mt-1">{{ $message }}</p> @enderror
+                </div>
+                <div>
+                    <label class="text-[10px] text-gray-400 uppercase font-bold mb-1 block">Or enter Session ID manually</label>
+                    <input type="number" name="session_id_manual" id="sessionIdManual" value="{{ old('session_id_manual') }}" min="1" placeholder="e.g. 106257" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <p class="text-[10px] text-primary-400 mt-1">Find the session ID in your Wasender dashboard URL (e.g. wasenderapi.com/whatsapp/106257/webhook).</p>
+                    @error('session_id_manual') <p class="text-[10px] text-red-500 mt-1">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="text-[10px] text-gray-400 uppercase font-bold mb-1 block">Endpoint URL *</label>
@@ -89,6 +115,18 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        const sessionSelect = document.getElementById('sessionSelect');
+        const sessionIdManual = document.getElementById('sessionIdManual');
+
+        if (sessionSelect && sessionIdManual) {
+            sessionSelect.addEventListener('change', function () {
+                if (this.value) sessionIdManual.value = '';
+            });
+            sessionIdManual.addEventListener('input', function () {
+                if (this.value) sessionSelect.value = '';
+            });
+        }
+
         const resetUrlBtn = document.getElementById('resetUrlBtn');
         if (resetUrlBtn) {
             resetUrlBtn.addEventListener('click', function () {

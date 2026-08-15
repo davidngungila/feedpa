@@ -663,8 +663,9 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $sessions = $this->whatsapp->getSessions();
         $events = $this->webhookEvents();
         $canonicalUrl = rtrim(config('app.url', url('/')), '/') . '/api/whatsapp/webhook';
+        $personalTokenConfigured = $this->whatsapp->hasPersonalAccessToken();
 
-        return view('whatsapp.webhooks.create', compact('sessions', 'events', 'canonicalUrl'));
+        return view('whatsapp.webhooks.create', compact('sessions', 'events', 'canonicalUrl', 'personalTokenConfigured'));
     }
 
     protected function webhookEvents(): array
@@ -718,13 +719,16 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
     public function storeWebhook(Request $request)
     {
         $validated = $request->validate([
-            'session_id' => 'required|integer',
+            'session_id' => 'nullable|integer|required_without:session_id_manual',
+            'session_id_manual' => 'nullable|integer|required_without:session_id',
             'webhook_url' => 'required|url|max:500',
             'webhook_enabled' => 'nullable|boolean',
             'events' => 'nullable|array',
             'events.*' => 'string',
             'webhook_secret' => 'nullable|string|max:255',
         ]);
+
+        $sessionId = (int) ($validated['session_id'] ?? $validated['session_id_manual']);
 
         $payload = [
             'webhook_url' => $validated['webhook_url'],
@@ -736,7 +740,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             $payload['webhook_secret'] = $validated['webhook_secret'];
         }
 
-        $result = $this->whatsapp->updateSession((int) $validated['session_id'], $payload);
+        $result = $this->whatsapp->updateSession($sessionId, $payload);
 
         if (($result['success'] ?? false)) {
             return redirect()->route('whatsapp.webhooks.index')

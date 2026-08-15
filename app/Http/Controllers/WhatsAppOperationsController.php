@@ -7,7 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class WhatsAppOperationsController extends Controller implements HasMiddleware
 {
@@ -332,7 +334,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $groups = [];
 
         foreach ($liveGroups as $group) {
-            $jid = $group['jid'] ?? '';
+            $jid = $group['jid'] ?? $group['id'] ?? '';
             $meta = $jid ? $this->whatsapp->getGroupMetadata($jid) : [];
 
             $groups[] = [
@@ -348,6 +350,80 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         }
 
         return view('whatsapp.groups.index', compact('groups', 'apiKeyConfigured'));
+    }
+
+    public function groupDetails($jid)
+    {
+        $meta = $this->whatsapp->getGroupMetadata($jid);
+        $participants = $this->whatsapp->getGroupParticipants($jid);
+
+        if (empty($meta) && empty($participants)) {
+            return redirect()->route('whatsapp.groups.index')
+                ->with('error', 'Could not load group details from the WhatsApp API.');
+        }
+
+        $group = [
+            'jid' => $jid,
+            'name' => $meta['subject'] ?? 'Unknown Group',
+            'img_url' => $this->whatsapp->getGroupPicture($jid),
+            'description' => $meta['desc'] ?? null,
+            'owner' => $meta['owner'] ?? null,
+            'creation' => isset($meta['creation']) ? date('Y-m-d H:i', (int) $meta['creation']) : null,
+            'participants' => $participants,
+        ];
+
+        $personalTokenConfigured = $this->whatsapp->hasPersonalAccessToken();
+        $session = null;
+        $messageLogs = [];
+        $logsError = null;
+
+        if ($personalTokenConfigured) {
+            $sessions = $this->whatsapp->getSessions();
+            $session = $sessions[0] ?? null;
+
+            if ($session && !empty($session['id'])) {
+                $logsResult = $this->whatsapp->getMessageLogs((int) $session['id'], 1, 100);
+
+                if (($logsResult['success'] ?? false) && is_array($logsResult['data']['data'] ?? null)) {
+                    foreach ($logsResult['data']['data'] as $log) {
+                        if (stripos((string) ($log['to'] ?? ''), $jid) !== false) {
+                            $messageLogs[] = $log;
+                        }
+                    }
+                } else {
+                    $logsError = $logsResult['message'] ?? 'Could not load message logs.';
+                }
+            }
+        }
+
+        return view('whatsapp.groups.show', compact('group', 'personalTokenConfigured', 'session', 'messageLogs', 'logsError'));
+    }
+
+    public function addGroupParticipants(Request $request, $jid)
+    {
+        $validated = $request->validate([
+            'participants' => 'required|string',
+        ]);
+
+        $participants = array_values(array_filter(array_map(
+            'trim',
+            preg_split('/[\s,;]+/', $validated['participants']) ?: []
+        )));
+
+        if (empty($participants)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter at least one phone number.',
+            ], 422);
+        }
+
+        $result = $this->whatsapp->addGroupParticipants($jid, $participants);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'Failed to add participants.',
+            'data'    => $result['data'] ?? null,
+        ], ($result['success'] ?? false) ? 200 : 400);
     }
 
     public function createGroup()
@@ -445,6 +521,39 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $personalTokenConfigured = $this->whatsapp->hasPersonalAccessToken();
 
         return view('whatsapp.sessions.index', compact('sessions', 'sessionInfo', 'personalTokenConfigured'));
+    }
+
+    public function messageLogs(Request $request, $id)
+    {
+        $page = (int) $request->input('page', 1);
+        $perPage = (int) $request->input('per_page', 20);
+        $session = $this->whatsapp->getSessionDetails((int) $id);
+        $personalTokenConfigured = $this->whatsapp->hasPersonalAccessToken();
+
+        $result = $this->whatsapp->getMessageLogs((int) $id, $page, $perPage);
+
+        $items = [];
+        $paginator = null;
+        $error = null;
+
+        if (($result['success'] ?? false) && is_array($result['data'] ?? null)) {
+            $items = $result['data']['data'] ?? [];
+
+            $paginator = new LengthAwarePaginator(
+                $items,
+                (int) ($result['data']['total'] ?? 0),
+                (int) ($result['data']['per_page'] ?? $perPage),
+                (int) ($result['data']['current_page'] ?? $page),
+                [
+                    'path' => LengthAwarePaginator::resolveCurrentPath(),
+                    'query' => $request->query(),
+                ]
+            );
+        } else {
+            $error = $result['message'] ?? 'Failed to fetch message logs.';
+        }
+
+        return view('whatsapp.sessions.message-logs', compact('id', 'session', 'items', 'paginator', 'error', 'personalTokenConfigured'));
     }
 
     public function createSession(Request $request)

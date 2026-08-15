@@ -46,11 +46,13 @@
                             <i class="fas fa-users text-xl text-primary-600 dark:text-primary-400"></i>
                         @endif
                     </div>
-                    <span class="px-2 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
-                        <i class="fab fa-whatsapp mr-1"></i> Live
-                    </span>
+                    <a href="{{ route('whatsapp.groups.details', $group['jid']) }}" class="px-3 py-1.5 rounded-full text-[10px] font-bold bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300 hover:bg-primary-600 hover:text-white transition-all">
+                        <i class="fas fa-eye mr-1"></i> Details
+                    </a>
                 </div>
-                <h3 class="text-sm font-bold text-primary-900 dark:text-white">{{ $group['name'] }}</h3>
+                <a href="{{ route('whatsapp.groups.details', $group['jid']) }}" class="hover:text-primary-500 transition-colors">
+                    <h3 class="text-sm font-bold text-primary-900 dark:text-white">{{ $group['name'] }}</h3>
+                </a>
                 <p class="text-[11px] text-primary-500 mt-1 font-mono break-all">{{ $group['jid'] }}</p>
                 <p class="text-[11px] text-primary-500 mt-1 line-clamp-2">{{ $group['description'] ?? 'No description' }}</p>
                 <div class="mt-4 pt-4 border-t border-primary-100 dark:border-primary-800 flex items-center justify-between">

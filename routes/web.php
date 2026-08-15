@@ -219,6 +219,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/groups', [WhatsAppOperationsController::class, 'groups'])->name('groups.index');
             Route::get('/groups/create', [WhatsAppOperationsController::class, 'createGroup'])->name('groups.create');
             Route::post('/groups', [WhatsAppOperationsController::class, 'storeGroup'])->name('groups.store');
+            Route::get('/groups/{jid}', [WhatsAppOperationsController::class, 'groupDetails'])->name('groups.details');
+            Route::post('/groups/{jid}/participants/add', [WhatsAppOperationsController::class, 'addGroupParticipants'])->name('groups.add-participants');
             Route::get('/groups/{id}/edit', [WhatsAppOperationsController::class, 'editGroup'])->name('groups.edit');
             Route::put('/groups/{id}', [WhatsAppOperationsController::class, 'updateGroup'])->name('groups.update');
             Route::delete('/groups/{id}', [WhatsAppOperationsController::class, 'destroyGroup'])->name('groups.destroy');
@@ -234,6 +236,7 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/sessions/{id}', [WhatsAppOperationsController::class, 'destroySession'])->name('sessions.destroy');
             Route::get('/sessions/{id}/qr', [WhatsAppOperationsController::class, 'getSessionQr'])->name('sessions.qr');
             Route::get('/sessions/{id}/status', [WhatsAppOperationsController::class, 'getSessionStatus'])->name('sessions.status');
+            Route::get('/sessions/{id}/message-logs', [WhatsAppOperationsController::class, 'messageLogs'])->name('sessions.message-logs');
             
             // Manage Webhooks
             Route::get('/webhooks', [WhatsAppOperationsController::class, 'webhooks'])->name('webhooks.index');

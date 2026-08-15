@@ -118,6 +118,9 @@
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-end gap-2">
                                     @php $sessionId = $session['id'] ?? $session['session'] ?? ''; @endphp
+                                    <a href="{{ route('whatsapp.sessions.message-logs', $sessionId) }}" class="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-600 hover:text-white transition-all" title="Message Logs">
+                                        <i class="fas fa-scroll text-xs"></i>
+                                    </a>
                                     @if($status === 'connected' || $status === 'online' || $status === 'active')
                                         <button type="button" class="session-action p-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 hover:bg-yellow-600 hover:text-white transition-all" title="Restart" data-url="{{ route('whatsapp.sessions.restart', $sessionId) }}" data-method="POST">
                                             <i class="fas fa-sync text-xs"></i>

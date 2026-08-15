@@ -444,6 +444,78 @@ class WhatsAppService
         return [];
     }
 
+    public function getGroupParticipants(string $jid): array
+    {
+        $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/participants');
+
+        if (($result['success'] ?? false) && is_array($result['data'])) {
+            return $result['data'];
+        }
+
+        return [];
+    }
+
+    public function getGroupPicture(string $jid): ?string
+    {
+        $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/picture');
+
+        if (($result['success'] ?? false) && !empty($result['data']['imgUrl'])) {
+            return $result['data']['imgUrl'];
+        }
+
+        return null;
+    }
+
+    public function addGroupParticipants(string $jid, array $participants): array
+    {
+        return $this->request('POST', '/groups/' . rawurlencode($jid) . '/participants/add', [
+            'participants' => $participants,
+        ]);
+    }
+
+    public function removeGroupParticipants(string $jid, array $participants): array
+    {
+        return $this->request('DELETE', '/groups/' . rawurlencode($jid) . '/participants/remove', [
+            'participants' => $participants,
+        ]);
+    }
+
+    public function getMessageLogs(int|string $session, int $page = 1, int $perPage = 20): array
+    {
+        $result = $this->request('GET', '/whatsapp-sessions/' . rawurlencode((string) $session) . '/message-logs?page=' . $page . '&per_page=' . $perPage, [], true);
+
+        if (($result['success'] ?? false) && is_array($result['data'])) {
+            return [
+                'success' => true,
+                'data'    => $result['data'],
+                'message' => $result['message'] ?? 'Message logs retrieved.',
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => $result['message'] ?? 'Failed to fetch message logs.',
+        ];
+    }
+
+    public function getSessionLogs(int|string $session, int $page = 1, int $perPage = 15): array
+    {
+        $result = $this->request('GET', '/whatsapp-sessions/' . rawurlencode((string) $session) . '/session-logs?page=' . $page . '&per_page=' . $perPage, [], true);
+
+        if (($result['success'] ?? false) && is_array($result['data'])) {
+            return [
+                'success' => true,
+                'data'    => $result['data'],
+                'message' => $result['message'] ?? 'Session logs retrieved.',
+            ];
+        }
+
+        return [
+            'success' => false,
+            'message' => $result['message'] ?? 'Failed to fetch session logs.',
+        ];
+    }
+
     // =========================================================================
     // LIVE SESSIONS (captured from Wasender API using Personal Access Token)
     // =========================================================================

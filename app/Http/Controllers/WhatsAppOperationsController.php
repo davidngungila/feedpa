@@ -440,6 +440,20 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $messageLogs = [];
         $logsError = null;
 
+        $participantNames = [];
+        $contactsResult = $this->whatsapp->getContactsRaw();
+        if (($contactsResult['success'] ?? false) && is_array($contactsResult['data'] ?? null)) {
+            $contacts = $contactsResult['data']['items'] ?? $contactsResult['data'] ?? [];
+            foreach ($contacts as $contact) {
+                $contactPhone = preg_replace('/@.*$/', '', (string) ($contact['id'] ?? ''));
+                $contactPhone = preg_replace('/\D/', '', $contactPhone);
+                $contactName = $contact['name'] ?? $contact['notify'] ?? $contact['verifiedName'] ?? null;
+                if ($contactPhone && $contactName) {
+                    $participantNames[$contactPhone] = (string) $contactName;
+                }
+            }
+        }
+
         if ($personalTokenConfigured) {
             $sessions = $this->whatsapp->getSessions();
             $session = $sessions[0] ?? null;
@@ -459,7 +473,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             }
         }
 
-        return view('whatsapp.groups.show', compact('group', 'personalTokenConfigured', 'session', 'messageLogs', 'logsError', 'metaError'));
+        return view('whatsapp.groups.show', compact('group', 'personalTokenConfigured', 'session', 'messageLogs', 'logsError', 'metaError', 'participantNames'));
     }
 
     public function addGroupParticipants(Request $request, $jid)

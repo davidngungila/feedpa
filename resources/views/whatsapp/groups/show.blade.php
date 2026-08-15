@@ -86,8 +86,11 @@
                         @forelse($group['participants'] as $participant)
                             <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
                                 <td class="px-6 py-3">
-                                    <p class="text-xs font-bold text-primary-900 dark:text-white">{{ $participant['name'] ?? $participant['pn'] ?? 'Unknown' }}</p>
-                                    <p class="text-[10px] text-primary-500 font-mono break-all">{{ $participant['jid'] ?? $participant['id'] ?? '' }}</p>
+                                    @php
+                                        $pName = $participantNames[$participant['pn'] ?? ''] ?? $participant['name'] ?? null;
+                                    @endphp
+                                    <p class="text-xs font-bold text-primary-900 dark:text-white">{{ $pName ?? 'Unknown' }}</p>
+                                    <p class="text-[10px] text-primary-500 font-mono break-all">{{ $participant['jid'] ?? $participant['id'] ?? ($pName ?? '') }}</p>
                                 </td>
                                 <td class="px-6 py-3">
                                     <p class="text-xs text-primary-700 dark:text-primary-300 font-mono">{{ $participant['pn'] ?? '—' }}</p>
@@ -162,7 +165,7 @@
                             @php
                                 $pn = $p['pn'] ?? preg_replace('/@s\.whatsapp\.net$/', '', $p['jid']);
                                 $mentionJid = !empty($p['jid']) ? $p['jid'] : ($pn . '@s.whatsapp.net');
-                                $label = $p['name'] ?? $p['id'] ?? $pn;
+                                $label = $participantNames[$pn] ?? $p['name'] ?? $p['id'] ?? $pn;
                             @endphp
                             <label class="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-700 cursor-pointer hover:border-primary-400 transition-colors">
                                 <input type="checkbox" value="{{ $mentionJid }}" data-phone="{{ $pn }}" class="mention-checkbox rounded text-primary-600 focus:ring-primary-500">

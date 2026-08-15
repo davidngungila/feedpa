@@ -444,6 +444,11 @@ class WhatsAppService
         return [];
     }
 
+    public function getGroupMetadataRaw(string $jid): array
+    {
+        return $this->request('GET', '/groups/' . rawurlencode($jid) . '/metadata');
+    }
+
     public function getGroupParticipants(string $jid): array
     {
         $result = $this->request('GET', '/groups/' . rawurlencode($jid) . '/participants');

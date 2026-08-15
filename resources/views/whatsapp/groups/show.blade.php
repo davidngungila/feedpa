@@ -20,6 +20,14 @@
     </div>
 
     <!-- Group Info -->
+    @if(!empty($metaError))
+        <div class="p-4 rounded-xl border-l-4 border-l-amber-500 bg-amber-50/60 dark:bg-amber-900/10">
+            <p class="text-xs font-bold text-amber-700 dark:text-amber-300">
+                <i class="fas fa-exclamation-triangle mr-1"></i> Could not load group metadata from the WhatsApp API: {{ $metaError }}
+            </p>
+        </div>
+    @endif
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="card p-6 lg:col-span-1">
             <div class="flex items-center gap-4 mb-4">

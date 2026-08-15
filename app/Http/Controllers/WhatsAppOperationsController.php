@@ -354,21 +354,40 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
     public function groupDetails($jid)
     {
-        $meta = $this->whatsapp->getGroupMetadata($jid);
+        $metaResult = $this->whatsapp->getGroupMetadataRaw($jid);
+        $meta = ($metaResult['success'] ?? false) && is_array($metaResult['data'] ?? null) ? $metaResult['data'] : [];
         $participants = $this->whatsapp->getGroupParticipants($jid);
+        $metaError = empty($meta) ? ($metaResult['message'] ?? 'Could not load group metadata from the WhatsApp API.') : null;
 
         if (empty($meta) && empty($participants)) {
             return redirect()->route('whatsapp.groups.index')
                 ->with('error', 'Could not load group details from the WhatsApp API.');
         }
 
+        $listName = null;
+        if (empty($meta['subject'])) {
+            foreach ($this->whatsapp->getGroups() as $g) {
+                if (($g['id'] ?? '') === $jid || ($g['jid'] ?? '') === $jid) {
+                    $listName = $g['name'] ?? null;
+                    break;
+                }
+            }
+        }
+
+        $creation = null;
+        if (!empty($meta['creation'])) {
+            $creation = ctype_digit((string) $meta['creation'])
+                ? date('Y-m-d H:i', (int) $meta['creation'])
+                : (string) $meta['creation'];
+        }
+
         $group = [
             'jid' => $jid,
-            'name' => $meta['subject'] ?? 'Unknown Group',
+            'name' => $meta['subject'] ?? $listName ?? 'Unknown Group',
             'img_url' => $this->whatsapp->getGroupPicture($jid),
-            'description' => $meta['desc'] ?? null,
-            'owner' => $meta['owner'] ?? null,
-            'creation' => isset($meta['creation']) ? date('Y-m-d H:i', (int) $meta['creation']) : null,
+            'description' => $meta['desc'] ?? $meta['description'] ?? null,
+            'owner' => $meta['ownerPn'] ?? $meta['ownerJid'] ?? $meta['owner'] ?? null,
+            'creation' => $creation,
             'participants' => $participants,
         ];
 
@@ -396,7 +415,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             }
         }
 
-        return view('whatsapp.groups.show', compact('group', 'personalTokenConfigured', 'session', 'messageLogs', 'logsError'));
+        return view('whatsapp.groups.show', compact('group', 'personalTokenConfigured', 'session', 'messageLogs', 'logsError', 'metaError'));
     }
 
     public function addGroupParticipants(Request $request, $jid)

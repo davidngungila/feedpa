@@ -85,6 +85,7 @@ class SyncClickPesaPayouts extends Command
 
                 if ($previousStatus !== $syncedStatus && in_array($syncedStatus, ['SUCCESS', 'SETTLED'], true)) {
                     $this->notifications->sendPayoutSuccessEmail($payout);
+                    $this->notifications->sendBeneficiaryPayoutNotification($payout, 'completed');
                 }
 
                 $syncedCount++;

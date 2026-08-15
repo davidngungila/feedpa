@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Audit;
 use App\Models\Payout;
 use App\Models\PayoutOtp;
+use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\AppNotificationService;
 use App\Services\ClickPesaAPIService;
 use App\Services\MessagingServiceAPI;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -19,12 +21,14 @@ class PayoutController extends Controller
     protected ClickPesaAPIService $api;
     protected MessagingServiceAPI $sms;
     protected AppNotificationService $notifications;
+    protected WhatsAppService $whatsapp;
 
-    public function __construct(ClickPesaAPIService $api, MessagingServiceAPI $sms, AppNotificationService $notifications)
+    public function __construct(ClickPesaAPIService $api, MessagingServiceAPI $sms, AppNotificationService $notifications, WhatsAppService $whatsapp)
     {
         $this->api = $api;
         $this->sms = $sms;
         $this->notifications = $notifications;
+        $this->whatsapp = $whatsapp;
     }
 
     public function index(Request $request)
@@ -491,6 +495,7 @@ class PayoutController extends Controller
             Audit::log('initiate_payout', "Initiated payout {$orderReference}: {$validated['amount']} {$validated['currency']} to {$validated['recipient_name']} ({$validated['payout_type']})");
 
             $this->createAndSendOtp($payout, auth()->user(), 'initiation');
+            $this->notifications->sendBeneficiaryPayoutNotification($payout, 'initiated');
             $this->notifications->notifyPayoutOfficers(
                 'payout_initiated',
                 'Payout Initiated',
@@ -626,6 +631,9 @@ class PayoutController extends Controller
                 ['payout_id' => $payout->id, 'order_reference' => $orderReference, 'status' => 'PENDING_APPROVAL'],
                 'payout:' . $payout->id . ':approval_pending'
             );
+
+            $this->notifyInitiatorPayoutInitialized($payout);
+            $this->broadcastFinalApprovalRequest($payout);
 
             return redirect()->route('payouts.status', $orderReference)
                 ->with('success', 'Initiation OTP verified. The payout is now waiting for approval and authorization by another officer.');
@@ -952,6 +960,7 @@ class PayoutController extends Controller
 
                         if ($previousStatus !== $syncedStatus && in_array($syncedStatus, ['SUCCESS', 'SETTLED'], true)) {
                             $this->notifications->sendPayoutSuccessEmail($payout);
+                            $this->notifications->sendBeneficiaryPayoutNotification($payout, 'completed');
                         }
 
                         $syncedCount++;
@@ -1000,16 +1009,7 @@ class PayoutController extends Controller
 
         $message = $this->buildOtpMessage($payout, $otp, $purpose, $user);
 
-        try {
-            $this->sms->sendSMS($phone, $message);
-        } catch (\Exception $e) {
-            Log::warning('Failed to send payout OTP SMS', [
-                'payout_id' => $payout->id,
-                'purpose' => $purpose,
-                'phone' => $phone,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        $this->sendSmsAndWhatsApp($phone, $message);
 
         $this->notifications->sendPayoutOtpEmail($payout, $otp, $purpose, $user);
 
@@ -1061,7 +1061,7 @@ class PayoutController extends Controller
 
     protected function broadcastAuthorizationAlert(Payout $payout, User $authorizer): void
     {
-        $message = "Someone authorized the payment of {$payout->amount} {$payout->currency}. "
+        $message = "{$authorizer->name} authorized the payment of {$payout->amount} {$payout->currency}. "
             . "It was made by " . ($payout->initiator?->name ?? 'Unknown officer')
             . " at " . now()->format('d M Y H:i')
             . " for reasons " . ($payout->resolvedDescription() ?: 'N/A') . '.';
@@ -1085,15 +1085,63 @@ class PayoutController extends Controller
                 continue;
             }
 
+            $this->sendSmsAndWhatsApp($officer->phone, $message);
+        }
+    }
+
+    protected function sendSmsAndWhatsApp(string $phone, string $message): void
+    {
+        if (!filled($phone)) {
+            return;
+        }
+
+        try {
+            $this->sms->sendSMS($phone, $message);
+        } catch (\Exception $e) {
+            Log::warning('Failed to send payout SMS', [
+                'phone' => $phone,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        if (SystemSetting::get('whatsapp_enabled', false)) {
             try {
-                $this->sms->sendSMS($officer->phone, $message);
+                $this->whatsapp->sendText($phone, $message);
             } catch (\Exception $e) {
-                Log::warning('Failed to send payout authorization alert SMS', [
-                    'payout_id' => $payout->id,
-                    'user_id' => $officer->id,
+                Log::warning('Failed to send payout WhatsApp message', [
+                    'phone' => $phone,
                     'error' => $e->getMessage(),
                 ]);
             }
+        }
+    }
+
+    protected function notifyInitiatorPayoutInitialized(Payout $payout): void
+    {
+        $initiator = $payout->initiator ?? User::find($payout->initiated_by);
+        if (!$initiator || !filled($initiator->phone)) {
+            return;
+        }
+
+        $message = "New payout initialized of total amount {$payout->amount} {$payout->currency} by {$initiator->name}. "
+            . "Reference: {$payout->order_reference}. "
+            . "Thank you for using FEEDTAN services.";
+
+        $this->sendSmsAndWhatsApp($initiator->phone, $message);
+    }
+
+    protected function broadcastFinalApprovalRequest(Payout $payout): void
+    {
+        $loginUrl = config('app.url') ?: 'https://pay.feedtancmg.org';
+        $message = "Payout {$payout->order_reference} has been initiated and OTP verified. "
+            . "Please login to {$loginUrl}/entry for final verification and authorization of the payment.";
+
+        foreach ($this->notifications->payoutOfficers() as $officer) {
+            if (!$officer->phone) {
+                continue;
+            }
+
+            $this->sendSmsAndWhatsApp($officer->phone, $message);
         }
     }
 
@@ -1159,6 +1207,7 @@ class PayoutController extends Controller
 
             if (in_array($apiStatus, ['SUCCESS', 'SETTLED'], true)) {
                 $this->notifications->sendPayoutSuccessEmail($payout);
+                $this->notifications->sendBeneficiaryPayoutNotification($payout, 'completed');
             }
         }
     }

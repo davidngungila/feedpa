@@ -95,14 +95,14 @@
             </div>
             <div class="flex gap-1 bg-gray-100 dark:bg-primary-900/20 p-1 rounded-xl w-fit">
                 <button type="button" data-tab="extracted" class="tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-comment-dots mr-1"></i>Extracted</button>
-                <button type="button" data-tab="summary" class="tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-list-ul mr-1"></i>Summary</button>
                 <button type="button" data-tab="payload" class="tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-code mr-1"></i>Payload (JSON)</button>
             </div>
             <div id="tab-extracted" class="tab-panel hidden">
                 <div id="eventModalExtracted" class="p-3 rounded-xl bg-white dark:bg-primary-900/40 text-primary-800 dark:text-primary-100 text-xs leading-relaxed space-y-2"></div>
-            </div>
-            <div id="tab-summary" class="tab-panel hidden">
-                <div id="eventModalSummary" class="rounded-xl bg-gray-50 dark:bg-primary-900/20 divide-y divide-primary-100 dark:divide-primary-800 overflow-hidden"></div>
+                <div class="mt-3">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Details</p>
+                    <div id="eventModalSummary" class="rounded-xl bg-gray-50 dark:bg-primary-900/20 divide-y divide-primary-100 dark:divide-primary-800 overflow-hidden"></div>
+                </div>
             </div>
             <div id="tab-payload" class="tab-panel hidden">
                 <pre id="eventModalPayload" class="p-3 rounded-xl bg-gray-900 text-green-300 text-[10px] leading-relaxed overflow-x-auto max-h-[50vh]"></pre>

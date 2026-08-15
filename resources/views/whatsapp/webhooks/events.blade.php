@@ -93,12 +93,18 @@
                 <span id="eventModalSource" class="px-2 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-primary-500 dark:bg-gray-800"></span>
                 <span id="eventModalTime" class="px-2 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-primary-500 dark:bg-gray-800"></span>
             </div>
-            <div>
-                <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Summary</p>
+            <div class="flex gap-1 bg-gray-100 dark:bg-primary-900/20 p-1 rounded-xl w-fit">
+                <button type="button" data-tab="extracted" class="tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-comment-dots mr-1"></i>Extracted</button>
+                <button type="button" data-tab="summary" class="tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-list-ul mr-1"></i>Summary</button>
+                <button type="button" data-tab="payload" class="tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-code mr-1"></i>Payload (JSON)</button>
+            </div>
+            <div id="tab-extracted" class="tab-panel hidden">
+                <div id="eventModalExtracted" class="p-3 rounded-xl bg-white dark:bg-primary-900/40 text-primary-800 dark:text-primary-100 text-xs leading-relaxed space-y-2"></div>
+            </div>
+            <div id="tab-summary" class="tab-panel hidden">
                 <div id="eventModalSummary" class="rounded-xl bg-gray-50 dark:bg-primary-900/20 divide-y divide-primary-100 dark:divide-primary-800 overflow-hidden"></div>
             </div>
-            <div>
-                <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Payload (JSON)</p>
+            <div id="tab-payload" class="tab-panel hidden">
                 <pre id="eventModalPayload" class="p-3 rounded-xl bg-gray-900 text-green-300 text-[10px] leading-relaxed overflow-x-auto max-h-[50vh]"></pre>
             </div>
         </div>
@@ -116,6 +122,7 @@
         const timeEl = document.getElementById('eventModalTime');
         const payloadEl = document.getElementById('eventModalPayload');
         const summaryEl = document.getElementById('eventModalSummary');
+        const extractedEl = document.getElementById('eventModalExtracted');
 
         function humanizeEvent(ev) {
             if (!ev) return 'unknown';
@@ -126,6 +133,11 @@
 
         function cleanId(v) {
             return String(v).replace(/@[a-z.]+$/i, '');
+        }
+
+        function toItems(v) {
+            if (v === null || v === undefined) return [];
+            return Array.isArray(v) ? v : [v];
         }
 
         function messageText(m) {
@@ -251,20 +263,23 @@
                 });
             }
 
-            if (event === 'chat.upsert' || event === 'chat.update' || event === 'chat.delete') {
-                const chat = data.chat || data;
-                add('Chat', pretty(chat.name || chat.jid));
-                add('Type', chat.isGroup ? 'Group chat' : 'Personal chat');
-                add('Unread messages', pretty(chat.unreadCount));
-                if (chat.lastMessage) add('Last message', messageText(chat.lastMessage));
+            if (event === 'chats.upsert' || event === 'chats.update' || event === 'chats.delete') {
+                toItems(data).forEach(function (c) {
+                    add(event === 'chats.delete' ? 'Chat removed' : event === 'chats.upsert' ? 'New chat' : 'Chat', pretty(c.name || c.jid));
+                    add('Type', c.isGroup ? 'Group chat' : 'Personal chat');
+                    add('Unread messages', pretty(c.unreadCount));
+                    add('Muted', c.mute === undefined ? '' : (c.mute ? 'Yes' : 'No'));
+                    if (c.lastMessage) add('Last message', messageText(c.lastMessage));
+                });
             }
 
-            if (event === 'group.upsert' || event === 'group.update') {
-                const g = data.group || data;
-                add('Group', pretty(g.subject || g.name || g.jid));
-                add('Group ID', cleanId(pretty(g.id || g.jid)));
-                add('Description', pretty(g.desc || g.description));
-                add('Size', pretty(g.size));
+            if (event === 'groups.upsert' || event === 'groups.update') {
+                toItems(data).forEach(function (g) {
+                    add(event === 'groups.upsert' ? 'New group' : 'Group', pretty(g.subject || g.name || g.jid));
+                    add('Group ID', cleanId(pretty(g.id || g.jid)));
+                    add('Description', pretty(g.desc || g.description));
+                    add('Size', pretty(g.size));
+                });
             }
 
             if (event === 'group-participants.update') {
@@ -298,6 +313,155 @@
             return lines;
         }
 
+        function extractPlain(payload) {
+            const event = payload.event || 'unknown';
+            const raw = (payload.payload && payload.payload.data) || payload.data;
+            const data = raw === null || raw === undefined ? {} : raw;
+            const out = [];
+
+            function num(v) {
+                return String(v || '').replace(/@[a-z.]+$/i, '').replace(/^\+/, '');
+            }
+
+            const msgEvents = ['messages.received', 'messages.upsert', 'messages-personal.received', 'messages-group.received', 'messages-newsletter.received'];
+            if (msgEvents.indexOf(event) !== -1) {
+                toItems(data.messages).forEach(function (m) {
+                    const key = m.key || {};
+                    const body = messageText(m);
+                    const text = body ? '"' + body + '"' : '(media)';
+                    const inGroup = (key.remoteJid || '').indexOf('@g.us') !== -1;
+                    const sender = m.pushName || num(key.cleanedParticipantPn || key.participantPn || key.cleanedSenderPn || key.senderPn) || 'Someone';
+                    const quote = quotedText(m) ? ' (replying to: "' + quotedText(m) + '")' : '';
+                    if (key.fromMe) {
+                        out.push((inGroup ? 'You sent a message in the group: ' : 'You sent: ') + text + quote);
+                    } else {
+                        out.push((inGroup ? sender + ' sent a message in the group: ' : sender + ': ') + text + quote);
+                    }
+                });
+                if (out.length) return out;
+            }
+
+            if (event === 'message.sent') {
+                const body = messageText(data);
+                if (data.success === false) {
+                    out.push('The message failed to send' + (body ? ': ' + body : '.'));
+                } else {
+                    out.push('Message delivered successfully' + (body ? ': ' + body : '.'));
+                }
+                return out;
+            }
+
+            if (event === 'messages.update') return ['A message status was updated (read, delivered, or failed).'];
+            if (event === 'messages.delete') return ['A message was deleted.'];
+            if (event === 'messages.reaction') return ['A reaction was added to a message.'];
+            if (event === 'message-receipt.update') return ['A message delivery receipt was updated.'];
+
+            if (event === 'session.status') {
+                const st = data.status || 'unknown';
+                const meanings = {
+                    connected: 'The session is connected and ready.',
+                    connecting: 'The session is starting or reconnecting.',
+                    need_scan: 'The session needs a QR code scan to link.',
+                    need_passkey: 'The session needs passkey linking approval.',
+                    disconnected: 'The session is disconnected but may reconnect.',
+                    logged_out: 'The WhatsApp account was logged out from this device.',
+                    expired: 'The session expired and needs to be reconnected.'
+                };
+                out.push('The session status changed to ' + st + '. ' + (meanings[st] || ''));
+                return out;
+            }
+
+            if (event === 'qrcode.updated') return ['A new QR code is ready to scan for linking the session.'];
+            if (event === 'passkey.updated') return ['The passkey linking status was updated.'];
+
+            if (event === 'contacts.upsert' || event === 'contacts.update') {
+                toItems(data.contacts).forEach(function (c) {
+                    const name = c.name || c.notify || c.verifiedName || c.pushName || '';
+                    const id = num(c.id || c.jid);
+                    if (name) out.push((event === 'contacts.upsert' ? 'New contact added: ' : 'Contact updated: ') + name + (id ? ' (' + id + ')' : ''));
+                    else out.push(event === 'contacts.upsert' ? 'New contact added.' : 'Contact updated.');
+                });
+                return out;
+            }
+
+            if (event === 'chats.upsert' || event === 'chats.update' || event === 'chats.delete') {
+                const action = event === 'chats.upsert' ? 'A new chat was added' : event === 'chats.delete' ? 'A chat was removed' : 'A chat was updated';
+                toItems(data).forEach(function (c) {
+                    let s = action;
+                    if (c.name) s += ' for ' + c.name;
+                    if (typeof c.unreadCount !== 'undefined') s += ' (unread: ' + c.unreadCount + ')';
+                    s += '.';
+                    out.push(s);
+                });
+                if (!out.length) out.push(action + '.');
+                return out;
+            }
+
+            if (event === 'groups.upsert' || event === 'groups.update') {
+                const action = event === 'groups.upsert' ? 'A new group was added' : 'A group was updated';
+                toItems(data).forEach(function (g) {
+                    out.push((g.subject || g.name ? action + ': ' + (g.subject || g.name) : action) + '.');
+                });
+                if (!out.length) out.push(action + '.');
+                return out;
+            }
+
+            if (event === 'group-participants.update') {
+                const actions = { add: 'was added to', remove: 'was removed from', promote: 'was promoted to admin in', demote: 'was demoted from admin in' };
+                const action = actions[data.action] || 'was changed in';
+                (data.participants || []).forEach(function (p) {
+                    out.push(num(p) + ' ' + action + ' the group.');
+                });
+                if (!out.length) out.push('Group participants were updated.');
+                return out;
+            }
+
+            if (event === 'call') {
+                out.push('Call ' + (data.status || 'received') + ' from ' + (num(data.from || data.id) || 'a contact') + '.');
+                return out;
+            }
+
+            if (event === 'poll.results') return ['Poll results were updated.'];
+
+            if (event === 'webhook.test') return ['This is a test webhook from the simulator.'];
+
+            return ['Received event: ' + humanizeEvent(event) + '.'];
+        }
+
+        function renderExtracted(lines, container) {
+            container.innerHTML = '';
+            if (!lines.length) {
+                container.textContent = 'Nothing readable to extract.';
+                return;
+            }
+            lines.forEach(function (line) {
+                const p = document.createElement('p');
+                p.className = 'flex gap-2 items-start';
+                const bullet = document.createElement('span');
+                bullet.className = 'text-primary-400 mt-0.5';
+                bullet.innerHTML = '<i class="fas fa-caret-right"></i>';
+                const text = document.createElement('span');
+                text.className = 'text-xs text-primary-800 dark:text-primary-100 whitespace-pre-wrap break-words';
+                text.textContent = line;
+                p.appendChild(bullet);
+                p.appendChild(text);
+                container.appendChild(p);
+            });
+        }
+
+        function showTab(name) {
+            document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.add('hidden'); });
+            document.querySelectorAll('.tab-btn').forEach(function (b) {
+                const active = b.dataset.tab === name;
+                b.classList.toggle('bg-primary-600', active);
+                b.classList.toggle('text-white', active);
+                b.classList.toggle('bg-transparent', !active);
+                b.classList.toggle('text-primary-500', !active);
+            });
+            const panel = document.getElementById('tab-' + name);
+            if (panel) panel.classList.remove('hidden');
+        }
+
         function renderSummary(lines, container) {
             container.innerHTML = '';
             if (!lines.length) {
@@ -324,11 +488,19 @@
             badge.innerHTML = '<i class="fas fa-bolt mr-1"></i>' + humanizeEvent(payload.event);
             sourceEl.innerHTML = '<i class="fas fa-tag mr-1"></i>' + (payload.source || '');
             timeEl.innerHTML = '<i class="far fa-clock mr-1"></i>' + (payload.created_at || '');
+            renderExtracted(extractPlain(payload), extractedEl);
             renderSummary(interpretEvent(payload), summaryEl);
             payloadEl.textContent = JSON.stringify(payload.payload, null, 2);
+            showTab('extracted');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
+
+        document.querySelectorAll('.tab-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                showTab(btn.dataset.tab);
+            });
+        });
 
         document.querySelectorAll('.webhook-event-row').forEach(function (row) {
             row.addEventListener('click', function () {

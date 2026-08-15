@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'webhooks/clickpesa',
             'webhooks/clickpesa/test',
+            'api/whatsapp/webhook',
             'api/whatsapp/webhook/*',
         ]);
     })

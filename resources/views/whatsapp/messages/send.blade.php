@@ -161,6 +161,28 @@
         </div>
     </div>
 </div>
+
+<!-- Send Results Modal -->
+<div id="sendResultsModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/60" onclick="closeSendResultsModal()"></div>
+    <div class="relative card w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 animate-fade-in">
+        <div class="flex items-center justify-between gap-3 mb-4">
+            <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
+                <i class="fas fa-paper-plane"></i> Send Results
+            </h3>
+            <button type="button" onclick="closeSendResultsModal()" class="w-8 h-8 rounded-lg bg-gray-100 dark:bg-dark-border hover:bg-red-100 hover:text-red-600 transition-all">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="sendResultsSummary" class="mb-4"></div>
+        <div id="sendResultsBody" class="space-y-3"></div>
+        <div class="mt-6 flex justify-end">
+            <button type="button" onclick="closeSendResultsModal()" class="px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
@@ -207,10 +229,82 @@
         });
 
         const form = document.getElementById('sendMessageForm');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalBtnHtml = submitBtn.innerHTML;
+
+        function openSendResultsModal(results) {
+            const body = document.getElementById('sendResultsBody');
+            const summary = document.getElementById('sendResultsSummary');
+            const items = Array.isArray(results) ? results : [];
+
+            const okCount = items.filter(r => r.success === true).length;
+            const failCount = items.length - okCount;
+
+            summary.innerHTML = okCount > 0
+                ? '<div class="p-3 rounded-xl bg-green-50/60 dark:bg-green-900/10 border border-green-200 dark:border-green-800 text-xs font-bold text-green-700 dark:text-green-300">' +
+                  '<i class="fas fa-check-circle mr-1"></i> ' + okCount + ' sent successfully' +
+                  (failCount > 0 ? ', ' + failCount + ' failed' : '') + '</div>'
+                : '<div class="p-3 rounded-xl bg-red-50/60 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-xs font-bold text-red-700 dark:text-red-300">' +
+                  '<i class="fas fa-exclamation-circle mr-1"></i> ' + failCount + ' failed</div>';
+
+            body.innerHTML = items.length
+                ? items.map(r => {
+                    const ok = r.success === true;
+                    const who = r.phone
+                        ? '<i class="fas fa-phone mr-1"></i>' + r.phone
+                        : (r.contact ? '<i class="fas fa-user mr-1"></i>' + r.contact
+                            : (r.group ? '<i class="fas fa-users mr-1"></i>' + r.group : '<i class="fas fa-user mr-1"></i>Unknown'));
+                    const sub = r.data && (r.data.msgId || r.data.jid || r.data.status)
+                        ? '<span class="font-mono">msgId: ' + (r.data.msgId ?? '-') + ' | status: ' + (r.data.status ?? '-') + '</span>'
+                        : '';
+                    return '<div class="flex items-start justify-between gap-3 p-3 rounded-xl border ' +
+                        (ok ? 'border-green-200 dark:border-green-800 bg-green-50/60 dark:bg-green-900/10' : 'border-red-200 dark:border-red-800 bg-red-50/60 dark:bg-red-900/10') + '">' +
+                        '<div class="min-w-0">' +
+                            '<p class="text-xs font-bold text-primary-900 dark:text-white truncate">' + who + '</p>' +
+                            (sub ? '<p class="text-[10px] text-primary-500 mt-0.5">' + sub + '</p>' : '') +
+                            '<p class="text-[10px] ' + (ok ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') + ' font-bold mt-1">' + (r.message || (ok ? 'Sent successfully' : 'Failed')) + '</p>' +
+                        '</div>' +
+                        '<span class="badge shrink-0 ' + (ok ? 'badge-green' : 'badge-red') + '">' + (ok ? 'Success' : 'Failed') + '</span>' +
+                    '</div>';
+                }).join('')
+                : '<p class="text-xs text-primary-500 text-center py-4">No results returned.</p>';
+
+            document.getElementById('sendResultsModal').classList.remove('hidden');
+        }
+
+        function closeSendResultsModal() {
+            document.getElementById('sendResultsModal').classList.add('hidden');
+        }
+
         form.addEventListener('submit', function (e) {
-            const submitBtn = form.querySelector('button[type="submit"]');
+            e.preventDefault();
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
+                body: new FormData(form),
+            })
+            .then(function (response) {
+                return response.json().then(function (data) {
+                    return { ok: response.ok, data: data };
+                });
+            })
+            .then(function (result) {
+                if (result.data.success) {
+                    openSendResultsModal(result.data.results);
+                } else {
+                    openSendResultsModal([{ success: false, message: result.data.message || 'Request failed. Please try again.' }]);
+                }
+            })
+            .catch(function () {
+                openSendResultsModal([{ success: false, message: 'Network error. Please check your connection and try again.' }]);
+            })
+            .finally(function () {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            });
         });
     });
 </script>

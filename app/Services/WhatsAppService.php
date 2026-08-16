@@ -126,9 +126,9 @@ class WhatsAppService
                 'Accept'        => 'application/json',
             ])->timeout(30)->post($this->wasenderBaseUrl . '/send-message', $payload);
 
-            $body = $response->json();
+            $body = $response->json() ?? [];
 
-            if ($response->successful() && (isset($body['success']) || isset($body['status']) || $response->ok())) {
+            if ($response->successful() && ($body['success'] ?? true) !== false) {
                 return [
                     'success' => true,
                     'data'    => $body['data'] ?? $body,
@@ -221,7 +221,7 @@ class WhatsAppService
             $body = json_decode((string) $response->getBody(), true);
             $statusCode = $response->getStatusCode();
 
-            if ($statusCode >= 200 && $statusCode < 300 && (isset($body['success']) || isset($body['status']) || $statusCode === 200)) {
+            if ($statusCode >= 200 && $statusCode < 300 && ($body['success'] ?? true) !== false) {
                 return [
                     'success' => true,
                     'data' => $body['data'] ?? $body,

@@ -262,7 +262,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $optionsAll = (array) ($data['question_options'] ?? []);
         $multiAll = (array) ($data['question_multi'] ?? []);
         $msgIds = [];
-        $failures = 0;
+        $failures = [];
         $total = count($questions);
 
         foreach ($questions as $i => $question) {
@@ -282,15 +282,26 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             if (($result['success'] ?? false)) {
                 $msgIds[] = $result['data']['msgId'] ?? $result['data']['id'] ?? null;
             } else {
-                $failures++;
+                $failures[] = [
+                    'question' => $question,
+                    'message'  => $result['message'] ?? 'Unknown error',
+                ];
+            }
+
+            if ($i < $total - 1) {
+                usleep(500000);
             }
         }
 
-        if ($failures > 0) {
+        if ($failures) {
+            $details = array_map(function ($f) {
+                return '"' . $f['question'] . '" - ' . $f['message'];
+            }, $failures);
+
             return [
                 'success' => false,
-                'message' => $failures . ' of ' . $total . ' poll questions failed to send.',
-                'data'    => ['msgIds' => $msgIds],
+                'message' => count($failures) . ' of ' . $total . ' poll questions failed to send. Failed: ' . implode(' | ', $details),
+                'data'    => ['msgIds' => $msgIds, 'failures' => $failures],
             ];
         }
 

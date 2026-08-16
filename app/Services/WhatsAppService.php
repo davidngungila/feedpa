@@ -399,17 +399,22 @@ class WhatsAppService
     // LIVE GROUPS (captured from Wasender API)
     // =========================================================================
 
-    public function getGroups(): array
+    public function getGroupsRaw(): array
     {
         return Cache::remember('whatsapp.groups.list', now()->addMinutes(2), function () {
-            $result = $this->request('GET', '/groups');
-
-            if (($result['success'] ?? false) && is_array($result['data'])) {
-                return $result['data'];
-            }
-
-            return [];
+            return $this->request('GET', '/groups');
         });
+    }
+
+    public function getGroups(): array
+    {
+        $result = $this->getGroupsRaw();
+
+        if (($result['success'] ?? false) && is_array($result['data'])) {
+            return $result['data'];
+        }
+
+        return [];
     }
 
     public function isRateLimited(array $result): bool

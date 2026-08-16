@@ -117,8 +117,13 @@
                             @if(!empty($liveContacts) || $contacts->isNotEmpty())
                                 <p class="text-[10px] text-primary-400 mt-1">
                                     @if(!empty($liveContacts)) {{ count($seenPhones) }} contacts available (from WhatsApp + saved). @endif
-                                    @if(!$apiKeyConfigured) <span class="text-amber-600">Live WhatsApp contacts unavailable — configure the session API key.</span> @endif
                                 </p>
+                            @elseif($contactsError)
+                                <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i> Could not load WhatsApp contacts: {{ $contactsError }}</p>
+                            @elseif(!$apiKeyConfigured)
+                                <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i> Live WhatsApp contacts unavailable — configure the session API key in WhatsApp settings.</p>
+                            @else
+                                <p class="text-[10px] text-gray-400 mt-1">No contacts found. Add contacts under Contacts or sync them from the WhatsApp account first.</p>
                             @endif
                         </div>
 
@@ -141,8 +146,14 @@
                                     @endforeach
                                 @endif
                             </select>
-                            @if($apiKeyConfigured)
+                            @if(!empty($liveGroups) || $groups->isNotEmpty())
                                 <p class="text-[10px] text-primary-400 mt-1">{{ count($seenJids) }} groups available (from WhatsApp + saved).</p>
+                            @elseif($groupsError)
+                                <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i> Could not load WhatsApp groups: {{ $groupsError }}</p>
+                            @elseif(!$apiKeyConfigured)
+                                <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i> Live WhatsApp groups unavailable — configure the session API key in WhatsApp settings.</p>
+                            @else
+                                <p class="text-[10px] text-gray-400 mt-1">No groups found. Create groups from the WhatsApp account first.</p>
                             @endif
                         </div>
                     </div>

@@ -43,10 +43,29 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $templates = \App\Models\MessageTemplate::orderBy('name')->get();
 
         $apiKeyConfigured = $this->whatsapp->hasSessionApiKey();
-        $liveGroups = $apiKeyConfigured ? $this->whatsapp->getGroups() : [];
-        $liveContacts = $apiKeyConfigured ? $this->whatsapp->getContacts() : [];
 
-        return view('whatsapp.messages.send', compact('contacts', 'groups', 'templates', 'liveGroups', 'liveContacts', 'apiKeyConfigured'));
+        $contactsError = null;
+        $groupsError = null;
+        $liveGroups = [];
+        $liveContacts = [];
+
+        if ($apiKeyConfigured) {
+            $contactsResult = $this->whatsapp->getContactsRaw();
+            if (($contactsResult['success'] ?? false) && is_array($contactsResult['data'] ?? null)) {
+                $liveContacts = $contactsResult['data']['items'] ?? $contactsResult['data'];
+            } else {
+                $contactsError = $contactsResult['message'] ?? 'Could not load contacts from the WhatsApp API.';
+            }
+
+            $groupsResult = $this->whatsapp->getGroupsRaw();
+            if (($groupsResult['success'] ?? false) && is_array($groupsResult['data'] ?? null)) {
+                $liveGroups = $groupsResult['data'];
+            } else {
+                $groupsError = $groupsResult['message'] ?? 'Could not load groups from the WhatsApp API.';
+            }
+        }
+
+        return view('whatsapp.messages.send', compact('contacts', 'groups', 'templates', 'liveGroups', 'liveContacts', 'apiKeyConfigured', 'contactsError', 'groupsError'));
     }
 
     public function sendMessagesPost(Request $request)

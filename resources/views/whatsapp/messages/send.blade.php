@@ -109,7 +109,7 @@
                                         @endphp
                                         @if($pn && empty($seenPhones[$pn]))
                                             @php $seenPhones[$pn] = true; @endphp
-                                            <option value="{{ $pn }}">{{ $contact['name'] ?? $contact['pushName'] ?? $pn }} ({{ $pn }})</option>
+                                            <option value="{{ $pn }}">{{ $contact['name'] ?? $contact['pushName'] ?? $pn }} ({{ $pn }})@if(!empty($contact['from'])) — {{ $contact['from'] }} @endif</option>
                                         @endif
                                     @endforeach
                                 @endif
@@ -117,6 +117,7 @@
                             @if(!empty($liveContacts) || $contacts->isNotEmpty())
                                 <p class="text-[10px] text-primary-400 mt-1">
                                     @if(!empty($liveContacts)) {{ count($seenPhones) }} contacts available (from WhatsApp + saved). @endif
+                                    @if($contactsFallbackUsed) <span class="text-amber-600">Your WhatsApp session has no synced contacts — showing group members instead.</span> @endif
                                 </p>
                             @elseif($contactsError)
                                 <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i> Could not load WhatsApp contacts: {{ $contactsError }}</p>

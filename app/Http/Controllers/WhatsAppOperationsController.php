@@ -46,6 +46,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
         $contactsError = null;
         $groupsError = null;
+        $contactsFallbackUsed = false;
         $liveGroups = [];
         $liveContacts = [];
 
@@ -63,9 +64,36 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             } else {
                 $groupsError = $groupsResult['message'] ?? 'Could not load groups from the WhatsApp API.';
             }
+
+            if (empty($liveContacts) && !$contactsError && !empty($liveGroups)) {
+                $fallbackContacts = [];
+                $seenFallback = [];
+
+                foreach ($liveGroups as $g) {
+                    $gJid = $g['jid'] ?? $g['id'] ?? '';
+                    if (!$gJid) continue;
+
+                    foreach ($this->whatsapp->getGroupParticipants($gJid) as $p) {
+                        $pn = $p['pn'] ?? preg_replace('/@.*$/', '', (string) ($p['jid'] ?? $p['id'] ?? ''));
+                        if (!$pn || isset($seenFallback[$pn])) continue;
+
+                        $seenFallback[$pn] = true;
+                        $fallbackContacts[] = [
+                            'pn'   => $pn,
+                            'name' => $p['name'] ?? $p['pushName'] ?? $p['notify'] ?? null,
+                            'from' => $g['name'] ?? $g['subject'] ?? 'Group',
+                        ];
+                    }
+                }
+
+                if (!empty($fallbackContacts)) {
+                    $liveContacts = $fallbackContacts;
+                    $contactsFallbackUsed = true;
+                }
+            }
         }
 
-        return view('whatsapp.messages.send', compact('contacts', 'groups', 'templates', 'liveGroups', 'liveContacts', 'apiKeyConfigured', 'contactsError', 'groupsError'));
+        return view('whatsapp.messages.send', compact('contacts', 'groups', 'templates', 'liveGroups', 'liveContacts', 'apiKeyConfigured', 'contactsError', 'groupsError', 'contactsFallbackUsed'));
     }
 
     public function sendMessagesPost(Request $request)

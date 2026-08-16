@@ -63,12 +63,21 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             'longitude' => 'nullable|numeric|required_if:message_type,location',
             'location_name' => 'nullable|string',
             'location_address' => 'nullable|string',
-            'poll_question' => 'nullable|string|required_if:message_type,poll',
-            'poll_options' => 'nullable|array|required_if:message_type,poll',
+            'location_caption' => 'nullable|string',
+            'question' => 'nullable|array|required_if:message_type,poll',
+            'question.*' => 'required|string',
+            'question_options' => 'nullable|array',
+            'question_options.*' => 'nullable|array',
+            'question_options.*.*' => 'required|string',
+            'question_multi' => 'nullable|array',
+            'question_multi.*' => 'nullable|boolean',
+            'poll_question' => 'nullable|string',
+            'poll_options' => 'nullable|array',
             'poll_options.*' => 'string',
             'poll_multi' => 'nullable|boolean',
             'media_type' => 'nullable|in:image,video,audio|required_if:message_type,viewOnce',
             'reply_to' => 'nullable|numeric|required_if:message_type,quoted',
+            'reply_text' => 'nullable|string',
         ]);
 
         try {
@@ -185,8 +194,8 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
                     $location['address'] = $data['location_address'];
                 }
                 $payload = ['to' => $to, 'location' => $location];
-                if (!empty($data['text'])) {
-                    $payload['text'] = $data['text'];
+                if (!empty($data['location_caption'])) {
+                    $payload['text'] = $data['location_caption'];
                 }
                 break;
 
@@ -208,8 +217,8 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
             case 'quoted':
                 $payload = ['to' => $to, 'replyTo' => (int) ($data['reply_to'] ?? 0)];
-                if (!empty($data['text'])) {
-                    $payload['text'] = $data['text'];
+                if (!empty($data['reply_text'])) {
+                    $payload['text'] = $data['reply_text'];
                 }
                 break;
 
@@ -224,14 +233,72 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         return $payload;
     }
 
+    protected function dispatchSend(array $data, string $to): array
+    {
+        if (($data['message_type'] ?? '') === 'poll') {
+            return $this->sendPolls($data, $to);
+        }
+
+        return $this->whatsapp->sendWasenderRequest($this->buildSendPayload($data, $to));
+    }
+
     protected function sendToPhone(array $data): array
     {
-        return $this->whatsapp->sendWasenderRequest($this->buildSendPayload($data, $data['phone']));
+        return $this->dispatchSend($data, $data['phone']);
     }
 
     protected function sendToGroup(array $data, string $groupId): array
     {
-        return $this->whatsapp->sendWasenderRequest($this->buildSendPayload($data, $groupId));
+        return $this->dispatchSend($data, $groupId);
+    }
+
+    protected function sendPolls(array $data, string $to): array
+    {
+        $questions = array_values(array_filter(array_map('trim', (array) ($data['question'] ?? []))));
+        if (!$questions) {
+            $questions = [trim((string) ($data['poll_question'] ?? ''))];
+        }
+
+        $optionsAll = (array) ($data['question_options'] ?? []);
+        $multiAll = (array) ($data['question_multi'] ?? []);
+        $msgIds = [];
+        $failures = 0;
+        $total = count($questions);
+
+        foreach ($questions as $i => $question) {
+            if ($question === '') {
+                continue;
+            }
+
+            $single = array_merge($data, [
+                'message_type'  => 'poll',
+                'poll_question' => $question,
+                'poll_options'  => array_values(array_filter(array_map('trim', $optionsAll[$i] ?? []))),
+                'poll_multi'    => !empty($multiAll[$i]),
+            ]);
+
+            $result = $this->whatsapp->sendWasenderRequest($this->buildSendPayload($single, $to));
+
+            if (($result['success'] ?? false)) {
+                $msgIds[] = $result['data']['msgId'] ?? $result['data']['id'] ?? null;
+            } else {
+                $failures++;
+            }
+        }
+
+        if ($failures > 0) {
+            return [
+                'success' => false,
+                'message' => $failures . ' of ' . $total . ' poll questions failed to send.',
+                'data'    => ['msgIds' => $msgIds],
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' => $total > 1 ? $total . ' poll questions sent successfully.' : 'Poll sent successfully.',
+            'data'    => ['msgId' => end($msgIds) ?: null, 'msgIds' => $msgIds],
+        ];
     }
 
     // =========================================================================
@@ -593,17 +660,26 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             'longitude' => 'nullable|numeric|required_if:message_type,location',
             'location_name' => 'nullable|string',
             'location_address' => 'nullable|string',
-            'poll_question' => 'nullable|string|required_if:message_type,poll',
-            'poll_options' => 'nullable|array|required_if:message_type,poll',
+            'location_caption' => 'nullable|string',
+            'question' => 'nullable|array|required_if:message_type,poll',
+            'question.*' => 'required|string',
+            'question_options' => 'nullable|array',
+            'question_options.*' => 'nullable|array',
+            'question_options.*.*' => 'required|string',
+            'question_multi' => 'nullable|array',
+            'question_multi.*' => 'nullable|boolean',
+            'poll_question' => 'nullable|string',
+            'poll_options' => 'nullable|array',
             'poll_options.*' => 'string',
             'poll_multi' => 'nullable|boolean',
             'media_type' => 'nullable|in:image,video,audio|required_if:message_type,viewOnce',
             'reply_to' => 'nullable|numeric|required_if:message_type,quoted',
+            'reply_text' => 'nullable|string',
         ]);
 
         $validated['mentions'] = array_values(array_filter(array_map('trim', $validated['mentions'] ?? [])));
 
-        $result = $this->whatsapp->sendWasenderRequest($this->buildSendPayload($validated, $jid));
+        $result = $this->dispatchSend($validated, $jid);
 
         if (!($result['success'] ?? false)) {
             return response()->json([

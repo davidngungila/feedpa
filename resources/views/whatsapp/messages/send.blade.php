@@ -156,23 +156,15 @@
                         </div>
                         <input type="text" name="location_name" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Location name (optional)">
                         <input type="text" name="location_address" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Address (optional)">
-                        <input type="text" name="text" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Caption (optional)">
+                        <input type="text" name="location_caption" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Caption (optional)">
                     </div>
 
                     <!-- Poll Fields -->
                     <div id="pollFields" class="hidden space-y-4">
-                        <div>
-                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Poll Question</label>
-                            <input type="text" name="poll_question" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="What is your favourite option?">
-                        </div>
-                        <div>
-                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Options (2 to 12, one per line)</label>
-                            <textarea name="poll_options_raw" rows="4" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
-                        </div>
-                        <label class="flex items-center gap-2 text-xs font-bold text-primary-700 dark:text-primary-300">
-                            <input type="checkbox" name="poll_multi" value="1" class="rounded text-primary-600 focus:ring-primary-500">
-                            Allow multiple answers
-                        </label>
+                        <div id="pollQuestions" class="space-y-4"></div>
+                        <button type="button" id="addPollQuestionBtn" class="px-4 py-2 rounded-xl border border-dashed border-primary-300 dark:border-primary-700 text-primary-600 dark:text-primary-300 text-xs font-bold hover:border-green-500 hover:text-green-600 transition-all">
+                            <i class="fas fa-plus mr-1"></i> Add Question
+                        </button>
                     </div>
 
                     <!-- View Once Fields -->
@@ -199,7 +191,7 @@
                         </div>
                         <div>
                             <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Reply Text</label>
-                            <textarea name="text" rows="3" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Type your reply..."></textarea>
+                            <textarea name="reply_text" rows="3" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Type your reply..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -304,6 +296,122 @@
         messageTypes.forEach(input => input.addEventListener('change', updateMessageFields));
         updateMessageFields();
 
+        const pollInputClass = 'w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500';
+
+        function buildPollQuestionBlock(qi, question, options, multi) {
+            const wrap = document.createElement('div');
+            wrap.className = 'poll-question-block p-4 rounded-xl bg-gray-50 dark:bg-primary-900/20 border border-primary-100 dark:border-primary-800 space-y-3';
+
+            const header = document.createElement('div');
+            header.className = 'flex items-center justify-between gap-2';
+            const title = document.createElement('p');
+            title.className = 'text-[10px] text-gray-400 uppercase font-bold';
+            title.textContent = 'Question ' + (qi + 1);
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'poll-remove-question px-2 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-100 transition-all';
+            removeBtn.innerHTML = '<i class="fas fa-times mr-1"></i>Remove';
+            header.appendChild(title);
+            header.appendChild(removeBtn);
+            wrap.appendChild(header);
+
+            const qInput = document.createElement('input');
+            qInput.type = 'text';
+            qInput.name = 'question[]';
+            qInput.value = question || '';
+            qInput.placeholder = 'Poll question';
+            qInput.className = pollInputClass;
+            wrap.appendChild(qInput);
+
+            const optionsWrap = document.createElement('div');
+            optionsWrap.className = 'poll-options space-y-2';
+            wrap.appendChild(optionsWrap);
+
+            function addOptionRow(value) {
+                const row = document.createElement('div');
+                row.className = 'flex items-center gap-2';
+                const optInput = document.createElement('input');
+                optInput.type = 'text';
+                optInput.name = 'question_options[' + qi + '][]';
+                optInput.value = value || '';
+                optInput.placeholder = 'Option';
+                optInput.className = pollInputClass;
+                const optRemove = document.createElement('button');
+                optRemove.type = 'button';
+                optRemove.className = 'poll-remove-option px-2 py-1 rounded-lg bg-gray-100 dark:bg-primary-900/20 text-primary-500 text-[10px] font-bold hover:text-red-500 transition-all';
+                optRemove.innerHTML = '<i class="fas fa-times"></i>';
+                optRemove.addEventListener('click', function () { row.remove(); });
+                row.appendChild(optInput);
+                row.appendChild(optRemove);
+                optionsWrap.appendChild(row);
+            }
+
+            (options && options.length ? options : ['', '', '']).forEach(addOptionRow);
+
+            const addOptionBtn = document.createElement('button');
+            addOptionBtn.type = 'button';
+            addOptionBtn.className = 'poll-add-option text-[10px] font-bold text-primary-600 dark:text-primary-300 hover:underline';
+            addOptionBtn.innerHTML = '<i class="fas fa-plus mr-1"></i>Add Option';
+            addOptionBtn.addEventListener('click', function () { addOptionRow(''); });
+            wrap.appendChild(addOptionBtn);
+
+            const multiLabel = document.createElement('label');
+            multiLabel.className = 'flex items-center gap-2 text-xs font-bold text-primary-700 dark:text-primary-300';
+            const multiInput = document.createElement('input');
+            multiInput.type = 'checkbox';
+            multiInput.name = 'question_multi[' + qi + ']';
+            multiInput.value = '1';
+            multiInput.checked = !!multi;
+            multiInput.className = 'rounded text-primary-600 focus:ring-primary-500';
+            multiLabel.appendChild(multiInput);
+            multiLabel.appendChild(document.createTextNode(' Allow multiple answers'));
+            wrap.appendChild(multiLabel);
+
+            removeBtn.addEventListener('click', function () {
+                const container = document.getElementById('pollQuestions');
+                if (container && container.children.length <= 1) return;
+                wrap.remove();
+                rerenderPollQuestions();
+            });
+
+            return wrap;
+        }
+
+        function readPollState(container) {
+            return Array.from(container.querySelectorAll('.poll-question-block')).map(function (b) {
+                return {
+                    question: (b.querySelector('input[name="question[]"]') || {}).value || '',
+                    options: Array.from(b.querySelectorAll('.poll-options input[name$="[]"]')).map(function (i) { return i.value; }),
+                    multi: !!(b.querySelector('input[name^="question_multi"]') || {}).checked,
+                };
+            });
+        }
+
+        function rerenderPollQuestions() {
+            const container = document.getElementById('pollQuestions');
+            if (!container) return;
+            const state = readPollState(container);
+            container.innerHTML = '';
+            if (!state.length) state.push({ question: '', options: ['', '', ''], multi: false });
+            state.forEach(function (block, qi) {
+                container.appendChild(buildPollQuestionBlock(qi, block.question, block.options, block.multi));
+            });
+        }
+
+        const addPollQuestionBtn = document.getElementById('addPollQuestionBtn');
+        if (addPollQuestionBtn) {
+            addPollQuestionBtn.addEventListener('click', function () {
+                const container = document.getElementById('pollQuestions');
+                const state = readPollState(container);
+                state.push({ question: '', options: ['', '', ''], multi: false });
+                container.innerHTML = '';
+                state.forEach(function (block, qi) {
+                    container.appendChild(buildPollQuestionBlock(qi, block.question, block.options, block.multi));
+                });
+            });
+            rerenderPollQuestions();
+        }
+
         const recipientTypes = document.querySelectorAll('.recipient-type');
         const phoneDiv = document.getElementById('recipientPhone');
         const contactDiv = document.getElementById('recipientContact');
@@ -383,15 +491,7 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
 
-            const type = (document.querySelector('.message-type:checked') || {}).value || 'text';
             const data = new FormData(form);
-            const pollRaw = data.get('poll_options_raw');
-            if (type === 'poll' && pollRaw) {
-                data.delete('poll_options_raw');
-                pollRaw.split('\n').map(function (o) { return o.trim(); }).filter(Boolean).forEach(function (o) {
-                    data.append('poll_options[]', o);
-                });
-            }
 
             fetch(form.action, {
                 method: 'POST',

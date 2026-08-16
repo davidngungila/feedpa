@@ -95,22 +95,55 @@
 
                         <!-- Contact Select -->
                         <div id="recipientContact" class="hidden mb-2">
-                            <select name="contact_id" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                            <select name="contact_phone" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                                 <option value="">-- Select Contact --</option>
+                                @php $seenPhones = []; @endphp
                                 @foreach($contacts as $contact)
-                                    <option value="{{ $contact->id }}">{{ $contact->name }} ({{ $contact->phone }})</option>
+                                    @php $seenPhones[$contact->phone] = true; @endphp
+                                    <option value="{{ $contact->phone }}">{{ $contact->name }} ({{ $contact->phone }})</option>
                                 @endforeach
+                                @if(!empty($liveContacts))
+                                    @foreach($liveContacts as $contact)
+                                        @php
+                                            $pn = $contact['pn'] ?? $contact['phone'] ?? preg_replace('/@.*$/', '', (string) ($contact['jid'] ?? ''));
+                                        @endphp
+                                        @if($pn && empty($seenPhones[$pn]))
+                                            @php $seenPhones[$pn] = true; @endphp
+                                            <option value="{{ $pn }}">{{ $contact['name'] ?? $contact['pushName'] ?? $pn }} ({{ $pn }})</option>
+                                        @endif
+                                    @endforeach
+                                @endif
                             </select>
+                            @if(!empty($liveContacts) || $contacts->isNotEmpty())
+                                <p class="text-[10px] text-primary-400 mt-1">
+                                    @if(!empty($liveContacts)) {{ count($seenPhones) }} contacts available (from WhatsApp + saved). @endif
+                                    @if(!$apiKeyConfigured) <span class="text-amber-600">Live WhatsApp contacts unavailable — configure the session API key.</span> @endif
+                                </p>
+                            @endif
                         </div>
 
                         <!-- Group Select -->
                         <div id="recipientGroup" class="hidden">
-                            <select name="group_id" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                            <select name="group_jid" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                                 <option value="">-- Select Group --</option>
+                                @php $seenJids = []; @endphp
                                 @foreach($groups as $group)
-                                    <option value="{{ $group->id }}">{{ $group->name }}</option>
+                                    @php $seenJids[$group->group_id] = true; @endphp
+                                    <option value="{{ $group->group_id }}">{{ $group->name }}</option>
                                 @endforeach
+                                @if(!empty($liveGroups))
+                                    @foreach($liveGroups as $g)
+                                        @php $gJid = $g['jid'] ?? $g['id'] ?? ''; @endphp
+                                        @if($gJid && empty($seenJids[$gJid]))
+                                            @php $seenJids[$gJid] = true; @endphp
+                                            <option value="{{ $gJid }}">{{ $g['name'] ?? $g['subject'] ?? $gJid }}</option>
+                                        @endif
+                                    @endforeach
+                                @endif
                             </select>
+                            @if($apiKeyConfigured)
+                                <p class="text-[10px] text-primary-400 mt-1">{{ count($seenJids) }} groups available (from WhatsApp + saved).</p>
+                            @endif
                         </div>
                     </div>
 
@@ -144,7 +177,7 @@
                         </div>
                         <div>
                             <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Contact Phone</label>
-                            <input type="text" name="contact_phone" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="255712345678">
+                            <input type="text" name="card_phone" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="255712345678">
                         </div>
                     </div>
 
@@ -276,6 +309,21 @@
             quoted: document.getElementById('quotedFields'),
         };
 
+        function setPanelState() {
+            const selected = document.querySelector('.message-type:checked');
+            const type = selected ? selected.value : 'text';
+            const mediaType = ['image', 'video', 'document', 'audio', 'sticker'].includes(type);
+
+            Object.keys(fieldPanels).forEach(function (key) {
+                const panel = fieldPanels[key];
+                if (!panel) return;
+                const active = key === type || (mediaType && key === 'media');
+                panel.querySelectorAll('input, textarea, select').forEach(function (el) {
+                    el.disabled = !active;
+                });
+            });
+        }
+
         function updateMessageFields() {
             const selected = document.querySelector('.message-type:checked');
             const type = selected ? selected.value : 'text';
@@ -291,6 +339,7 @@
                 fieldPanels[type].classList.remove('hidden');
             }
             fileNameField.classList.toggle('hidden', type !== 'document');
+            setPanelState();
         }
 
         messageTypes.forEach(input => input.addEventListener('change', updateMessageFields));
@@ -491,6 +540,7 @@
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
 
+            setPanelState();
             const data = new FormData(form);
 
             fetch(form.action, {

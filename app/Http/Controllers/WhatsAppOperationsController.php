@@ -42,7 +42,11 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $groups = \App\Models\WhatsAppGroup::orderBy('name')->get();
         $templates = \App\Models\MessageTemplate::orderBy('name')->get();
 
-        return view('whatsapp.messages.send', compact('contacts', 'groups', 'templates'));
+        $apiKeyConfigured = $this->whatsapp->hasSessionApiKey();
+        $liveGroups = $apiKeyConfigured ? $this->whatsapp->getGroups() : [];
+        $liveContacts = $apiKeyConfigured ? $this->whatsapp->getContacts() : [];
+
+        return view('whatsapp.messages.send', compact('contacts', 'groups', 'templates', 'liveGroups', 'liveContacts', 'apiKeyConfigured'));
     }
 
     public function sendMessagesPost(Request $request)
@@ -51,14 +55,16 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             'message_type' => 'required|in:text,image,document,video,audio,sticker,contact,location,poll,viewOnce,quoted',
             'recipient_type' => 'required|in:contact,group,phone',
             'phone' => 'nullable|string|required_if:recipient_type,phone',
-            'contact_id' => 'nullable|exists:contacts,id|required_if:recipient_type,contact',
-            'group_id' => 'nullable|exists:whatsapp_groups,id|required_if:recipient_type,group',
+            'contact_id' => 'nullable|exists:contacts,id',
+            'contact_phone' => 'nullable|string',
+            'group_id' => 'nullable|exists:whatsapp_groups,id',
+            'group_jid' => 'nullable|string',
             'text' => 'nullable|string',
             'media_url' => 'nullable|url|required_if:message_type,image,document,video,audio,sticker,viewOnce',
             'caption' => 'nullable|string',
             'file_name' => 'nullable|string',
             'contact_name' => 'nullable|string|required_if:message_type,contact',
-            'contact_phone' => 'nullable|string|required_if:message_type,contact',
+            'card_phone' => 'nullable|string|required_if:message_type,contact',
             'latitude' => 'nullable|numeric|required_if:message_type,location',
             'longitude' => 'nullable|numeric|required_if:message_type,location',
             'location_name' => 'nullable|string',
@@ -80,20 +86,42 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             'reply_text' => 'nullable|string',
         ]);
 
+        if ($validated['recipient_type'] === 'contact' && empty($validated['contact_id']) && empty($validated['contact_phone'])) {
+            return response()->json(['success' => false, 'message' => 'Please select a saved contact.'], 422);
+        }
+
+        if ($validated['recipient_type'] === 'group' && empty($validated['group_id']) && empty($validated['group_jid'])) {
+            return response()->json(['success' => false, 'message' => 'Please select a group.'], 422);
+        }
+
         try {
             $results = [];
-            
+
             if ($validated['recipient_type'] === 'phone') {
                 $result = $this->sendToPhone($validated);
                 $results[] = ['phone' => $validated['phone'], ...$result];
             } elseif ($validated['recipient_type'] === 'contact') {
-                $contact = \App\Models\Contact::find($validated['contact_id']);
-                $result = $this->sendToPhone(array_merge($validated, ['phone' => $contact->phone]));
-                $results[] = ['contact' => $contact->name, 'phone' => $contact->phone, ...$result];
+                $contact = !empty($validated['contact_id']) ? \App\Models\Contact::find($validated['contact_id']) : null;
+                $phone = $validated['contact_phone'] ?? $contact->phone ?? null;
+                $name = $contact->name ?? $phone;
+
+                if (!$phone) {
+                    return response()->json(['success' => false, 'message' => 'Could not resolve the contact phone number.'], 422);
+                }
+
+                $result = $this->sendToPhone(array_merge($validated, ['phone' => $phone]));
+                $results[] = ['contact' => $name, 'phone' => $phone, ...$result];
             } elseif ($validated['recipient_type'] === 'group') {
-                $group = \App\Models\WhatsAppGroup::find($validated['group_id']);
-                $result = $this->sendToGroup($validated, $group->group_id);
-                $results[] = ['group' => $group->name, 'group_id' => $group->group_id, ...$result];
+                $group = !empty($validated['group_id']) ? \App\Models\WhatsAppGroup::find($validated['group_id']) : null;
+                $jid = $validated['group_jid'] ?? $group->group_id ?? null;
+                $name = $group->name ?? $jid;
+
+                if (!$jid) {
+                    return response()->json(['success' => false, 'message' => 'Could not resolve the group.'], 422);
+                }
+
+                $result = $this->sendToGroup($validated, $jid);
+                $results[] = ['group' => $name, 'group_id' => $jid, ...$result];
             }
 
             return response()->json(['success' => true, 'results' => $results]);
@@ -177,7 +205,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
                     'to'      => $to,
                     'contact' => [
                         'name'  => $data['contact_name'] ?? '',
-                        'phone' => $data['contact_phone'] ?? '',
+                        'phone' => $data['card_phone'] ?? $data['contact_phone'] ?? '',
                     ],
                 ];
                 break;

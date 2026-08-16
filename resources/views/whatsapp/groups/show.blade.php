@@ -526,7 +526,11 @@
             if (!selected) return;
             const type = selected.value;
             document.querySelectorAll('.composer-panel').forEach(function (panel) {
-                panel.classList.toggle('hidden', panel.dataset.panel !== type);
+                const active = panel.dataset.panel === type;
+                panel.classList.toggle('hidden', !active);
+                panel.querySelectorAll('input, textarea, select').forEach(function (el) {
+                    el.disabled = !active;
+                });
             });
             const mentions = document.getElementById('composerMentions');
             if (mentions) mentions.classList.toggle('hidden', type !== 'text' && type !== 'quoted');

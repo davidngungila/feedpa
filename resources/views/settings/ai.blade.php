@@ -7,7 +7,7 @@
     <!-- Status Header Card -->
     <div class="card overflow-hidden">
         <div class="p-6 sm:p-8">
-            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-6">
                 <div class="p-3 bg-white rounded-2xl border border-primary-100 shadow-sm flex-shrink-0">
                     <i class="fas fa-robot text-4xl text-primary-600"></i>
                 </div>
@@ -15,9 +15,9 @@
                     <div class="text-[10px] text-primary-500 uppercase font-extrabold tracking-widest mb-1">System Configuration</div>
                     <div class="text-xl font-bold text-primary-900 dark:text-white">AI Settings</div>
                     <div class="mt-2">
-                        <span class="badge badge-{{ $groqApiKey ? 'green' : 'yellow' }} px-4 py-1.5 text-xs">
-                            <i class="fas fa-{{ $groqApiKey ? 'check' : 'clock' }} me-2"></i>
-                            {{ $groqApiKey ? 'AI Assistant Enabled' : 'AI Assistant Disabled' }}
+                        <span class="badge badge-{{ $openrouterApiKey ? 'green' : 'yellow' }} px-4 py-1.5 text-xs">
+                            <i class="fas fa-{{ $openrouterApiKey ? 'check' : 'clock' }} me-2"></i>
+                            {{ $openrouterApiKey ? 'AI Assistant Enabled' : 'AI Assistant Disabled' }}
                         </span>
                     </div>
                 </div>
@@ -54,15 +54,15 @@
         <!-- AI Config Form -->
         <div class="card p-6 space-y-6">
             <h3 class="text-xs font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                <i class="fas fa-sliders-h"></i> Groq AI Configuration
+                <i class="fas fa-sliders-h"></i> OpenRouter AI Configuration
             </h3>
             <form method="POST" action="{{ route('settings.ai.update') }}">
                 @csrf
                 <div class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-1 gap-4">
                         <div class="md:col-span-2">
-                            <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">Groq API Key</div>
-                            <input type="password" name="groq_api_key" value="{{ old('groq_api_key', $groqApiKey) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Enter your Groq API key">
+                            <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">OpenRouter API Key</div>
+                            <input type="password" name="openrouter_api_key" value="{{ old('openrouter_api_key', $openrouterApiKey) }}" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="Enter your OpenRouter API key">
                         </div>
                     </div>
                 </div>

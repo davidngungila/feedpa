@@ -147,7 +147,7 @@ class SettingsController extends Controller
         $payoutNotificationsEnabled = SystemSetting::get('payout_notifications_enabled', true);
         
         // AI Settings
-        $groqApiKey = SystemSetting::get('groq_api_key', '');
+        $openrouterApiKey = SystemSetting::get('openrouter_api_key', '');
         
         $users = User::all();
         
@@ -161,7 +161,7 @@ class SettingsController extends Controller
             'siteDescription',
             'paymentNotificationsEnabled',
             'payoutNotificationsEnabled',
-            'groqApiKey',
+            'openrouterApiKey',
             'users'
         ));
     }
@@ -171,11 +171,11 @@ class SettingsController extends Controller
         $this->checkAdmin();
         $settings = SystemSetting::where('group', 'ai')->get()->keyBy('key');
         
-        $groqApiKey = SystemSetting::get('groq_api_key', '');
+        $openrouterApiKey = SystemSetting::get('openrouter_api_key', '');
         
         return view('settings.ai', compact(
             'settings',
-            'groqApiKey'
+            'openrouterApiKey'
         ));
     }
     
@@ -183,10 +183,10 @@ class SettingsController extends Controller
     {
         $this->checkAdmin();
         $validated = $request->validate([
-            'groq_api_key' => 'nullable|string',
+            'openrouter_api_key' => 'nullable|string',
         ]);
 
-        SystemSetting::set('groq_api_key', $validated['groq_api_key'] ?? '', 'string', 'ai', 'Groq API Key', 'API key for Groq AI');
+        SystemSetting::set('openrouter_api_key', $validated['openrouter_api_key'] ?? '', 'string', 'ai', 'OpenRouter API Key', 'API key for OpenRouter AI');
 
         return back()->with('success', 'AI Settings updated successfully!');
     }
@@ -215,7 +215,7 @@ class SettingsController extends Controller
             'site_description' => 'nullable|string',
             'payment_notifications_enabled' => 'nullable',
             'payout_notifications_enabled' => 'nullable',
-            'groq_api_key' => 'nullable|string',
+            'openrouter_api_key' => 'nullable|string',
         ]);
 
         SystemSetting::set('session_timeout', $validated['session_timeout'] ?? 120, 'number', 'general', 'Session Timeout (minutes)', 'How long until session expires');
@@ -226,7 +226,7 @@ class SettingsController extends Controller
         SystemSetting::set('payout_notifications_enabled', $request->has('payout_notifications_enabled'), 'boolean', 'general', 'Payout Notifications', 'Email officers when payout is made');
         
         // AI Settings
-        SystemSetting::set('groq_api_key', $validated['groq_api_key'] ?? '', 'string', 'ai', 'Groq API Key', 'API key for Groq AI');
+        SystemSetting::set('openrouter_api_key', $validated['openrouter_api_key'] ?? '', 'string', 'ai', 'OpenRouter API Key', 'API key for OpenRouter AI');
 
         return back()->with('success', 'General Settings updated successfully!');
     }

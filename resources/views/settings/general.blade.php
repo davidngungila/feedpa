@@ -19,9 +19,9 @@
                             <i class="fas fa-check-circle me-2"></i>
                             System Active
                         </span>
-                        <span class="badge badge-{{ $groqApiKey ? 'green' : 'yellow' }} px-4 py-1.5 text-xs">
-                            <i class="fas fa-{{ $groqApiKey ? 'check' : 'clock' }} me-2"></i>
-                            {{ $groqApiKey ? 'AI Assistant Enabled' : 'AI Assistant Disabled' }}
+                        <span class="badge badge-{{ $openrouterApiKey ? 'green' : 'yellow' }} px-4 py-1.5 text-xs">
+                            <i class="fas fa-{{ $openrouterApiKey ? 'check' : 'clock' }} me-2"></i>
+                            {{ $openrouterApiKey ? 'AI Assistant Enabled' : 'AI Assistant Disabled' }}
                         </span>
                     </div>
                 </div>

@@ -76,11 +76,11 @@ class AiChatController extends Controller
             'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:4096',
         ]);
 
-        $apiKey = SystemSetting::get('groq_api_key') ?? env('GROQ_API_KEY');
+        $apiKey = SystemSetting::get('openrouter_api_key');
         if (!$apiKey) {
             return response()->json([
                 'success' => false,
-                'message' => 'Groq API key not configured. Please set it in system settings or .env file.',
+                'message' => 'OpenRouter API key not configured. Please set it in AI Settings.',
             ], 400);
         }
 
@@ -146,7 +146,7 @@ class AiChatController extends Controller
                 'content' => $request->message,
             ];
 
-            $model = 'llama-3.3-70b-versatile';
+            $model = 'meta-llama/llama-3.3-70b-versatile';
             if ($imageFile) {
                 $mimeType = $imageFile->getMimeType() ?: 'image/jpeg';
                 $base64Image = base64_encode(file_get_contents($imageFile->getRealPath()));
@@ -172,13 +172,15 @@ class AiChatController extends Controller
             $response = Http::timeout(60)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $apiKey,
+                    'HTTP-Referer' => config('app.url'),
+                    'X-OpenRouter-Title' => config('app.name'),
                     'Content-Type' => 'application/json',
                 ])
-                ->post('https://api.groq.com/openai/v1/chat/completions', [
+                ->post('https://openrouter.ai/api/v1/chat/completions', [
                     'model' => $model,
                     'messages' => $messages,
                     'temperature' => 0.7,
-                    'max_completion_tokens' => 2048,
+                    'max_tokens' => 2048,
                 ]);
 
             if ($response->successful()) {
@@ -216,17 +218,17 @@ class AiChatController extends Controller
                 } else {
                     return response()->json([
                         'success' => false,
-                        'message' => 'AI Error: No response text received from Groq.',
+                        'message' => 'AI Error: No response text received from OpenRouter.',
                     ], 500);
                 }
             } else {
-                Log::error('Groq API failed', [
+                Log::error('OpenRouter API failed', [
                     'status' => $response->status(),
                     'body' => $response->body(),
                 ]);
                 return response()->json([
                     'success' => false,
-                    'message' => 'AI Error: Groq API failed (status ' . $response->status() . '): ' . $response->body(),
+                    'message' => 'AI Error: OpenRouter API failed (status ' . $response->status() . '): ' . $response->body(),
                 ], 500);
             }
         } catch (\Exception $e) {

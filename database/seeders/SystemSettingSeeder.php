@@ -11,12 +11,12 @@ class SystemSettingSeeder extends Seeder
     {
         $settings = [
             [
-                'key' => 'groq_api_key',
+                'key' => 'openrouter_api_key',
                 'value' => '',
                 'type' => 'string',
                 'group' => 'ai',
-                'label' => 'Groq API Key',
-                'description' => 'API key for Groq AI',
+                'label' => 'OpenRouter API Key',
+                'description' => 'API key for OpenRouter AI',
             ],
         ];
 

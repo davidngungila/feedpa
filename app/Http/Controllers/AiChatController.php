@@ -146,7 +146,7 @@ class AiChatController extends Controller
                 'content' => $request->message,
             ];
 
-            $model = 'meta-llama/llama-3.3-70b-versatile';
+            $model = 'meta-llama/llama-3.3-70b-instruct';
             if ($imageFile) {
                 $mimeType = $imageFile->getMimeType() ?: 'image/jpeg';
                 $base64Image = base64_encode(file_get_contents($imageFile->getRealPath()));
@@ -164,7 +164,7 @@ class AiChatController extends Controller
                     ],
                 ];
 
-                $model = 'meta-llama/llama-4-scout-17b-16e-instruct';
+                $model = 'meta-llama/llama-4-scout';
             }
 
             $messages[] = $userMessage;

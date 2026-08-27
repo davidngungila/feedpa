@@ -280,8 +280,13 @@ class AiChatController extends Controller
                     'model' => 'bytedance-seed/seedream-4.5',
                     'prompt' => $prompt,
                     'n' => 1,
-                    'size' => '1024x1024',
+                    'resolution' => '1K',
                 ]);
+
+            Log::info('OpenRouter Image API response', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
 
             if ($response->successful()) {
                 $result = $response->json();
@@ -335,9 +340,12 @@ class AiChatController extends Controller
                 'body' => $response->body(),
             ]);
 
+            $errorBody = json_decode($response->body(), true);
+            $errorMessage = $errorBody['error']['message'] ?? 'Image generation failed. Please try again.';
+
             return response()->json([
                 'success' => false,
-                'message' => 'Image generation failed. Please try again with a different prompt.',
+                'message' => 'Image generation error: ' . $errorMessage,
             ], 500);
         } catch (\Exception $e) {
             Log::error('Image generation exception', [

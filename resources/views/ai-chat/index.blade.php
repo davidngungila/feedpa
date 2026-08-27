@@ -160,6 +160,7 @@
                             <ul class="mt-2 space-y-2 text-xs text-primary-900 dark:text-primary-100">
                                 <li class="flex gap-2"><i class="fas fa-comment-dots mt-0.5 text-primary-500"></i><span>Ask about payments, bills, transactions, and workflows.</span></li>
                                 <li class="flex gap-2"><i class="fas fa-image mt-0.5 text-primary-500"></i><span>Upload a screenshot or receipt and ask FEEDTAN AI to explain it.</span></li>
+                                <li class="flex gap-2"><i class="fas fa-paintbrush mt-0.5 text-primary-500"></i><span>Generate images by typing "generate image of..." or "draw..."</span></li>
                                 <li class="flex gap-2"><i class="fas fa-file-pdf mt-0.5 text-primary-500"></i><span>Export the current conversation as a PDF.</span></li>
                             </ul>
                         </div>
@@ -376,7 +377,7 @@
 
         const isUser = role === 'user';
         const imageHtml = options.imageUrl
-            ? `<img src="${options.imageUrl}" alt="Uploaded attachment" class="mb-2 max-h-44 w-full rounded-xl object-cover border border-white/40">`
+            ? `<img src="${options.imageUrl}" alt="Generated image" class="mb-2 max-h-64 w-full rounded-xl object-cover border border-white/40">`
             : '';
         const copyButton = !isUser
             ? `<button type="button" class="ai-copy-response inline-flex items-center gap-1.5 rounded-lg border border-primary-200 px-2.5 py-1.5 text-[11px] font-bold text-primary-700 hover:bg-primary-50 transition-all" data-copy="${encodeURIComponent(text ?? '')}">
@@ -397,7 +398,7 @@
                 <div class="${isUser
                     ? 'rounded-2xl rounded-tr-sm bg-gradient-to-br from-primary-700 to-primary-500 text-white px-3 py-1.5 shadow-lg shadow-primary-900/15'
                     : 'rounded-2xl rounded-tl-sm border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-card px-3 py-1.5 shadow-sm'}">
-                    ${imageHtml}
+                    ${!isUser ? imageHtml : ''}
                     <div class="${isUser ? 'text-sm leading-snug whitespace-pre-wrap' : 'ai-response-content text-sm leading-snug text-primary-950 dark:text-primary-50'}">
                         ${isUser ? aiEscapeHtml(text ?? '') : aiFormatRichText(text ?? '')}
                     </div>
@@ -548,7 +549,11 @@
                     aiPageSessionId = data.session_id;
                     aiUpdateSessionList();
                 }
-                aiCreateMessageCard('assistant', data.response);
+                const responseOptions = {};
+                if (data.image_url) {
+                    responseOptions.imageUrl = data.image_url;
+                }
+                aiCreateMessageCard('assistant', data.response, responseOptions);
                 aiPageHistory.push({
                     role: 'assistant',
                     text: data.response

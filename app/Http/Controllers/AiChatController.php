@@ -15,6 +15,12 @@ use Illuminate\Support\Str;
 
 class AiChatController extends Controller
 {
+    private array $imageGenerationTriggers = [
+        'generate image', 'create image', 'draw', 'make a picture', 'picture of',
+        'image of', 'photo of', 'illustration of', 'generate a picture', 'generate a photo',
+        'picha', 'unda picha', 'chora', 'generate artwork', 'create artwork',
+    ];
+
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -169,6 +175,11 @@ class AiChatController extends Controller
 
             $messages[] = $userMessage;
 
+            // Check if user wants to generate an image
+            if ($this->isImageGenerationRequest($request->message)) {
+                return $this->generateImage($apiKey, $request->message, $user, $session, $imagePath);
+            }
+
             $response = Http::timeout(60)
                 ->withHeaders([
                     'Authorization' => 'Bearer ' . $apiKey,
@@ -240,6 +251,103 @@ class AiChatController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'AI Error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    protected function isImageGenerationRequest(string $message): bool
+    {
+        $lower = strtolower($message);
+        foreach ($this->imageGenerationTriggers as $trigger) {
+            if (str_contains($lower, $trigger)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected function generateImage(string $apiKey, string $prompt, $user, $session, ?string $imagePath)
+    {
+        try {
+            $response = Http::timeout(120)
+                ->withHeaders([
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'HTTP-Referer' => config('app.url'),
+                    'X-OpenRouter-Title' => config('app.name'),
+                    'Content-Type' => 'application/json',
+                ])
+                ->post('https://openrouter.ai/api/v1/images', [
+                    'model' => 'bytedance-seed/seedream-4.5',
+                    'prompt' => $prompt,
+                    'n' => 1,
+                    'size' => '1024x1024',
+                ]);
+
+            if ($response->successful()) {
+                $result = $response->json();
+                $imageData = $result['data'][0]['b64_json'] ?? null;
+
+                if ($imageData) {
+                    $imageFileName = 'ai-generated-' . time() . '.png';
+                    $imageStoragePath = 'ai-chat-images/' . $imageFileName;
+                    $fullPath = storage_path('app/public/' . $imageStoragePath);
+
+                    $dir = dirname($fullPath);
+                    if (!is_dir($dir)) {
+                        mkdir($dir, 0755, true);
+                    }
+
+                    file_put_contents($fullPath, base64_decode($imageData));
+
+                    // Save user message
+                    AiChatMessage::create([
+                        'user_id' => $user->id,
+                        'chat_session_id' => $session->id,
+                        'role' => 'user',
+                        'content' => $prompt,
+                        'image_path' => $imagePath,
+                    ]);
+
+                    // Save assistant response with generated image
+                    AiChatMessage::create([
+                        'user_id' => $user->id,
+                        'chat_session_id' => $session->id,
+                        'role' => 'assistant',
+                        'content' => "Here is the image I generated for you: **{$prompt}**",
+                        'image_path' => $imageStoragePath,
+                    ]);
+
+                    if (empty($session->title) || $session->title === 'New Chat') {
+                        $session->update(['title' => Str::limit($prompt, 50)]);
+                    }
+
+                    return response()->json([
+                        'success' => true,
+                        'response' => "Here is the image I generated for you based on: \"{$prompt}\"",
+                        'image_url' => '/storage/' . $imageStoragePath,
+                        'session_id' => $session->id,
+                    ]);
+                }
+            }
+
+            Log::error('OpenRouter Image API failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Image generation failed. Please try again with a different prompt.',
+            ], 500);
+        } catch (\Exception $e) {
+            Log::error('Image generation exception', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Image generation error: ' . $e->getMessage(),
             ], 500);
         }
     }
@@ -372,7 +480,11 @@ You help $name with payments, transactions, payouts, bills, beneficiaries, and g
 - Explain the payout workflow: Payout initiation by an authorized officer -> initiation OTP verification -> approval by an approver -> payment OTP request -> payment authorization -> processing -> completed (SUCCESS) or FAILED.
 - Explain transaction statuses: PENDING (awaiting confirmation), SUCCESS (payment confirmed), FAILED (payment failed).
 - Explain platform features: collecting payments via ClickPesa gateway, initiating bank transfer & mobile money payouts, bill payments, beneficiary management, reporting, notifications (SMS, WhatsApp, email), two-factor authentication, and payout WhatsApp notifications to recipients.
+- Generate images when requested. When the user asks you to generate, create, draw, or make an image/picture/photo/illustration, respond with the request and the system will automatically generate the image.
 - If you don't know or data is unavailable, say so honestly and offer the next step.
+
+## Image Generation
+When a user asks you to generate an image, you should respond normally acknowledging the request. The system will detect the image generation intent and call the image API automatically. Just respond as if you are fulfilling the request.
 
 ## Guidelines
 - Answer in a clear, structured, helpful way. Use short paragraphs, bullet points and bold for emphasis where useful.

@@ -168,58 +168,202 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         }
 
         try {
-            set_time_limit(0);
-            $results = [];
+            $recipients = $this->resolveRecipients($validated);
 
-            if ($validated['recipient_type'] === 'phone') {
-                $result = $this->sendToPhone($validated);
-                $results[] = ['phone' => $validated['phone'], ...$result];
-            } elseif ($validated['recipient_type'] === 'contact') {
-                $contact = !empty($validated['contact_id']) ? \App\Models\Contact::find($validated['contact_id']) : null;
-                $phone = $validated['contact_phone'] ?? $contact->phone ?? null;
-                $name = $contact->name ?? $phone;
+            if ($recipients === null) {
+                return response()->json(['success' => false, 'message' => 'Could not resolve the recipients.'], 422);
+            }
 
-                if (!$phone) {
-                    return response()->json(['success' => false, 'message' => 'Could not resolve the contact phone number.'], 422);
-                }
+            if (empty($recipients)) {
+                return response()->json(['success' => false, 'message' => 'Please select at least one recipient.'], 422);
+            }
 
-                $result = $this->sendToPhone(array_merge($validated, ['phone' => $phone]));
-                $results[] = ['contact' => $name, 'phone' => $phone, ...$result];
-            } elseif ($validated['recipient_type'] === 'group') {
-                $jids = array_values(array_unique(array_filter(array_map('trim', (array) ($validated['group_jid'] ?? [])))));
+            $payload = collect($validated)->except([
+                'recipient_type',
+                'phone',
+                'contact_id',
+                'contact_phone',
+                'group_id',
+                'group_jid',
+                'image_file',
+            ])->all();
 
-                if (!empty($validated['group_id'])) {
-                    $group = \App\Models\WhatsAppGroup::find($validated['group_id']);
-                    if ($group && !in_array($group->group_id, $jids)) {
-                        array_unshift($jids, $group->group_id);
-                    }
-                }
+            $batch = \App\Models\WhatsAppSendBatch::create([
+                'user_id' => auth()->id(),
+                'status'  => 'processing',
+                'total'   => count($recipients),
+            ]);
 
-                if (empty($jids)) {
-                    return response()->json(['success' => false, 'message' => 'Please select at least one group.'], 422);
-                }
+            foreach ($recipients as $r) {
+                \App\Models\WhatsAppSendJob::create([
+                    'batch_id'        => $batch->id,
+                    'recipient_type'  => $r['type'],
+                    'recipient'       => $r['recipient'],
+                    'recipient_name'  => $r['name'],
+                    'payload'         => $payload,
+                    'status'          => 'pending',
+                ]);
+            }
 
-                $groupNames = [];
-                foreach ($this->whatsapp->getGroups() as $g) {
-                    $gid = $g['jid'] ?? $g['id'] ?? '';
-                    if ($gid) {
-                        $groupNames[$gid] = $g['name'] ?? $g['subject'] ?? $gid;
-                    }
-                }
+            return response()->json([
+                'success'  => true,
+                'batch_id' => (int) $batch->id,
+                'total'    => count($recipients),
+                'message'  => count($recipients) . ' message(s) queued for sending.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('WhatsApp send queue error: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
 
-                foreach ($jids as $i => $jid) {
-                    $this->delayBetweenSends($i);
-                    $name = $groupNames[$jid] ?? $jid;
-                    $result = $this->sendToGroup($validated, $jid);
-                    $results[] = ['group' => $name, 'group_id' => $jid, ...$result];
+    protected function resolveRecipients(array $validated): ?array
+    {
+        $recipients = [];
+
+        if ($validated['recipient_type'] === 'phone') {
+            $recipients[] = ['type' => 'phone', 'recipient' => $validated['phone'], 'name' => $validated['phone']];
+        } elseif ($validated['recipient_type'] === 'contact') {
+            $contact = !empty($validated['contact_id']) ? \App\Models\Contact::find($validated['contact_id']) : null;
+            $phone = $validated['contact_phone'] ?? $contact->phone ?? null;
+            $name = $contact->name ?? $phone;
+
+            if (!$phone) {
+                return null;
+            }
+
+            $recipients[] = ['type' => 'phone', 'recipient' => $phone, 'name' => $name];
+        } elseif ($validated['recipient_type'] === 'group') {
+            $jids = array_values(array_unique(array_filter(array_map('trim', (array) ($validated['group_jid'] ?? [])))));
+
+            if (!empty($validated['group_id'])) {
+                $group = \App\Models\WhatsAppGroup::find($validated['group_id']);
+                if ($group && !in_array($group->group_id, $jids)) {
+                    array_unshift($jids, $group->group_id);
                 }
             }
 
-            return response()->json(['success' => true, 'results' => $results]);
+            if (empty($jids)) {
+                return [];
+            }
+
+            $groupNames = [];
+            foreach ($this->whatsapp->getGroups() as $g) {
+                $gid = $g['jid'] ?? $g['id'] ?? '';
+                if ($gid) {
+                    $groupNames[$gid] = $g['name'] ?? $g['subject'] ?? $gid;
+                }
+            }
+
+            foreach ($jids as $jid) {
+                $recipients[] = [
+                    'type'      => 'group',
+                    'recipient' => $jid,
+                    'name'      => $groupNames[$jid] ?? $jid,
+                ];
+            }
+        }
+
+        return $recipients;
+    }
+
+    public function processSendBatch(Request $request)
+    {
+        $validated = $request->validate([
+            'batch_id' => 'required|integer|exists:whatsapp_send_batches,id',
+        ]);
+
+        $batch = \App\Models\WhatsAppSendBatch::findOrFail($validated['batch_id']);
+
+        if ($batch->status !== 'processing') {
+            return $this->sendBatchProgress($batch);
+        }
+
+        try {
+            set_time_limit(0);
+
+            if ($batch->next_available_at && $batch->next_available_at->gt(now())) {
+                return $this->sendBatchProgress($batch);
+            }
+
+            $job = $batch->pendingJobs()->orderBy('id')->first();
+
+            if (!$job) {
+                $stale = $batch->jobs()
+                    ->where('status', 'sending')
+                    ->where('processed_at', '<', now()->subSeconds(90))
+                    ->orderBy('id')
+                    ->first();
+
+                if ($stale) {
+                    $stale->update(['status' => 'pending']);
+                    $job = $stale;
+                }
+            }
+
+            if (!$job) {
+                $batch->update(['status' => 'done']);
+                return $this->sendBatchProgress($batch);
+            }
+
+            $job->update(['status' => 'sending', 'processed_at' => now()]);
+
+            $data = (array) ($job->payload ?? []);
+            $data['recipient_type'] = $job->recipient_type;
+
+            if ($job->recipient_type === 'phone') {
+                $result = $this->sendToPhone(array_merge($data, ['phone' => $job->recipient]));
+            } else {
+                $result = $this->sendToGroup($data, $job->recipient);
+            }
+
+            $success = (bool) ($result['success'] ?? false);
+
+            $job->update([
+                'status'       => $success ? 'sent' : 'failed',
+                'message'      => $result['message'] ?? ($success ? 'Sent successfully' : 'Failed'),
+                'result'       => $result,
+                'processed_at' => now(),
+            ]);
+
+            $batch->increment($success ? 'sent' : 'failed');
+            $batch->update(['next_available_at' => now()->addSeconds(5)]);
+
+            if ($batch->pendingJobs()->count() === 0 && $batch->jobs()->where('status', 'sending')->count() === 0) {
+                $batch->update(['status' => 'done']);
+            }
+
+            return response()->json([
+                'success'  => true,
+                'done'     => $batch->status === 'done',
+                'total'    => (int) $batch->total,
+                'sent'     => (int) $batch->sent,
+                'failed'   => (int) $batch->failed,
+                'current'  => [
+                    'recipient_type' => $job->recipient_type,
+                    'recipient'      => $job->recipient,
+                    'recipient_name' => $job->recipient_name,
+                    'success'        => $success,
+                    'message'        => $result['message'] ?? ($success ? 'Sent successfully' : 'Failed'),
+                    'data'           => $result['data'] ?? null,
+                ],
+            ]);
         } catch (\Exception $e) {
-            Log::error('WhatsApp send message error: ' . $e->getMessage());
+            Log::error('WhatsApp background send error: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
+    }
+
+    protected function sendBatchProgress(\App\Models\WhatsAppSendBatch $batch): array
+    {
+        return [
+            'success' => true,
+            'done'    => $batch->status === 'done',
+            'total'   => (int) $batch->total,
+            'sent'    => (int) $batch->sent,
+            'failed'  => (int) $batch->failed,
+            'current' => null,
+        ];
     }
 
     public function uploadMessageImage(Request $request)

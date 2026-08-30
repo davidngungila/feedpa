@@ -608,7 +608,9 @@
                     const who = r.phone
                         ? '<i class="fas fa-phone mr-1"></i>' + r.phone
                         : (r.contact ? '<i class="fas fa-user mr-1"></i>' + r.contact
-                            : (r.group ? '<i class="fas fa-users mr-1"></i>' + r.group : '<i class="fas fa-user mr-1"></i>Unknown'));
+                            : (r.group ? '<i class="fas fa-users mr-1"></i>' + r.group
+                                : (r.recipient_name ? '<i class="fas fa-users mr-1"></i>' + r.recipient_name
+                                    : (r.recipient ? '<i class="fas fa-user mr-1"></i>' + r.recipient : '<i class="fas fa-user mr-1"></i>Unknown'))));
                     const sub = r.data && (r.data.msgId || r.data.jid || r.data.status)
                         ? '<span class="font-mono">msgId: ' + (r.data.msgId ?? '-') + ' | status: ' + (r.data.status ?? '-') + '</span>'
                         : '';
@@ -647,6 +649,25 @@
             }
         }
 
+        async function postProcessBatch(batchId) {
+            const params = new URLSearchParams();
+            params.append('batch_id', batchId);
+            try {
+                const response = await fetch('{{ route('whatsapp.messages.send-process') }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    },
+                    body: params.toString(),
+                });
+                return await response.json();
+            } catch (err) {
+                return { success: false, message: 'Network error. Please check your connection and try again.' };
+            }
+        }
+
         async function uploadImageFile(file) {
             const fd = new FormData();
             fd.append('image_file', file);
@@ -675,21 +696,6 @@
                 const messageTypeRadio = document.querySelector('.message-type:checked');
                 const messageType = messageTypeRadio ? messageTypeRadio.value : 'text';
 
-                let recipients = [];
-                if (recipientType === 'group') {
-                    recipients = Array.from(document.querySelectorAll('select[name="group_jid[]"] option:checked'))
-                        .map(o => o.value)
-                        .filter(v => v);
-                } else if (recipientType === 'contact') {
-                    const value = (document.querySelector('select[name="contact_phone"]') || {}).value || '';
-                    if (!value) throw new Error('Please select a saved contact.');
-                    recipients = [value];
-                } else {
-                    const value = (document.querySelector('input[name="phone"]').value || '').trim();
-                    if (!value) throw new Error('Please enter a phone number.');
-                    recipients = [value];
-                }
-
                 const imageFile = imageFileInput && imageFileInput.files && imageFileInput.files[0];
                 let uploadedUrl = null;
                 if (messageType === 'image' && imageFile) {
@@ -702,43 +708,46 @@
                     uploadedUrl = up.url;
                 }
 
-                if (!recipients.length) {
-                    openSendResultsModal([{ success: false, message: 'Please select at least one recipient.' }]);
+                const batchFd = new FormData(form);
+                if (uploadedUrl) {
+                    batchFd.set('media_url', uploadedUrl);
+                    batchFd.delete('image_file');
+                }
+
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Queuing...';
+                const startResp = await postSend(batchFd);
+
+                if (!(startResp && startResp.success && startResp.batch_id)) {
+                    openSendResultsModal([{ success: false, message: (startResp && startResp.message) || 'Failed to start sending. Please try again.' }]);
                     return;
                 }
 
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending 0/' + startResp.total + '...';
 
-                for (let i = 0; i < recipients.length; i++) {
-                    if (i > 0) await sleep(5200);
+                let done = false;
+                while (!done) {
+                    const pr = await postProcessBatch(startResp.batch_id);
 
-                    const fd = new FormData(form);
-                    if (recipientType === 'group') {
-                        fd.delete('group_jid[]');
-                        fd.append('group_jid[]', recipients[i]);
-                    } else if (recipientType === 'contact') {
-                        fd.set('contact_phone', recipients[i]);
-                    } else {
-                        fd.set('phone', recipients[i]);
+                    if (!(pr && pr.success)) {
+                        results.push({ success: false, message: (pr && pr.message) || 'Network error. Please check your connection and try again.' });
+                        done = true;
+                        break;
                     }
 
-                    if (uploadedUrl) {
-                        fd.set('media_url', uploadedUrl);
-                        fd.delete('image_file');
-                    } else if (messageType === 'image' && !imageFile && !fd.get('media_url')) {
-                        results.push({ success: false, message: 'Please provide a media URL or upload/paste an image.' });
-                        continue;
+                    if (pr.current) {
+                        results.push({
+                            recipient_type: pr.current.recipient_type,
+                            recipient: pr.current.recipient,
+                            recipient_name: pr.current.recipient_name,
+                            success: pr.current.success === true,
+                            message: pr.current.message,
+                            data: pr.current.data,
+                        });
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending ' + pr.sent + '/' + pr.total + '...';
                     }
 
-                    const body = await postSend(fd);
-
-                    if (body && body.success && Array.isArray(body.results)) {
-                        results.push.apply(results, body.results);
-                    } else if (body && !body.success) {
-                        results.push({ success: false, message: body.message || 'Request failed. Please try again.' });
-                    } else {
-                        results.push({ success: false, message: 'Network error. Please check your connection and try again.' });
-                    }
+                    done = !!pr.done;
+                    if (!done) await sleep(5200);
                 }
 
                 openSendResultsModal(results);

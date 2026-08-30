@@ -78,7 +78,7 @@
                     <div>
                         <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Recipient</label>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mb-3">
-                            @foreach(['phone' => 'Phone Number', 'contact' => 'Saved Contact', 'group' => 'Group'] as $value => $label)
+                            @foreach(['phone' => 'Phone Number', 'contact' => 'Saved Contact', 'group' => 'Group(s)'] as $value => $label)
                             <label class="cursor-pointer">
                                 <input type="radio" name="recipient_type" value="{{ $value }}" class="hidden peer recipient-type" {{ $loop->first ? 'checked' : '' }}>
                                 <div class="px-3 py-2 rounded-xl border border-primary-100 dark:border-primary-800 text-center text-xs font-bold text-primary-700 dark:text-primary-300 peer-checked:bg-primary-600 peer-checked:text-white peer-checked:border-primary-600 transition-all">
@@ -130,8 +130,7 @@
 
                         <!-- Group Select -->
                         <div id="recipientGroup" class="hidden">
-                            <select name="group_jid" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-                                <option value="">-- Select Group --</option>
+                            <select name="group_jid[]" multiple size="6" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                                 @php $seenJids = []; @endphp
                                 @foreach($groups as $group)
                                     @php $seenJids[$group->group_id] = true; @endphp
@@ -148,7 +147,7 @@
                                 @endif
                             </select>
                             @if(!empty($liveGroups) || $groups->isNotEmpty())
-                                <p class="text-[10px] text-primary-400 mt-1">{{ count($seenJids) }} groups available (from WhatsApp + saved).</p>
+                                <p class="text-[10px] text-primary-400 mt-1">{{ count($seenJids) }} groups available (from WhatsApp + saved). Select one or more groups — hold <strong>Ctrl</strong> (or <strong>Cmd</strong>) to pick multiple.</p>
                             @elseif($groupsError)
                                 <p class="text-[10px] text-amber-600 dark:text-amber-400 mt-1"><i class="fas fa-exclamation-triangle mr-1"></i> Could not load WhatsApp groups: {{ $groupsError }}</p>
                             @elseif(!$apiKeyConfigured)

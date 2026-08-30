@@ -105,7 +105,8 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             'contact_id' => 'nullable|exists:contacts,id',
             'contact_phone' => 'nullable|string',
             'group_id' => 'nullable|exists:whatsapp_groups,id',
-            'group_jid' => 'nullable|string',
+            'group_jid' => 'nullable|array',
+            'group_jid.*' => 'string',
             'text' => 'nullable|string',
             'media_url' => 'nullable|url|required_if:message_type,image,document,video,audio,sticker,viewOnce',
             'caption' => 'nullable|string',
@@ -159,16 +160,32 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
                 $result = $this->sendToPhone(array_merge($validated, ['phone' => $phone]));
                 $results[] = ['contact' => $name, 'phone' => $phone, ...$result];
             } elseif ($validated['recipient_type'] === 'group') {
-                $group = !empty($validated['group_id']) ? \App\Models\WhatsAppGroup::find($validated['group_id']) : null;
-                $jid = $validated['group_jid'] ?? $group->group_id ?? null;
-                $name = $group->name ?? $jid;
+                $jids = array_values(array_unique(array_filter(array_map('trim', (array) ($validated['group_jid'] ?? [])))));
 
-                if (!$jid) {
-                    return response()->json(['success' => false, 'message' => 'Could not resolve the group.'], 422);
+                if (!empty($validated['group_id'])) {
+                    $group = \App\Models\WhatsAppGroup::find($validated['group_id']);
+                    if ($group && !in_array($group->group_id, $jids)) {
+                        array_unshift($jids, $group->group_id);
+                    }
                 }
 
-                $result = $this->sendToGroup($validated, $jid);
-                $results[] = ['group' => $name, 'group_id' => $jid, ...$result];
+                if (empty($jids)) {
+                    return response()->json(['success' => false, 'message' => 'Please select at least one group.'], 422);
+                }
+
+                $groupNames = [];
+                foreach ($this->whatsapp->getGroups() as $g) {
+                    $gid = $g['jid'] ?? $g['id'] ?? '';
+                    if ($gid) {
+                        $groupNames[$gid] = $g['name'] ?? $g['subject'] ?? $gid;
+                    }
+                }
+
+                foreach ($jids as $jid) {
+                    $name = $groupNames[$jid] ?? $jid;
+                    $result = $this->sendToGroup($validated, $jid);
+                    $results[] = ['group' => $name, 'group_id' => $jid, ...$result];
+                }
             }
 
             return response()->json(['success' => true, 'results' => $results]);

@@ -222,6 +222,29 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         }
     }
 
+    public function uploadMessageImage(Request $request)
+    {
+        $request->validate([
+            'image_file' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+        ]);
+
+        $result = $this->whatsapp->uploadFile($request->file('image_file'));
+
+        if (!($result['success'] ?? false)) {
+            return response()->json(['success' => false, 'message' => $result['message'] ?? 'Image upload failed.'], 422);
+        }
+
+        $url = $result['url']
+            ?? $result['data']['url'] ?? null
+            ?? $result['data']['fileUrl'] ?? null;
+
+        if (empty($url)) {
+            return response()->json(['success' => false, 'message' => 'Image uploaded but no file URL was returned.'], 422);
+        }
+
+        return response()->json(['success' => true, 'url' => $url]);
+    }
+
     public function sendBulkMessages(Request $request)
     {
         $validated = $request->validate([

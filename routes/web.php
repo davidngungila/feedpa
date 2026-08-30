@@ -203,6 +203,7 @@ Route::middleware(['auth'])->group(function () {
             // Send Messages
             Route::get('/messages/send', [WhatsAppOperationsController::class, 'sendMessages'])->name('messages.send');
             Route::post('/messages/send', [WhatsAppOperationsController::class, 'sendMessagesPost'])->name('messages.send.post');
+            Route::post('/messages/upload-image', [WhatsAppOperationsController::class, 'uploadMessageImage'])->name('messages.upload-image');
             Route::post('/messages/send-bulk', [WhatsAppOperationsController::class, 'sendBulkMessages'])->name('messages.send-bulk');
             Route::delete('/messages/{msgId}', [WhatsAppOperationsController::class, 'deleteMessage'])->name('messages.delete');
             Route::post('/messages/read', [WhatsAppOperationsController::class, 'markMessageRead'])->name('messages.mark-read');

@@ -584,6 +584,8 @@
         const form = document.getElementById('sendMessageForm');
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalBtnHtml = submitBtn.innerHTML;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const sleep = function (ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); };
 
         function openSendResultsModal(results) {
             const body = document.getElementById('sendResultsBody');
@@ -632,38 +634,120 @@
         window.openSendResultsModal = openSendResultsModal;
         window.closeSendResultsModal = closeSendResultsModal;
 
-        form.addEventListener('submit', function (e) {
+        async function postSend(formData) {
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                    body: formData,
+                });
+                return await response.json();
+            } catch (err) {
+                return { success: false, message: 'Network error. Please check your connection and try again.' };
+            }
+        }
+
+        async function uploadImageFile(file) {
+            const fd = new FormData();
+            fd.append('image_file', file);
+            try {
+                const response = await fetch('{{ route('whatsapp.messages.upload-image') }}', {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' },
+                    body: fd,
+                });
+                return await response.json();
+            } catch (err) {
+                return { success: false, message: 'Image upload failed. Please try again.' };
+            }
+        }
+
+        form.addEventListener('submit', async function (e) {
             e.preventDefault();
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
 
-            setPanelState();
-            const data = new FormData(form);
+            try {
+                setPanelState();
+                const results = [];
+                const recipientRadio = document.querySelector('.recipient-type:checked');
+                const recipientType = recipientRadio ? recipientRadio.value : 'phone';
+                const messageTypeRadio = document.querySelector('.message-type:checked');
+                const messageType = messageTypeRadio ? messageTypeRadio.value : 'text';
 
-            fetch(form.action, {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content') },
-                body: data,
-            })
-            .then(function (response) {
-                return response.json().then(function (data) {
-                    return { ok: response.ok, data: data };
-                });
-            })
-            .then(function (result) {
-                if (result.data.success) {
-                    openSendResultsModal(result.data.results);
+                let recipients = [];
+                if (recipientType === 'group') {
+                    recipients = Array.from(document.querySelectorAll('select[name="group_jid[]"] option:checked'))
+                        .map(o => o.value)
+                        .filter(v => v);
+                } else if (recipientType === 'contact') {
+                    const value = (document.querySelector('select[name="contact_phone"]') || {}).value || '';
+                    if (!value) throw new Error('Please select a saved contact.');
+                    recipients = [value];
                 } else {
-                    openSendResultsModal([{ success: false, message: result.data.message || 'Request failed. Please try again.' }]);
+                    const value = (document.querySelector('input[name="phone"]').value || '').trim();
+                    if (!value) throw new Error('Please enter a phone number.');
+                    recipients = [value];
                 }
-            })
-            .catch(function () {
-                openSendResultsModal([{ success: false, message: 'Network error. Please check your connection and try again.' }]);
-            })
-            .finally(function () {
+
+                const imageFile = imageFileInput && imageFileInput.files && imageFileInput.files[0];
+                let uploadedUrl = null;
+                if (messageType === 'image' && imageFile) {
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Uploading image...';
+                    const up = await uploadImageFile(imageFile);
+                    if (!(up && up.success)) {
+                        openSendResultsModal([{ success: false, message: (up && up.message) || 'Image upload failed. Please try again.' }]);
+                        return;
+                    }
+                    uploadedUrl = up.url;
+                }
+
+                if (!recipients.length) {
+                    openSendResultsModal([{ success: false, message: 'Please select at least one recipient.' }]);
+                    return;
+                }
+
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Sending...';
+
+                for (let i = 0; i < recipients.length; i++) {
+                    if (i > 0) await sleep(5200);
+
+                    const fd = new FormData(form);
+                    if (recipientType === 'group') {
+                        fd.delete('group_jid[]');
+                        fd.append('group_jid[]', recipients[i]);
+                    } else if (recipientType === 'contact') {
+                        fd.set('contact_phone', recipients[i]);
+                    } else {
+                        fd.set('phone', recipients[i]);
+                    }
+
+                    if (uploadedUrl) {
+                        fd.set('media_url', uploadedUrl);
+                        fd.delete('image_file');
+                    } else if (messageType === 'image' && !imageFile && !fd.get('media_url')) {
+                        results.push({ success: false, message: 'Please provide a media URL or upload/paste an image.' });
+                        continue;
+                    }
+
+                    const body = await postSend(fd);
+
+                    if (body && body.success && Array.isArray(body.results)) {
+                        results.push.apply(results, body.results);
+                    } else if (body && !body.success) {
+                        results.push({ success: false, message: body.message || 'Request failed. Please try again.' });
+                    } else {
+                        results.push({ success: false, message: 'Network error. Please check your connection and try again.' });
+                    }
+                }
+
+                openSendResultsModal(results);
+            } catch (err) {
+                openSendResultsModal([{ success: false, message: (err && err.message) || 'Network error. Please check your connection and try again.' }]);
+            } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalBtnHtml;
-            });
+            }
         });
     });
 </script>

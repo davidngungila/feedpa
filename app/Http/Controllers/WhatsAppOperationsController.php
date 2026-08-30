@@ -143,6 +143,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         }
 
         try {
+            set_time_limit(0);
             $results = [];
 
             if ($validated['recipient_type'] === 'phone') {
@@ -181,7 +182,8 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
                     }
                 }
 
-                foreach ($jids as $jid) {
+                foreach ($jids as $i => $jid) {
+                    $this->delayBetweenSends($i);
                     $name = $groupNames[$jid] ?? $jid;
                     $result = $this->sendToGroup($validated, $jid);
                     $results[] = ['group' => $name, 'group_id' => $jid, ...$result];
@@ -214,21 +216,26 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
         $results = [];
 
         try {
+            set_time_limit(0);
+
             if ($validated['recipient_type'] === 'contacts') {
-                foreach ($validated['contact_ids'] as $contactId) {
+                foreach ($validated['contact_ids'] as $i => $contactId) {
+                    $this->delayBetweenSends($i);
                     $contact = \App\Models\Contact::find($contactId);
                     $result = $this->sendToPhone(array_merge($validated, ['phone' => $contact->phone]));
                     $results[] = ['contact' => $contact->name, 'phone' => $contact->phone, ...$result];
                 }
             } elseif ($validated['recipient_type'] === 'groups') {
-                foreach ($validated['group_ids'] as $groupId) {
+                foreach ($validated['group_ids'] as $i => $groupId) {
+                    $this->delayBetweenSends($i);
                     $group = \App\Models\WhatsAppGroup::find($groupId);
                     $result = $this->sendToGroup($validated, $group->group_id);
                     $results[] = ['group' => $group->name, 'group_id' => $group->group_id, ...$result];
                 }
             } elseif ($validated['recipient_type'] === 'custom') {
-                $phones = array_filter(array_map('trim', explode("\n", $validated['custom_phones'])));
-                foreach ($phones as $phone) {
+                $phones = array_values(array_filter(array_map('trim', explode("\n", $validated['custom_phones']))));
+                foreach ($phones as $i => $phone) {
+                    $this->delayBetweenSends($i);
                     $result = $this->sendToPhone(array_merge($validated, ['phone' => $phone]));
                     $results[] = ['phone' => $phone, ...$result];
                 }
@@ -336,12 +343,36 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
     protected function sendToPhone(array $data): array
     {
-        return $this->dispatchSend($data, $data['phone']);
+        return $this->sendWithRateLimit($data, $data['phone']);
     }
 
     protected function sendToGroup(array $data, string $groupId): array
     {
-        return $this->dispatchSend($data, $groupId);
+        return $this->sendWithRateLimit($data, $groupId);
+    }
+
+    protected function sendWithRateLimit(array $data, string $to): array
+    {
+        $result = $this->dispatchSend($data, $to);
+
+        if (!($result['success'] ?? false) && $this->isAccountProtectionFailure($result)) {
+            sleep(6);
+            $result = $this->dispatchSend($data, $to);
+        }
+
+        return $result;
+    }
+
+    protected function isAccountProtectionFailure(array $result): bool
+    {
+        return stripos((string) ($result['message'] ?? ''), 'account protection') !== false;
+    }
+
+    protected function delayBetweenSends(int $index): void
+    {
+        if ($index > 0) {
+            sleep(5);
+        }
     }
 
     protected function sendPolls(array $data, string $to): array
@@ -381,7 +412,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             }
 
             if ($i < $total - 1) {
-                usleep(500000);
+                sleep(5);
             }
         }
 

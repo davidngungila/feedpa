@@ -319,9 +319,16 @@ class WhatsAppService
             $body = $response->json() ?? [];
 
             if ($response->successful() && ($body['success'] ?? false) === true) {
+                $uploadedUrl = $body['publicUrl']
+                    ?? $body['url']
+                    ?? $body['data']['url'] ?? null
+                    ?? $body['data']['fileUrl'] ?? null
+                    ?? (is_string($body['data'] ?? null) ? $body['data'] : null);
+
                 return [
                     'success' => true,
                     'data'    => $body['data'] ?? null,
+                    'url'     => $uploadedUrl,
                     'message' => $body['message'] ?? 'File uploaded successfully',
                 ];
             }

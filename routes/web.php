@@ -373,7 +373,7 @@ Route::get('/webhooks/events', [WhatsAppOperationsController::class, 'webhookLog
             }
 
             if ($uploadResult['success'] ?? false) {
-                $pdfUrl = $uploadResult['data']['url'] ?? $uploadResult['data']['fileUrl'] ?? null;
+                $pdfUrl = $uploadResult['url'] ?? $uploadResult['data']['url'] ?? $uploadResult['data']['fileUrl'] ?? null;
                 
                 if ($pdfUrl) {
                     $result = $whatsappService->sendDocument($phone, $pdfUrl, $pdfFileName, $message);

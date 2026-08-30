@@ -157,7 +157,9 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
                 return response()->json(['success' => false, 'message' => 'Image upload failed: ' . ($upload['message'] ?? 'Unknown error')], 422);
             }
 
-            $uploadedUrl = $upload['data']['url'] ?? $upload['data']['fileUrl'] ?? null;
+            $uploadedUrl = $upload['url']
+                ?? $upload['data']['url'] ?? null
+                ?? $upload['data']['fileUrl'] ?? null;
             if (empty($uploadedUrl)) {
                 return response()->json(['success' => false, 'message' => 'Image uploaded but no file URL was returned.'], 422);
             }
@@ -1465,7 +1467,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
                 'type' => $request->type,
                 'mime_type' => $mimeType,
                 'size' => $size,
-                'url' => $result['data']['url'] ?? $result['data']['fileUrl'] ?? null,
+                'url' => $result['url'] ?? $result['data']['url'] ?? $result['data']['fileUrl'] ?? null,
                 'wasender_id' => $result['data']['id'] ?? null,
             ]);
 

@@ -170,6 +170,21 @@
                             <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Media URL</label>
                             <input type="url" name="media_url" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="https://example.com/file.jpg">
                         </div>
+                        <div id="imageUploadBlock" class="hidden">
+                            <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">Or Upload / Paste Image</label>
+                            <input type="file" name="image_file" id="imageFile" accept="image/*" class="hidden">
+                            <div id="imageDropZone" class="relative border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl p-4 text-center cursor-pointer hover:border-green-400 hover:bg-green-50/40 dark:hover:bg-green-900/10 transition-all overflow-hidden">
+                                <img id="imagePreview" class="hidden max-h-40 mx-auto rounded-lg object-contain" alt="Preview">
+                                <div id="imageDropText" class="text-xs text-primary-500">
+                                    <i class="fas fa-cloud-upload-alt text-lg mb-1"></i>
+                                    <p class="font-bold">Click to choose an image</p>
+                                    <p class="text-[10px] mt-1">or paste one directly with <strong>Ctrl+V</strong></p>
+                                </div>
+                            </div>
+                            <button type="button" id="clearImageBtn" class="hidden mt-2 px-3 py-1 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold hover:bg-red-100 transition-all">
+                                <i class="fas fa-times mr-1"></i> Remove image
+                            </button>
+                        </div>
                         <div id="fileNameField" class="hidden">
                             <label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block">File Name</label>
                             <input type="text" name="file_name" class="w-full px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="document.pdf">
@@ -273,7 +288,7 @@
                     <i class="fas fa-info-circle"></i> Tip
                 </h3>
                 <p class="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
-                    Phone numbers must include the country code without the "+" sign (e.g. 255655123456). For media messages, provide a publicly accessible URL or upload files under Media & Files first.
+                    Phone numbers must include the country code without the "+" sign (e.g. 255655123456). For image messages you can paste (Ctrl+V), drag & drop, or browse to upload an image, or provide a publicly accessible URL. For other media, provide a public URL or upload files under Media & Files first.
                 </p>
             </div>
         </div>
@@ -349,8 +364,79 @@
             } else if (fieldPanels[type]) {
                 fieldPanels[type].classList.remove('hidden');
             }
+
+            if (imageUploadBlock) {
+                if (type === 'image') {
+                    imageUploadBlock.classList.remove('hidden');
+                } else {
+                    imageUploadBlock.classList.add('hidden');
+                    resetImageUpload();
+                }
+            }
             fileNameField.classList.toggle('hidden', type !== 'document');
             setPanelState();
+        }
+
+        const imageUploadBlock = document.getElementById('imageUploadBlock');
+        const imageFileInput = document.getElementById('imageFile');
+        const imagePreview = document.getElementById('imagePreview');
+        const imageDropZone = document.getElementById('imageDropZone');
+        const imageDropText = document.getElementById('imageDropText');
+        const clearImageBtn = document.getElementById('clearImageBtn');
+
+        function resetImageUpload() {
+            imageFileInput.value = '';
+            imagePreview.src = '';
+            imagePreview.classList.add('hidden');
+            imageDropText.classList.remove('hidden');
+            clearImageBtn.classList.add('hidden');
+        }
+
+        function showImage(file) {
+            if (!file || !file.type.startsWith('image/')) return;
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            imageFileInput.files = dt.files;
+            imagePreview.src = URL.createObjectURL(file);
+            imagePreview.classList.remove('hidden');
+            imageDropText.classList.add('hidden');
+            clearImageBtn.classList.remove('hidden');
+        }
+
+        if (imageDropZone) {
+            imageDropZone.addEventListener('click', function () { imageFileInput.click(); });
+            imageDropZone.addEventListener('dragover', function (e) { e.preventDefault(); });
+            imageDropZone.addEventListener('drop', function (e) {
+                e.preventDefault();
+                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file) showImage(file);
+            });
+
+            imageFileInput.addEventListener('change', function () {
+                showImage(this.files && this.files[0]);
+            });
+
+            clearImageBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                resetImageUpload();
+            });
+
+            document.addEventListener('paste', function (e) {
+                const selectedType = document.querySelector('.message-type:checked');
+                if (!selectedType || selectedType.value !== 'image') return;
+                const items = e.clipboardData && e.clipboardData.items;
+                if (!items) return;
+                for (const item of items) {
+                    if (item.type && item.type.startsWith('image/')) {
+                        const file = item.getAsFile();
+                        if (file) {
+                            showImage(file);
+                            e.preventDefault();
+                            break;
+                        }
+                    }
+                }
+            });
         }
 
         messageTypes.forEach(input => input.addEventListener('change', updateMessageFields));

@@ -108,7 +108,8 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
             'group_jid' => 'nullable|array',
             'group_jid.*' => 'string',
             'text' => 'nullable|string',
-            'media_url' => 'nullable|url|required_if:message_type,image,document,video,audio,sticker,viewOnce',
+            'media_url' => 'nullable|url',
+            'image_file' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
             'caption' => 'nullable|string',
             'file_name' => 'nullable|string',
             'contact_name' => 'nullable|string|required_if:message_type,contact',
@@ -140,6 +141,28 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
         if ($validated['recipient_type'] === 'group' && empty($validated['group_id']) && empty($validated['group_jid'])) {
             return response()->json(['success' => false, 'message' => 'Please select a group.'], 422);
+        }
+
+        $mediaRequiredTypes = ['image', 'document', 'video', 'audio', 'sticker', 'viewOnce'];
+        if (in_array($validated['message_type'], $mediaRequiredTypes, true)
+            && empty($validated['media_url'])
+            && !$request->hasFile('image_file')) {
+            return response()->json(['success' => false, 'message' => 'Please provide a media URL or upload/paste a media file.'], 422);
+        }
+
+        if ($request->hasFile('image_file')) {
+            $upload = $this->whatsapp->uploadFile($request->file('image_file'));
+
+            if (!($upload['success'] ?? false)) {
+                return response()->json(['success' => false, 'message' => 'Image upload failed: ' . ($upload['message'] ?? 'Unknown error')], 422);
+            }
+
+            $uploadedUrl = $upload['data']['url'] ?? $upload['data']['fileUrl'] ?? null;
+            if (empty($uploadedUrl)) {
+                return response()->json(['success' => false, 'message' => 'Image uploaded but no file URL was returned.'], 422);
+            }
+
+            $validated['media_url'] = $uploadedUrl;
         }
 
         try {

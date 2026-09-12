@@ -10,8 +10,6 @@ use Illuminate\Support\Facades\DB;
 
 class SmsDashboardController extends Controller
 {
-    public function __construct(){ $this->middleware('auth'); }
-
     public function index(Request $request)
     {
         $today = today();

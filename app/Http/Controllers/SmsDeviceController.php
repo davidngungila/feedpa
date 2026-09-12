@@ -11,11 +11,6 @@ use Illuminate\Support\Facades\Auth;
 
 class SmsDeviceController extends Controller
 {
-    public function __construct()
-    {
-        $this->middleware('auth');
-    }
-
     public function index(Request $request)
     {
         $q = SmsDevice::with(['location'])->withCount('smsMessages')->latest();

@@ -9,8 +9,6 @@ use Illuminate\Http\Request;
 
 class SmsInboxController extends Controller
 {
-    public function __construct(){ $this->middleware('auth'); }
-
     public function index(Request $request)
     {
         $q = SmsMessage::with(['device','provider','smsTransaction','reconciliation'])->latest('sms_timestamp');

@@ -9,8 +9,6 @@ use Illuminate\Support\Facades\Auth;
 
 class SmsReconciliationController extends Controller
 {
-    public function __construct(){ $this->middleware('auth'); }
-
     public function index(Request $request)
     {
         $q = SmsReconciliation::with(['smsTransaction','smsMessage.device','smsMessage.provider'])->latest();

@@ -28,6 +28,7 @@
                 <div><span class="text-primary-500">Last SMS</span><p class="font-bold">{{ $device->last_sms_at ?? 'never' }}</p></div>
             </div>
 
+            @if(auth()->user()->is_admin)
             <div class="flex flex-wrap gap-2 pt-2">
                 <form method="POST" action="{{ route('sms-gateway.devices.generate-code', $device) }}">@csrf<button class="px-4 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold">Generate Activation Code</button></form>
                 @if($device->status !== 'ACTIVE')
@@ -37,6 +38,9 @@
                 @endif
                 <form method="POST" action="{{ route('sms-gateway.devices.revoke', $device) }}" onsubmit="return confirm('Revoke device and all tokens?')">@csrf<button class="px-4 py-2 rounded-lg bg-red-600 text-white text-xs font-bold">Revoke</button></form>
             </div>
+            @else
+            <div class="p-3 rounded-lg bg-gray-50 border border-primary-100 text-xs text-primary-500"><i class="fa-solid fa-lock me-1"></i> Device controls (Generate Code / Suspend / Revoke) are admin-only.</div>
+            @endif
 
             @if($device->activation_code)
             <div class="p-4 rounded-xl bg-amber-50 border border-amber-300">
@@ -83,7 +87,9 @@
                 </div>
             </div>
 
+            @if(auth()->user()->is_admin)
             <form method="POST" action="{{ route('sms-gateway.devices.destroy', $device) }}" onsubmit="return confirm('Delete device permanently?')">@csrf @method('DELETE')<button class="w-full px-3 py-2 rounded-lg border border-red-200 text-red-600 text-xs font-bold">Delete Device</button></form>
+            @endif
         </div>
     </div>
 </div>

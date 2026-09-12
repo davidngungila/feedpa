@@ -69,12 +69,14 @@ class SmsDeviceController extends Controller
 
     public function generateCode(SmsDevice $device)
     {
+        abort_unless(auth()->user()->is_admin, 403, 'Admin only.');
         $code = $device->generateActivationCode(60);
         return back()->with('success', "New activation code: {$code} (valid 60 min)");
     }
 
     public function revoke(SmsDevice $device)
     {
+        abort_unless(auth()->user()->is_admin, 403, 'Admin only.');
         $device->update(['status'=>'REVOKED']);
         $device->tokens()->update(['is_revoked'=>true]);
         return back()->with('success', 'Device revoked. Tokens invalidated.');
@@ -82,18 +84,21 @@ class SmsDeviceController extends Controller
 
     public function suspend(SmsDevice $device)
     {
+        abort_unless(auth()->user()->is_admin, 403, 'Admin only.');
         $device->update(['status'=>'SUSPENDED']);
         return back()->with('success', 'Device suspended.');
     }
 
     public function activate(SmsDevice $device)
     {
+        abort_unless(auth()->user()->is_admin, 403, 'Admin only.');
         $device->update(['status'=>'ACTIVE']);
         return back()->with('success', 'Device activated.');
     }
 
     public function destroy(SmsDevice $device)
     {
+        abort_unless(auth()->user()->is_admin, 403, 'Admin only.');
         $device->delete();
         return redirect()->route('sms-gateway.devices.index')->with('success','Device deleted.');
     }

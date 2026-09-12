@@ -40,6 +40,12 @@
             <a href="{{ route('sms-gateway.sms', ['filter'=>'recorded']) }}" class="px-3 py-1.5 rounded-full border border-green-200 bg-green-50 text-green-700">Recorded</a>
             <a href="{{ route('sms-gateway.sms', ['filter'=>'not_recorded']) }}" class="px-3 py-1.5 rounded-full border border-amber-200 bg-amber-50 text-amber-700">Not Recorded</a>
             <a href="{{ route('sms-gateway.sms') }}" class="px-3 py-1.5 rounded-full border border-primary-200 hover:bg-primary-50">Clear</a>
+            @if(auth()->user()->is_admin)
+                <form method="POST" action="{{ route('sms-gateway.reparse-all') }}" onsubmit="return confirm('Re-parse all messages with new Swahili+English parser? This will fix Amount/Reference/Balance for old SMS.')" class="ml-2">
+                    @csrf
+                    <button class="px-3 py-1.5 rounded-full bg-amber-500 text-white font-bold hover:bg-amber-600"><i class="fa-solid fa-rotate me-1"></i> Re-parse Swahili</button>
+                </form>
+            @endif
             <span class="ml-auto text-primary-400 hidden sm:inline">Click any row → right drawer with full details • Add comment • Toggle recorded</span>
         </div>
     </div>
@@ -136,6 +142,15 @@
                     <p class="text-[11px] font-bold tracking-widest text-primary-500 mb-2">MESSAGE BODY</p>
                     <div class="p-4 rounded-xl bg-gray-900 text-green-300 text-xs leading-relaxed whitespace-pre-wrap break-words" x-text="selected?.body"></div>
                     <p class="mt-2 text-[10px] font-mono text-primary-400 break-all" x-text="'Hash: ' + (selected?.hash ?? '')"></p>
+                    <!-- Kumbukumbu chip (auto-detected from body) -->
+                    <template x-if="getKumbukumbu()">
+                        <div class="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-amber-100 border border-amber-200">
+                            <span class="text-[11px] font-bold text-amber-800">Kumbukumbu: <span class="font-mono" x-text="getKumbukumbu()"></span></span>
+                            <button @click="copyRef(getKumbukumbu())" title="Copy Kumbukumbu" class="w-6 h-6 rounded-full bg-white border border-amber-300 flex items-center justify-center text-amber-700 hover:bg-amber-50">
+                                <i class="fa-regular fa-copy text-[10px]"></i>
+                            </button>
+                        </div>
+                    </template>
                 </div>
 
                 <!-- Parsed Transaction -->
@@ -155,6 +170,7 @@
                                 </p>
                             </div>
                             <div><span class="text-primary-500">Counterparty</span><p class="font-bold" x-text="selected.transaction.counterparty ?? '—'"></p></div>
+                            <div><span class="text-primary-500">Name</span><p class="font-bold" x-text="selected.transaction.counterparty_name ?? '—'"></p></div>
                             <div><span class="text-primary-500">Balance</span><p class="font-bold" x-text="selected.transaction.balance ? 'TZS ' + Number(selected.transaction.balance).toLocaleString() : '—'"></p></div>
                             <div><span class="text-primary-500">Sync</span><p class="font-bold" x-text="selected.sync_status + ' / ' + selected.processing_status"></p></div>
                         </div>
@@ -162,6 +178,10 @@
                     <template x-if="!selected?.transaction">
                         <p class="text-xs text-primary-400">No transaction parsed (generic SMS).</p>
                     </template>
+                </div>
+
+                <div class="flex justify-end">
+                    <button @click="reparse()" class="px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold hover:bg-amber-100"><i class="fa-solid fa-rotate me-1"></i> Re-parse (Swahili fix)</button>
                 </div>
 
                 <!-- Recorded Toggle -->
@@ -258,6 +278,19 @@ function smsDrawer(){
                     this.selected.commented_at=new Date().toLocaleString();
                 }
             }).catch(()=>{this.savingComment=false;});
+        },
+        getKumbukumbu(){
+            if(!this.selected?.body) return this.selected?.transaction?.reference || null;
+            const m=this.selected.body.match(/Kumbukumbu\s*(?:no\.?|namba)?\s*[:\.\s]*([A-Za-z0-9\-]{5,30})/iu);
+            if(m) return m[1].trim();
+            return this.selected?.transaction?.reference || null;
+        },
+        reparse(){
+            if(!this.selected) return;
+            fetch('{{ url('sms-gateway/sms') }}/' + this.selected.id + '/reparse', {
+                method:'POST',
+                headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]')?.content,'Accept':'application/json'},
+            }).then(()=>{ this.openDrawer(this.selected.id); this.showToast('Re-parsed!'); });
         },
         copyRef(text, event){
             if(event) event.stopPropagation();

@@ -23,6 +23,19 @@
                 <div class="mt-4 p-4 rounded-xl bg-primary-50 border border-primary-100">
                     <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">{{ $sms->body }}</p>
                 </div>
+                @php
+                    $kumb=null;
+                    if(preg_match('/Kumbukumbu\s*(?:no\.?|namba)?\s*[:\.\s]*([A-Za-z0-9\-]{5,30})/iu', $sms->body, $m)) $kumb=trim($m[1]);
+                    elseif($sms->smsTransaction && $sms->smsTransaction->reference) $kumb=$sms->smsTransaction->reference;
+                @endphp
+                @if($kumb)
+                    <div class="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-amber-100 border border-amber-200">
+                        <span class="text-[11px] font-bold text-amber-800">Kumbukumbu: <span class="font-mono">{{ $kumb }}</span></span>
+                        <button onclick="copyRefShow('{{ $kumb }}')" title="Copy Kumbukumbu" class="w-6 h-6 rounded-full bg-white border border-amber-300 flex items-center justify-center text-amber-700 hover:bg-amber-50">
+                            <i class="fa-regular fa-copy text-[10px]"></i>
+                        </button>
+                    </div>
+                @endif
                 <div class="mt-3 grid grid-cols-3 gap-3 text-xs">
                     <div><span class="text-primary-500">Provider</span><p class="font-bold">{{ $sms->provider->name ?? $sms->parsed_data['provider_code'] ?? '—' }}</p></div>
                     <div><span class="text-primary-500">Hash</span><p class="font-mono text-[10px] break-all">{{ $sms->hash }}</p></div>
@@ -30,6 +43,12 @@
                 </div>
                 @if($sms->is_recorded)
                     <p class="mt-2 text-[11px] text-green-600">Recorded by {{ $sms->recordedBy?->name ?? '—' }} at {{ $sms->recorded_at ?? '—' }}</p>
+                @endif
+                @if(auth()->user()->is_admin)
+                    <form method="POST" action="{{ route('sms-gateway.sms.reparse', $sms) }}" class="mt-3">
+                        @csrf
+                        <button class="px-3 py-1.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-bold hover:bg-amber-100"><i class="fa-solid fa-rotate me-1"></i> Re-parse (fix Swahili amount/ref)</button>
+                    </form>
                 @endif
             </div>
 
@@ -51,6 +70,7 @@
                         </p>
                     </div>
                     <div><span class="text-xs text-primary-500">Counterparty</span><p class="font-bold">{{ $sms->smsTransaction->counterparty ?? '—' }}</p></div>
+                    <div><span class="text-xs text-primary-500">Recipient Name</span><p class="font-bold">{{ $sms->smsTransaction->counterparty_name ?? '—' }}</p></div>
                     <div><span class="text-xs text-primary-500">Balance</span><p class="font-bold">{{ $sms->smsTransaction->balance ? 'TZS '.number_format($sms->smsTransaction->balance,0) : '—' }}</p></div>
                     <div><span class="text-xs text-primary-500">At</span><p class="font-bold">{{ $sms->smsTransaction->transaction_at }}</p></div>
                 </div>

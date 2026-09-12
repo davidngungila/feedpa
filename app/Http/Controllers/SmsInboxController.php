@@ -104,6 +104,7 @@ class SmsInboxController extends Controller
                 'currency' => $sms->smsTransaction->currency,
                 'reference' => $sms->smsTransaction->reference,
                 'counterparty' => $sms->smsTransaction->counterparty,
+                'counterparty_name' => $sms->smsTransaction->counterparty_name,
                 'type' => $sms->smsTransaction->transaction_type,
                 'balance' => $sms->smsTransaction->balance,
             ] : null,
@@ -117,5 +118,74 @@ class SmsInboxController extends Controller
             'sync_status' => $sms->sync_status,
             'processing_status' => $sms->processing_status,
         ]);
+    }
+
+    public function reparse(Request $request, SmsMessage $sms)
+    {
+        $parsed = \App\Services\SmsParserService::parse($sms->sender, $sms->body, $sms->sms_timestamp->toDateTimeString());
+        // update message parsed_data and provider if detected
+        $sms->update([
+            'provider_id' => $parsed['provider_id'] ?? $sms->provider_id,
+            'parsed_data' => $parsed,
+        ]);
+        if ($sms->smsTransaction) {
+            $sms->smsTransaction->update([
+                'provider_id' => $parsed['provider_id'] ?? $sms->smsTransaction->provider_id,
+                'provider_code' => $parsed['provider_code'] ?? $sms->smsTransaction->provider_code,
+                'transaction_type' => $parsed['transaction_type'],
+                'amount' => $parsed['amount'],
+                'currency' => $parsed['currency'],
+                'reference' => $parsed['reference'],
+                'counterparty' => $parsed['counterparty'],
+                'counterparty_name' => $parsed['counterparty_name'] ?? null,
+                'balance' => $parsed['balance'],
+                'transaction_at' => $parsed['transaction_at'],
+                'raw_extracted' => $parsed['raw_extracted'],
+            ]);
+        } else {
+            \App\Models\SmsTransaction::create([
+                'sms_message_id' => $sms->id,
+                'device_id' => $sms->device_id,
+                'provider_id' => $parsed['provider_id'],
+                'provider_code' => $parsed['provider_code'],
+                'transaction_type' => $parsed['transaction_type'],
+                'amount' => $parsed['amount'],
+                'currency' => $parsed['currency'],
+                'reference' => $parsed['reference'],
+                'counterparty' => $parsed['counterparty'],
+                'counterparty_name' => $parsed['counterparty_name'] ?? null,
+                'balance' => $parsed['balance'],
+                'transaction_at' => $parsed['transaction_at'],
+                'raw_extracted' => $parsed['raw_extracted'],
+            ]);
+        }
+        return back()->with('success', 'Re-parsed successfully: Amount '.($parsed['amount'] ?? '—').' Ref '.($parsed['reference'] ?? '—'));
+    }
+
+    public function reparseAll()
+    {
+        abort_unless(auth()->user()->is_admin, 403);
+        $count=0;
+        foreach (\App\Models\SmsMessage::with('smsTransaction')->cursor() as $sms) {
+            $parsed = \App\Services\SmsParserService::parse($sms->sender, $sms->body, $sms->sms_timestamp->toDateTimeString());
+            $sms->update(['provider_id'=>$parsed['provider_id'] ?? $sms->provider_id, 'parsed_data'=>$parsed]);
+            if($sms->smsTransaction){
+                $sms->smsTransaction->update([
+                    'provider_id'=>$parsed['provider_id'] ?? $sms->smsTransaction->provider_id,
+                    'provider_code'=>$parsed['provider_code'],
+                    'transaction_type'=>$parsed['transaction_type'],
+                    'amount'=>$parsed['amount'],
+                    'currency'=>$parsed['currency'],
+                    'reference'=>$parsed['reference'],
+                    'counterparty'=>$parsed['counterparty'],
+                    'counterparty_name'=>$parsed['counterparty_name'] ?? null,
+                    'balance'=>$parsed['balance'],
+                    'transaction_at'=>$parsed['transaction_at'],
+                    'raw_extracted'=>$parsed['raw_extracted'],
+                ]);
+            }
+            $count++;
+        }
+        return back()->with('success', "Re-parsed $count messages with new Swahili/English parser.");
     }
 }

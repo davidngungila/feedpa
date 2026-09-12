@@ -292,6 +292,7 @@ class SmsGatewayController extends Controller
                     'currency' => $parsed['currency'],
                     'reference' => $parsed['reference'],
                     'counterparty' => $parsed['counterparty'],
+                    'counterparty_name' => $parsed['counterparty_name'] ?? null,
                     'balance' => $parsed['balance'],
                     'transaction_at' => $parsed['transaction_at'],
                     'raw_extracted' => $parsed['raw_extracted'],

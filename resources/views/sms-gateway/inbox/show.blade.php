@@ -39,7 +39,17 @@
                 <div class="mt-3 grid grid-cols-2 gap-4 text-sm">
                     <div><span class="text-xs text-primary-500">Amount</span><p class="font-bold text-lg">TZS {{ $sms->smsTransaction->amount ? number_format($sms->smsTransaction->amount,0) : '—' }} <span class="text-xs font-normal">{{ $sms->smsTransaction->currency }}</span></p></div>
                     <div><span class="text-xs text-primary-500">Type</span><p class="font-bold"><span class="badge badge-green">{{ $sms->smsTransaction->transaction_type }}</span></p></div>
-                    <div><span class="text-xs text-primary-500">Reference</span><p class="font-mono font-bold">{{ $sms->smsTransaction->reference ?? '—' }}</p></div>
+                    <div>
+                        <span class="text-xs text-primary-500">Reference / Txn ID</span>
+                        <p class="font-mono font-bold flex items-center gap-1.5">
+                            <span id="refText">{{ $sms->smsTransaction->reference ?? '—' }}</span>
+                            @if($sms->smsTransaction && $sms->smsTransaction->reference)
+                                <button onclick="copyRefShow('{{ $sms->smsTransaction->reference }}')" title="Copy reference" class="w-6 h-6 rounded-md bg-white border border-primary-200 hover:bg-primary-50 flex items-center justify-center text-primary-600">
+                                    <i class="fa-regular fa-copy text-[10px]"></i>
+                                </button>
+                            @endif
+                        </p>
+                    </div>
                     <div><span class="text-xs text-primary-500">Counterparty</span><p class="font-bold">{{ $sms->smsTransaction->counterparty ?? '—' }}</p></div>
                     <div><span class="text-xs text-primary-500">Balance</span><p class="font-bold">{{ $sms->smsTransaction->balance ? 'TZS '.number_format($sms->smsTransaction->balance,0) : '—' }}</p></div>
                     <div><span class="text-xs text-primary-500">At</span><p class="font-bold">{{ $sms->smsTransaction->transaction_at }}</p></div>
@@ -98,5 +108,28 @@
             </form>
         </div>
     </div>
+    <!-- Copy toast for show page -->
+    <div id="copyToastShow" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-xs font-bold shadow-xl hidden items-center gap-2">
+        <i class="fa-solid fa-check text-green-400"></i><span id="copyToastShowMsg">Copied!</span>
+    </div>
 </div>
+
+@push('scripts')
+<script>
+function copyRefShow(text){
+    if(!text || text==='—') return;
+    const showToast=(msg)=>{
+        const t=document.getElementById('copyToastShow'); const m=document.getElementById('copyToastShowMsg');
+        if(!t||!m) return; m.textContent=msg; t.classList.remove('hidden'); t.classList.add('flex');
+        setTimeout(()=>{ t.classList.add('hidden'); t.classList.remove('flex'); },1800);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(()=> showToast('Copied: ' + text));
+    } else {
+        const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        showToast('Copied: ' + text);
+    }
+}
+</script>
+@endpush
 @endsection

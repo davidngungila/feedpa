@@ -61,7 +61,19 @@
                         <td class="font-mono text-xs">{{ $sms->sender }}</td>
                         <td class="max-w-[260px] truncate text-xs" title="{{ $sms->body }}">{{ Str::limit($sms->body, 64) }}</td>
                         <td class="whitespace-nowrap text-xs font-bold">{{ optional($sms->smsTransaction)->amount ? 'TZS '.number_format($sms->smsTransaction->amount,0) : '—' }}</td>
-                        <td class="font-mono text-xs">{{ optional($sms->smsTransaction)->reference ?? '—' }}</td>
+                        <td class="font-mono text-xs">
+                            @php $ref = optional($sms->smsTransaction)->reference; @endphp
+                            @if($ref)
+                                <span class="inline-flex items-center gap-1.5">
+                                    <span>{{ $ref }}</span>
+                                    <button @click.stop="copyRef('{{ $ref }}', $event)" title="Copy reference" class="w-6 h-6 rounded-md bg-white border border-primary-200 hover:bg-primary-50 flex items-center justify-center text-primary-600 hover:text-primary-800 transition-colors">
+                                        <i class="fa-regular fa-copy text-[10px]"></i>
+                                    </button>
+                                </span>
+                            @else
+                                —
+                            @endif
+                        </td>
                         <td>
                             @if($sms->is_recorded)
                                 <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold"><i class="fa-solid fa-check text-[9px]"></i> Recorded</span>
@@ -133,7 +145,15 @@
                         <div class="grid grid-cols-2 gap-3 text-xs">
                             <div><span class="text-primary-500">Amount</span><p class="font-bold text-sm" x-text="selected.transaction.amount ? 'TZS ' + Number(selected.transaction.amount).toLocaleString() + ' ' + selected.transaction.currency : '—'"></p></div>
                             <div><span class="text-primary-500">Type</span><p><span class="badge badge-green text-[10px]" x-text="selected.transaction.type"></span></p></div>
-                            <div><span class="text-primary-500">Reference</span><p class="font-mono font-bold" x-text="selected.transaction.reference ?? '—'"></p></div>
+                            <div class="flex flex-col gap-1">
+                                <span class="text-primary-500">Reference / Txn ID</span>
+                                <p class="font-mono font-bold flex items-center gap-1.5">
+                                    <span x-text="selected.transaction.reference ?? '—'"></span>
+                                    <button x-show="selected.transaction.reference" @click="copyRef(selected.transaction.reference)" title="Copy reference" class="w-6 h-6 rounded-md bg-white border border-primary-200 hover:bg-primary-50 flex items-center justify-center text-primary-600">
+                                        <i class="fa-regular fa-copy text-[10px]"></i>
+                                    </button>
+                                </p>
+                            </div>
                             <div><span class="text-primary-500">Counterparty</span><p class="font-bold" x-text="selected.transaction.counterparty ?? '—'"></p></div>
                             <div><span class="text-primary-500">Balance</span><p class="font-bold" x-text="selected.transaction.balance ? 'TZS ' + Number(selected.transaction.balance).toLocaleString() : '—'"></p></div>
                             <div><span class="text-primary-500">Sync</span><p class="font-bold" x-text="selected.sync_status + ' / ' + selected.processing_status"></p></div>
@@ -181,6 +201,10 @@
                 </div>
             </div>
         </div>
+        <!-- Copy toast -->
+        <div x-show="toast" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-gray-900 text-white text-xs font-bold shadow-xl flex items-center gap-2" style="display:none;">
+            <i class="fa-solid fa-check text-green-400"></i><span x-text="toastMsg"></span>
+        </div>
     </div>
 </div>
 
@@ -192,6 +216,8 @@ function smsDrawer(){
         loading:false,
         commentText:'',
         savingComment:false,
+        toast:false,
+        toastMsg:'Copied!',
         openDrawer(id){
             this.drawerOpen=true;
             this.loading=true;
@@ -232,6 +258,19 @@ function smsDrawer(){
                     this.selected.commented_at=new Date().toLocaleString();
                 }
             }).catch(()=>{this.savingComment=false;});
+        },
+        copyRef(text, event){
+            if(event) event.stopPropagation();
+            if(!text) return;
+            if(navigator.clipboard && navigator.clipboard.writeText){
+                navigator.clipboard.writeText(text).then(()=> this.showToast('Copied: ' + text));
+            } else {
+                const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+                this.showToast('Copied: ' + text);
+            }
+        },
+        showToast(msg){
+            this.toastMsg=msg; this.toast=true; setTimeout(()=> this.toast=false, 1800);
         }
     }
 }

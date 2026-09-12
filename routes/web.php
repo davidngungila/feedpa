@@ -427,6 +427,9 @@ Route::prefix('payments')->name('payments.')->group(function () {
     Route::post('/{orderReference}/retry', [PaymentController::class, 'retryPayment'])->name('retry');
 });
 
+// SMS Gateway Web Routes (SMS-only sidebar)
+require __DIR__ . '/web_sms_gateway.php';
+
 // Callback/Webhook Routes
 Route::prefix('webhooks')->name('webhooks.')->group(function () {
     Route::post('/clickpesa', [CallbackController::class, 'handle'])->name('clickpesa')->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);

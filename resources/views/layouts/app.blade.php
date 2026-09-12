@@ -378,6 +378,42 @@
                     </div>
                 </div>
 
+                <!-- SMS Gateway — SMS Only Sidebar Menu (centralized) -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('smsGateway') ? openDropdowns = openDropdowns.filter(d => d !== 'smsGateway') : openDropdowns.push('smsGateway')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('sms-gateway.*') ? 'bg-primary-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-solid fa-message w-4 text-center"></i>
+                            <span>SMS Gateway</span>
+                            <span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-400 text-primary-900">SMS ONLY</span>
+                        </div>
+                        <i :class="openDropdowns.includes('smsGateway') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('smsGateway') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('sms-gateway.sms') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('sms-gateway.sms') || request()->routeIs('sms-gateway.inbox*') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-inbox text-[10px] ml-1"></i>
+                            <span>SMS</span>
+                            <span class="ml-auto text-[9px] opacity-60">Inbox</span>
+                        </a>
+                        <a href="{{ route('sms-gateway.dashboard') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('sms-gateway.dashboard') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Gateway Dashboard</span>
+                        </a>
+                        <a href="{{ route('sms-gateway.devices.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('sms-gateway.devices.*') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Devices</span>
+                        </a>
+                        <a href="{{ route('sms-gateway.reconciliation.index') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('sms-gateway.reconciliation.*') ? 'bg-primary-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-circle text-[6px] ml-1"></i>
+                            <span>Reconciliation</span>
+                        </a>
+                    </div>
+                </div>
+
                 @if(auth()->check() && auth()->user()->is_admin)
                 <!-- Users Management -->
                 <div class="space-y-0.5">

@@ -135,6 +135,36 @@
       </ul>
     </li>
 
+    <!-- SMS Gateway — SMS Only -->
+    <li class="menu-item {{ request()->routeIs('sms-gateway.*') ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons bx bx-message-dots"></i>
+        <div data-i18n="SMS Gateway">SMS Gateway <span class="badge bg-label-warning ms-1">SMS ONLY</span></div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('sms-gateway.sms') || request()->routeIs('sms-gateway.inbox') ? 'active' : '' }}">
+          <a href="{{ route('sms-gateway.sms') }}" class="menu-link">
+            <div data-i18n="SMS">SMS</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('sms-gateway.dashboard') ? 'active' : '' }}">
+          <a href="{{ route('sms-gateway.dashboard') }}" class="menu-link">
+            <div data-i18n="Gateway Dashboard">Gateway Dashboard</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('sms-gateway.devices.*') ? 'active' : '' }}">
+          <a href="{{ route('sms-gateway.devices.index') }}" class="menu-link">
+            <div data-i18n="Devices">Devices</div>
+          </a>
+        </li>
+        <li class="menu-item {{ request()->routeIs('sms-gateway.reconciliation.*') ? 'active' : '' }}">
+          <a href="{{ route('sms-gateway.reconciliation.index') }}" class="menu-link">
+            <div data-i18n="Reconciliation">Reconciliation</div>
+          </a>
+        </li>
+      </ul>
+    </li>
+
     <!-- System Settings (Admin Only) -->
     @if(auth()->user()->is_admin)
     <li class="menu-item {{ request()->routeIs('settings.*') ? 'active open' : '' }}">

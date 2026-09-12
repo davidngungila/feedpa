@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn (Request $request) => $request->expectsJson() ? null : url('/'));
 
+        $middleware->alias([
+            'device.auth' => \App\Http\Middleware\DeviceAuthMiddleware::class,
+        ]);
+
         $middleware->web(append: [
             \App\Http\Middleware\CheckUserLocked::class,
             \App\Http\Middleware\SessionValidation::class,

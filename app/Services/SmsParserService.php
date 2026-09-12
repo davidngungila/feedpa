@@ -49,6 +49,7 @@ class SmsParserService
             }
         }
 
+        $allRefs = self::extractAllReferences($body);
         return [
             'provider_code' => $providerCode,
             'provider_id' => $providerId,
@@ -56,6 +57,7 @@ class SmsParserService
             'amount' => $amount,
             'currency' => $currency,
             'reference' => $reference,
+            'all_references' => $allRefs,
             'counterparty' => $counterparty,
             'counterparty_name' => $counterpartyName,
             'balance' => $balance,
@@ -64,6 +66,7 @@ class SmsParserService
                 'sender' => $sender,
                 'body' => $body,
                 'detected_provider' => $providerCode,
+                'all_references' => $allRefs,
             ],
         ];
     }
@@ -92,6 +95,9 @@ class SmsParserService
     public static function extractReference(string $body): ?string
     {
         $patterns = [
+            // Swahili primary IDs — Namba ya muamala, Risiti, Kumbukumbu
+            '/Namba ya muamala\s*[:\s]*([A-Za-z0-9\-]{5,30})/iu',
+            '/Risiti\s*[:\s]*([A-Za-z0-9\-\.]{5,30})/iu',
             // Swahili Kumbukumbu (Mixx by Yas) — e.g. "Kumbukumbu no.: 26452292369821" or "Kumbukumbu: 264522..."
             '/Kumbukumbu\s*(?:no\.?|namba)?\s*[:\.\s]*([A-Za-z0-9\-]{5,30})/iu',
             '/Transaction ID[:\s]*([A-Za-z0-9\-]{5,30})/i',
@@ -104,9 +110,21 @@ class SmsParserService
             '/\b([A-Z]{2,4}[0-9]{6,12})\b/',
         ];
         foreach ($patterns as $p) {
-            if (preg_match($p, $body, $m)) return trim($m[1]);
+            if (preg_match($p, $body, $m)) return trim($m[1], " .\t\n\r\0\x0B-");
         }
         return null;
+    }
+
+    public static function extractAllReferences(string $body): array
+    {
+        $out = [];
+        if (preg_match('/Namba ya muamala\s*[:\s]*([A-Za-z0-9\-]{5,30})/iu', $body, $m)) $out['namba_ya_muamala'] = trim($m[1], " .");
+        if (preg_match('/Risiti\s*[:\s]*([A-Za-z0-9\-\.]{5,30})/iu', $body, $m)) $out['risiti'] = trim($m[1], " .");
+        if (preg_match('/Kumbukumbu\s*(?:no\.?|namba)?\s*[:\.\s]*([A-Za-z0-9\-]{5,30})/iu', $body, $m)) $out['kumbukumbu'] = trim($m[1], " .");
+        // also capture generic reference for fallback display
+        $ref = self::extractReference($body);
+        if ($ref) $out['reference'] = $ref;
+        return $out;
     }
 
     public static function extractCounterparty(string $body): ?string

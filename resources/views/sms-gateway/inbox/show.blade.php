@@ -24,14 +24,32 @@
                     <p class="text-sm leading-relaxed whitespace-pre-wrap break-words">{{ $sms->body }}</p>
                 </div>
                 @php
-                    $kumb=null;
-                    if(preg_match('/Kumbukumbu\s*(?:no\.?|namba)?\s*[:\.\s]*([A-Za-z0-9\-]{5,30})/iu', $sms->body, $m)) $kumb=trim($m[1]);
-                    elseif($sms->smsTransaction && $sms->smsTransaction->reference) $kumb=$sms->smsTransaction->reference;
+                    $kumb=null; $namba=null; $risiti=null;
+                    if(preg_match('/Kumbukumbu\s*(?:no\.?|namba)?\s*[:\.\s]*([A-Za-z0-9\-]{5,30})/iu', $sms->body, $m)) $kumb=trim($m[1], " .-");
+                    if(preg_match('/Namba ya muamala\s*[:\s]*([A-Za-z0-9\-]{5,30})/iu', $sms->body, $m)) $namba=trim($m[1], " .-");
+                    if(preg_match('/Risiti\s*[:\s]*([A-Za-z0-9\-\.]{5,30})/iu', $sms->body, $m)) $risiti=trim($m[1], " .-");
+                    if(!$kumb && $sms->smsTransaction && $sms->smsTransaction->reference) $kumb=$sms->smsTransaction->reference;
                 @endphp
                 @if($kumb)
                     <div class="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-amber-100 border border-amber-200">
                         <span class="text-[11px] font-bold text-amber-800">Kumbukumbu: <span class="font-mono">{{ $kumb }}</span></span>
                         <button onclick="copyRefShow('{{ $kumb }}')" title="Copy Kumbukumbu" class="w-6 h-6 rounded-full bg-white border border-amber-300 flex items-center justify-center text-amber-700 hover:bg-amber-50">
+                            <i class="fa-regular fa-copy text-[10px]"></i>
+                        </button>
+                    </div>
+                @endif
+                @if($namba)
+                    <div class="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-blue-50 border border-blue-200">
+                        <span class="text-[11px] font-bold text-blue-800">Namba ya muamala: <span class="font-mono">{{ $namba }}</span></span>
+                        <button onclick="copyRefShow('{{ $namba }}')" title="Copy Namba ya muamala" class="w-6 h-6 rounded-full bg-white border border-blue-300 flex items-center justify-center text-blue-700 hover:bg-blue-50">
+                            <i class="fa-regular fa-copy text-[10px]"></i>
+                        </button>
+                    </div>
+                @endif
+                @if($risiti)
+                    <div class="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-50 border border-emerald-200">
+                        <span class="text-[11px] font-bold text-emerald-800">Risiti: <span class="font-mono">{{ $risiti }}</span></span>
+                        <button onclick="copyRefShow('{{ $risiti }}')" title="Copy Risiti" class="w-6 h-6 rounded-full bg-white border border-emerald-300 flex items-center justify-center text-emerald-700 hover:bg-emerald-50">
                             <i class="fa-regular fa-copy text-[10px]"></i>
                         </button>
                     </div>

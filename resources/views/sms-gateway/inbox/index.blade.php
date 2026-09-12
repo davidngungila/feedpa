@@ -142,11 +142,27 @@
                     <p class="text-[11px] font-bold tracking-widest text-primary-500 mb-2">MESSAGE BODY</p>
                     <div class="p-4 rounded-xl bg-gray-900 text-green-300 text-xs leading-relaxed whitespace-pre-wrap break-words" x-text="selected?.body"></div>
                     <p class="mt-2 text-[10px] font-mono text-primary-400 break-all" x-text="'Hash: ' + (selected?.hash ?? '')"></p>
-                    <!-- Kumbukumbu chip (auto-detected from body) -->
+                    <!-- Auto-detected IDs: Kumbukumbu / Namba ya muamala / Risiti -->
                     <template x-if="getKumbukumbu()">
                         <div class="mt-3 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-amber-100 border border-amber-200">
                             <span class="text-[11px] font-bold text-amber-800">Kumbukumbu: <span class="font-mono" x-text="getKumbukumbu()"></span></span>
                             <button @click="copyRef(getKumbukumbu())" title="Copy Kumbukumbu" class="w-6 h-6 rounded-full bg-white border border-amber-300 flex items-center justify-center text-amber-700 hover:bg-amber-50">
+                                <i class="fa-regular fa-copy text-[10px]"></i>
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="getNamba()">
+                        <div class="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-blue-50 border border-blue-200">
+                            <span class="text-[11px] font-bold text-blue-800">Namba ya muamala: <span class="font-mono" x-text="getNamba()"></span></span>
+                            <button @click="copyRef(getNamba())" title="Copy Namba ya muamala" class="w-6 h-6 rounded-full bg-white border border-blue-300 flex items-center justify-center text-blue-700 hover:bg-blue-50">
+                                <i class="fa-regular fa-copy text-[10px]"></i>
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="getRisiti()">
+                        <div class="mt-2 inline-flex items-center gap-2 px-3 py-2 rounded-full bg-emerald-50 border border-emerald-200">
+                            <span class="text-[11px] font-bold text-emerald-800">Risiti: <span class="font-mono" x-text="getRisiti()"></span></span>
+                            <button @click="copyRef(getRisiti())" title="Copy Risiti" class="w-6 h-6 rounded-full bg-white border border-emerald-300 flex items-center justify-center text-emerald-700 hover:bg-emerald-50">
                                 <i class="fa-regular fa-copy text-[10px]"></i>
                             </button>
                         </div>
@@ -282,8 +298,20 @@ function smsDrawer(){
         getKumbukumbu(){
             if(!this.selected?.body) return this.selected?.transaction?.reference || null;
             const m=this.selected.body.match(/Kumbukumbu\s*(?:no\.?|namba)?\s*[:\.\s]*([A-Za-z0-9\-]{5,30})/iu);
-            if(m) return m[1].trim();
-            return this.selected?.transaction?.reference || null;
+            if(m) return m[1].trim().replace(/^[-\.]+|[-\.]+$/g,'');
+            return null;
+        },
+        getNamba(){
+            if(!this.selected?.body) return null;
+            const m=this.selected.body.match(/Namba ya muamala\s*[:\s]*([A-Za-z0-9\-]{5,30})/iu);
+            if(m) return m[1].trim().replace(/^[-\.]+|[-\.]+$/g,'');
+            return null;
+        },
+        getRisiti(){
+            if(!this.selected?.body) return null;
+            const m=this.selected.body.match(/Risiti\s*[:\s]*([A-Za-z0-9\-\.]{5,30})/iu);
+            if(m) return m[1].trim().replace(/^[-\.]+|[-\.]+$/g,'');
+            return null;
         },
         reparse(){
             if(!this.selected) return;

@@ -23,7 +23,7 @@
     }
 @endphp
 
-<div class="max-w-4xl mx-auto space-y-6 animate-fade-in">
+<div class="max-w-4xl mx-auto space-y-6 animate-fade-in" x-data="{ showReceipt: false }">
     @if(isset($error) && $error)
         <div class="card p-6 border-red-100 bg-red-50 dark:bg-red-900/10">
             <div class="flex items-center gap-4 text-red-600 dark:text-red-400">
@@ -203,10 +203,10 @@
         <!-- Action Buttons -->
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 @if(in_array($payment['status'] ?? '', ['SUCCESS', 'SETTLED']))
-                                    <a href="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}" target="_blank"
+                                    <button type="button" @click="showReceipt = !showReceipt"
                                        class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold shadow-lg shadow-primary-900/20 transition-all">
-                                        <i class="fas fa-download"></i> Receipt
-                                    </a>
+                                        <i class="fas" :class="showReceipt ? 'fa-eye-slash' : 'fa-file-pdf'"></i> <span x-text="showReceipt ? 'Hide Receipt' : 'Preview Receipt'"></span>
+                                    </button>
                                 @elseif(in_array($payment['status'] ?? '', ['FAILED', 'CANCELLED', 'DECLINED']))
                                     <form action="{{ route('payments.retry', $payment['orderReference'] ?? '') }}" method="POST" class="w-full">
                                         @csrf
@@ -296,6 +296,18 @@
                                     </button>
                                 @endif
                             </div>
+
+        <!-- Receipt Preview (inline within system, no download) -->
+        <div x-show="showReceipt" x-transition x-cloak class="card overflow-hidden border border-primary-200">
+            <div class="px-4 py-3 bg-primary-600 text-white flex items-center justify-between">
+                <span class="text-xs font-bold flex items-center gap-2"><i class="fas fa-file-pdf"></i> Receipt Preview — {{ $payment['orderReference'] ?? '' }}</span>
+                <button @click="showReceipt = false" class="w-7 h-7 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+            </div>
+            <div class="bg-white">
+                <iframe src="{{ route('payments.receipt', $payment['orderReference'] ?? '') }}?preview=1#toolbar=0&navpanes=0&scrollbar=0" class="w-full h-[720px] sm:h-[820px] border-0" loading="lazy" title="Receipt preview - {{ $payment['orderReference'] ?? '' }}"></iframe>
+            </div>
+            <div class="px-4 py-2 bg-amber-50 border-t border-amber-100 text-[11px] text-amber-700 text-center flex items-center justify-center gap-2"><i class="fas fa-info-circle"></i> Preview only — download disabled. Use browser Print (Ctrl+P) if needed.</div>
+        </div>
 
         <!-- SMS & Email Status -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

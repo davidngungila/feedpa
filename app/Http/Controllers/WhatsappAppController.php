@@ -72,6 +72,26 @@ class WhatsappAppController extends Controller
 
     public function store(Request $request)
     {
+        // Pre-check file upload errors (before validation) for better message
+        if($request->hasFile('attachment')){
+            $f = $request->file('attachment');
+            if(!$f->isValid()){
+                $code = $f->getError();
+                $map = [
+                    UPLOAD_ERR_INI_SIZE => 'File too large for server (upload_max_filesize).',
+                    UPLOAD_ERR_FORM_SIZE => 'File too large (form limit).',
+                    UPLOAD_ERR_PARTIAL => 'File only partially uploaded, try again.',
+                    UPLOAD_ERR_NO_FILE => 'No file uploaded.',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Server temp folder missing.',
+                    UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk (permission).',
+                    UPLOAD_ERR_EXTENSION => 'Upload blocked by extension.',
+                ];
+                $msg = $map[$code] ?? 'Upload failed (code '.$code.').';
+                \Illuminate\Support\Facades\Log::error('WhatsApp attachment upload invalid', ['code'=>$code, 'name'=>$f->getClientOriginalName(), 'size'=>$f->getSize()]);
+                return back()->withErrors(['attachment'=>$msg.' Please try a smaller file or different format.'])->withInput();
+            }
+        }
+
         $request->validate([
             'device_id' => 'required|exists:sms_devices,id',
             'recipient_phone' => 'required|string|max:20',
@@ -117,16 +137,37 @@ class WhatsappAppController extends Controller
 
         if($request->hasFile('attachment')){
             $file = $request->file('attachment');
-            // MIME & extension validation already via mimes rule
-            $dir = WhatsappMessage::attachmentDir($uuid);
-            $original = $file->getClientOriginalName();
-            // sanitize filename
-            $safeName = Str::slug(pathinfo($original, PATHINFO_FILENAME)).'.'.$file->getClientOriginalExtension();
-            $path = $file->storeAs($dir, $safeName, 'local'); // private storage/app/private
-            $data['attachment_path'] = $path;
-            $data['attachment_name'] = $original;
-            $data['attachment_mime'] = $file->getMimeType();
-            $data['attachment_size'] = $file->getSize();
+            if(!$file->isValid()){
+                return back()->withErrors(['attachment'=>'Attachment is not valid (error '.$file->getError().'). Please re-select file.'])->withInput();
+            }
+            try {
+                // Ensure private directory exists and is writable
+                $dir = WhatsappMessage::attachmentDir($uuid);
+                $fullDir = storage_path('app/private/'.$dir);
+                if(!is_dir($fullDir)){
+                    @mkdir($fullDir, 0755, true);
+                }
+                $original = $file->getClientOriginalName();
+                $base = pathinfo($original, PATHINFO_FILENAME);
+                $slug = Str::slug($base);
+                if(empty($slug)) $slug = 'file';
+                $ext = strtolower($file->getClientOriginalExtension());
+                if(empty($ext)) $ext = $file->extension() ?: 'bin';
+                $safeName = $slug.'.'.$ext;
+                // Ensure unique if exists (should not, uuid dir is unique)
+                $path = $file->storeAs($dir, $safeName, 'local'); // private storage/app/private
+                if(!$path){
+                    throw new \Exception('storeAs returned false - check storage/app/private permissions');
+                }
+                $data['attachment_path'] = $path;
+                $data['attachment_name'] = $original;
+                $data['attachment_mime'] = $file->getMimeType() ?: $file->getClientMimeType();
+                $data['attachment_size'] = $file->getSize();
+                \Illuminate\Support\Facades\Log::info('WhatsApp attachment stored', ['uuid'=>$uuid, 'path'=>$path, 'size'=>$data['attachment_size']]);
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('WhatsApp attachment store failed', ['uuid'=>$uuid, 'error'=>$e->getMessage(), 'trace'=>$e->getTraceAsString()]);
+                return back()->withErrors(['attachment'=>'Failed to store attachment: '.$e->getMessage().'. Check storage permissions.'])->withInput();
+            }
         }
 
         // Device ONLINE check - allow queue but warn

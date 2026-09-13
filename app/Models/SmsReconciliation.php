@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use App\Models\User;
 
 class SmsReconciliation extends Model
 {
@@ -22,5 +23,10 @@ class SmsReconciliation extends Model
     public function smsMessage(): BelongsTo
     {
         return $this->belongsTo(SmsMessage::class, 'sms_message_id');
+    }
+
+    public function reconciledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reconciled_by');
     }
 }

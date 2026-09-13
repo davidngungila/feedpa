@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\SmsReconciliation;
 use App\Models\SmsMessage;
+use App\Models\Transaction;
+use App\Models\Payout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,7 +25,71 @@ class SmsReconciliationController extends Controller
             'matched' => SmsReconciliation::where('status','MATCHED')->count(),
             'reconciled' => SmsReconciliation::where('status','RECONCILED')->count(),
         ];
-        return view('sms-gateway.reconciliation.index', compact('reconciliations','stats'));
+        $transactions = Transaction::orderByDesc('created_at')->limit(300)->get(['id','order_reference','transaction_id','amount','status','description']);
+        $payouts = Payout::orderByDesc('created_at')->limit(300)->get(['id','order_reference','amount','status','recipient_name','description']);
+        return view('sms-gateway.reconciliation.index', compact('reconciliations','stats','transactions','payouts'));
+    }
+
+    public function details(SmsReconciliation $reconciliation)
+    {
+        $reconciliation->load([
+            'smsTransaction.device', 'smsTransaction.provider',
+            'smsMessage.device', 'smsMessage.provider', 'smsMessage.smsTransaction',
+        ]);
+        $matched = null;
+        if ($reconciliation->matched_transaction_id) {
+            $matched = Transaction::with('notes')->find($reconciliation->matched_transaction_id);
+        } elseif ($reconciliation->matched_payout_id) {
+            $matched = Payout::find($reconciliation->matched_payout_id);
+        }
+        return response()->json([
+            'id' => $reconciliation->id,
+            'status' => $reconciliation->status,
+            'notes' => $reconciliation->notes,
+            'reconciled_by' => optional($reconciliation->reconciledBy)->name,
+            'reconciled_at' => optional($reconciliation->reconciled_at)?->toDateTimeString(),
+            'match_meta' => $reconciliation->match_meta,
+            'sms' => $reconciliation->smsMessage ? [
+                'id' => $reconciliation->smsMessage->id,
+                'uuid' => $reconciliation->smsMessage->uuid,
+                'sender' => $reconciliation->smsMessage->sender,
+                'body' => $reconciliation->smsMessage->body,
+                'sms_timestamp' => optional($reconciliation->smsMessage->sms_timestamp)->toDateTimeString(),
+                'received_at' => optional($reconciliation->smsMessage->received_at)->toDateTimeString(),
+                'sync_status' => $reconciliation->smsMessage->sync_status,
+                'processing_status' => $reconciliation->smsMessage->processing_status,
+                'reconciliation_status' => $reconciliation->smsMessage->reconciliation_status,
+                'is_recorded' => $reconciliation->smsMessage->is_recorded,
+                'admin_comment' => $reconciliation->smsMessage->admin_comment,
+                'device' => $reconciliation->smsMessage->device ? [
+                    'code' => $reconciliation->smsMessage->device->device_code,
+                    'name' => $reconciliation->smsMessage->device->name,
+                    'location' => $reconciliation->smsMessage->device->location->name ?? null,
+                ] : null,
+                'provider' => $reconciliation->smsMessage->provider ? [
+                    'code' => $reconciliation->smsMessage->provider->code,
+                    'name' => $reconciliation->smsMessage->provider->name,
+                ] : null,
+                'transaction' => $reconciliation->smsMessage->smsTransaction ? [
+                    'amount' => $reconciliation->smsMessage->smsTransaction->amount,
+                    'reference' => $reconciliation->smsMessage->smsTransaction->reference,
+                    'counterparty' => $reconciliation->smsMessage->smsTransaction->counterparty,
+                    'counterparty_name' => $reconciliation->smsMessage->smsTransaction->counterparty_name,
+                    'balance' => $reconciliation->smsMessage->smsTransaction->balance,
+                    'type' => $reconciliation->smsMessage->smsTransaction->transaction_type,
+                    'currency' => $reconciliation->smsMessage->smsTransaction->currency,
+                    'transaction_at' => optional($reconciliation->smsMessage->smsTransaction->transaction_at)->toDateTimeString(),
+                ] : null,
+            ] : null,
+            'matched' => $matched ? [
+                'kind' => $reconciliation->matched_transaction_id ? 'transaction' : 'payout',
+                'id' => $matched->id,
+                'reference' => $matched->order_reference ?? $matched->transaction_id ?? $matched->id,
+                'status' => $matched->status ?? null,
+                'amount' => $matched->amount ?? null,
+                'description' => $matched->description ?? null,
+            ] : null,
+        ]);
     }
 
     public function match(Request $request, SmsReconciliation $reconciliation)

@@ -37,6 +37,7 @@ Route::middleware('auth')->prefix('sms-gateway')->name('sms-gateway.')->group(fu
     Route::post('reparse-all', [SmsInboxController::class, 'reparseAll'])->name('reparse-all');
 
     Route::get('reconciliation', [SmsReconciliationController::class, 'index'])->name('reconciliation.index');
+    Route::get('reconciliation/{reconciliation}/details', [SmsReconciliationController::class, 'details'])->name('reconciliation.details');
     Route::post('reconciliation/{reconciliation}/match', [SmsReconciliationController::class, 'match'])->name('reconciliation.match');
     Route::post('reconciliation/{reconciliation}/unmatch', [SmsReconciliationController::class, 'unmatch'])->name('reconciliation.unmatch');
 });

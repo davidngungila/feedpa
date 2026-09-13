@@ -354,10 +354,10 @@
         @endif
     </div>
 
-    <!-- Right Drawer - replaces center modal, fully responsive -->
-    <div x-show="open" x-cloak class="fixed inset-0 z-50" @keydown.escape.window="closeDetails()">
+    <!-- Right Drawer - fixed to viewport, fully scrollable, never cut at top -->
+    <div x-show="open" x-cloak class="fixed inset-0 z-[60] overflow-hidden" @keydown.escape.window="closeDetails()">
         <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeDetails()"></div>
-        <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="absolute inset-y-0 right-0 w-full sm:w-[520px] max-w-[100vw] bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
+        <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="absolute inset-y-0 right-0 w-full sm:w-[520px] max-w-[100vw] h-screen max-h-[100dvh] bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
             <!-- Drawer Header -->
             <div class="shrink-0 flex items-start justify-between gap-4 px-5 py-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/50 dark:bg-dark-900/50">
                 <div class="min-w-0 flex-1">
@@ -368,8 +368,8 @@
                 <button type="button" @click="closeDetails()" class="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border text-primary-600 hover:bg-primary-50 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
             </div>
 
-            <!-- Drawer Body scroll -->
-            <div class="flex-1 overflow-y-auto p-5 space-y-5 overscroll-contain" x-show="selected">
+            <!-- Drawer Body scroll - min-h-0 ensures flex child can shrink and scroll without cutting top -->
+            <div class="flex-1 min-h-0 overflow-y-auto p-5 space-y-5 overscroll-contain" x-show="selected">
                 <template x-if="selected">
                     <div class="space-y-5">
                         <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-primary-50/70 dark:bg-dark-800 border border-primary-100 dark:border-dark-border">

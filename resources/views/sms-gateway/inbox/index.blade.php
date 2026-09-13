@@ -104,10 +104,10 @@
         <div class="p-4">{{ $messages->links() }}</div>
     </div>
 
-    <!-- Right Drawer -->
-    <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-40" style="display:none;">
+    <!-- Right Drawer - fits viewport, never cut at top -->
+    <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-[60] overflow-hidden" style="display:none;">
         <div @click="closeDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-        <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="absolute inset-y-0 right-0 w-full sm:w-[480px] bg-white shadow-2xl flex flex-col overflow-hidden">
+        <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="absolute inset-y-0 right-0 w-full sm:w-[480px] max-w-[100vw] h-screen max-h-[100dvh] bg-white shadow-2xl flex flex-col overflow-hidden">
             <!-- Drawer Header -->
             <div class="flex items-center justify-between px-5 py-4 border-b border-primary-100 bg-primary-50">
                 <div>
@@ -122,7 +122,7 @@
                 <p class="text-xs text-primary-500 mt-3">Loading details...</p>
             </div>
 
-            <div x-show="!loading && selected" class="flex-1 overflow-y-auto p-5 space-y-5" style="display:none;" x-cloak>
+            <div x-show="!loading && selected" class="flex-1 min-h-0 overflow-y-auto p-5 space-y-5" style="display:none;" x-cloak>
                 <!-- Meta -->
                 <div class="grid grid-cols-2 gap-3 text-xs">
                     <div class="p-3 rounded-xl bg-primary-50 border border-primary-100">

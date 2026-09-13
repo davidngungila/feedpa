@@ -407,10 +407,15 @@
         @endif
     </div>
 
-    <!-- Transaction Detail Modal -->
-    <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="closeDetails()">
-        <div class="absolute inset-0 bg-black/50" @click="closeDetails()"></div>
-        <div class="relative w-full max-w-2xl card p-6 max-h-[90vh] overflow-y-auto animate-fade-in" @click.stop>
+    <!-- Transaction Detail Drawer - fixed to viewport, never cut at top -->
+    <div x-show="open" x-cloak class="fixed inset-0 z-[60] overflow-hidden" @keydown.escape.window="closeDetails()">
+        <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeDetails()"></div>
+        <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="absolute inset-y-0 right-0 w-full sm:w-[520px] max-w-[100vw] h-screen max-h-[100dvh] bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
+            <div class="shrink-0 flex items-start justify-between gap-4 px-5 py-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/50">
+                <div><h3 class="text-sm font-black text-primary-900 dark:text-white">Transaction Details</h3><p class="text-[10px] text-primary-500 uppercase tracking-widest" x-text="selected?.source || 'Statement'"></p></div>
+                <button type="button" @click="closeDetails()" class="w-8 h-8 rounded-lg bg-white border border-primary-100 text-primary-600 hover:bg-primary-50 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+            </div>
+            <div class="flex-1 min-h-0 overflow-y-auto p-6 space-y-5 overscroll-contain" @click.stop>
             <div class="flex items-start justify-between gap-4 mb-5">
                 <div>
                     <h3 class="text-lg font-black text-primary-900 dark:text-white">Transaction Details</h3>

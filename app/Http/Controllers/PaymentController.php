@@ -1755,9 +1755,9 @@ HTML;
     }
 
     /**
-     * Generate payment receipt PDF
-     */
-    public function receipt($orderReference)
+      * Generate payment receipt PDF - preview inline (no forced download)
+      */
+    public function receipt(Request $request, $orderReference)
     {
         try {
             // Try to get from database first
@@ -1825,7 +1825,8 @@ HTML;
                 ->setPaper('a4', 'portrait')
                 ->setOption('margin-bottom', 20);
 
-            return $pdf->download('payment-receipt-' . $orderReference . '.pdf');
+            // Preview inline in drawer/iframe - no forced download
+            return $pdf->stream('payment-receipt-' . $orderReference . '.pdf');
         } catch (Exception $e) {
             Log::error('Receipt generation failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to generate receipt: ' . $e->getMessage());

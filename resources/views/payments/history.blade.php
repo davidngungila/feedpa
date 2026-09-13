@@ -177,28 +177,15 @@
             <span class="text-[10px] text-primary-500 hidden lg:inline">Tip: Horizontal scroll on desktop • Cards on mobile</span>
         </div>
 
-        <!-- Desktop / Tablet Table -->
+        <!-- Desktop / Tablet Table — minimized to important columns only, rest in drawer -->
         <div class="hidden md:block overflow-x-auto">
-            <table class="data-table min-w-[760px]">
-                <thead class="hidden lg:table-header-group">
+            <table class="data-table min-w-[640px]">
+                <thead>
                     <tr>
                         <th class="whitespace-nowrap">Date & Time</th>
                         <th>Reference</th>
                         <th>Member Name</th>
-                        <th class="hidden xl:table-cell">Purpose / Description</th>
                         <th class="whitespace-nowrap">Amount</th>
-                        <th class="hidden xl:table-cell">SMS Status</th>
-                        <th class="hidden xl:table-cell">Email Status</th>
-                        <th class="text-center">Actions</th>
-                    </tr>
-                </thead>
-                <!-- Compact header for md-lg -->
-                <thead class="lg:hidden">
-                    <tr>
-                        <th>Date</th>
-                        <th>Reference & Member</th>
-                        <th>Amount</th>
-                        <th class="text-center">View</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
@@ -246,43 +233,26 @@
                                     'receipt_url' => route('payments.receipt', $payment->order_reference),
                                 ];
                             @endphp
-                            <!-- Full row for lg+ -->
-                            <tr @click="openDetails(@js($detailPayload))" class="hidden lg:table-row hover:bg-primary-50/70 dark:hover:bg-primary-900/10 transition-colors cursor-pointer group">
-                                <td class="whitespace-nowrap py-3">
+                            <tr @click="openDetails(@js($detailPayload))" class="hover:bg-primary-50/70 dark:hover:bg-primary-900/10 transition-colors cursor-pointer group">
+                                <td class="whitespace-nowrap py-3.5 px-4">
                                     <div class="font-bold text-primary-900 dark:text-white text-xs">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
                                     <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
+                                    <span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[8px] font-bold" :class="statusBadgeClass('{{ $status }}') === 'badge-green' ? 'bg-green-100 text-green-700' : (statusBadgeClass('{{ $status }}') === 'badge-red' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700')">{{ $status }}</span>
                                 </td>
-                                <td class="py-3">
-                                    <div class="flex items-center gap-1.5 max-w-[190px]">
-                                        <span class="font-mono text-[11px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded border border-primary-100 dark:border-dark-border text-primary-700 dark:text-primary-300 truncate" title="{{ $payment->order_reference }}">{{ $payment->order_reference }}</span>
+                                <td class="py-3.5 px-3">
+                                    <div class="flex items-center gap-1.5 max-w-[180px]">
+                                        <span class="font-mono text-[11px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded border border-primary-100 dark:border-dark-border text-primary-700 dark:text-primary-300 truncate" title="{{ $payment->order_reference }}">{{ Str::limit($payment->order_reference, 18) }}</span>
                                         <button type="button" @click.stop="copyText(@js($payment->order_reference), 'ref-{{ $payment->id }}')" class="shrink-0 w-7 h-7 rounded-lg bg-white border border-primary-100 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all" title="Copy reference"><i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i></button>
                                     </div>
-                                    @if($payment->transaction_id)
-                                        <div class="flex items-center gap-1 mt-1 max-w-[190px]"><span class="font-mono text-[9px] text-primary-500 truncate" title="{{ $payment->transaction_id }}">TX: {{ Str::limit($payment->transaction_id, 22) }}</span><button type="button" @click.stop="copyText(@js($payment->transaction_id), 'tx-{{ $payment->id }}')" class="shrink-0 w-6 h-6 rounded border border-primary-100 flex items-center justify-center hover:bg-primary-600 hover:text-white text-primary-500" title="Copy TX"><i class="fas text-[9px]" :class="copiedField === 'tx-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i></button></div>
-                                    @endif
                                 </td>
-                                <td class="py-3"><div class="font-bold text-primary-900 dark:text-white text-xs truncate max-w-[140px]">{{ $memberName }}</div><div class="text-[10px] text-primary-500">Payer: {{ Str::limit($actualPayer,18) }}</div><div class="text-[10px] font-mono text-primary-400">{{ $displayPhone }}</div></td>
-                                <td class="py-3 hidden xl:table-cell"><div class="text-xs text-primary-700 dark:text-primary-400 max-w-[180px] truncate" title="{{ $displayDescription }}">{{ $displayDescription }}</div></td>
-                                <td class="whitespace-nowrap py-3"><div class="font-bold text-green-600 dark:text-green-400 text-xs">+ {{ number_format((float)$payment->amount, 2) }}</div><div class="text-[10px] font-bold text-primary-500 uppercase">{{ $payment->currency ?? 'TZS' }}</div></td>
-                                <td class="py-3 hidden xl:table-cell">
-                                    @if($payment->sms_sent)<span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> Sent</span>@elseif($payment->sms_error)<span class="badge badge-red text-[10px]">Failed</span>@elseif($isSettled)<span class="badge badge-yellow text-[10px]">Not Sent</span>@else<span class="text-[10px] text-primary-400">—</span>@endif
+                                <td class="py-3.5 px-3">
+                                    <div class="font-bold text-primary-900 dark:text-white text-xs truncate max-w-[160px]">{{ $memberName }}</div>
+                                    <div class="text-[10px] font-mono text-primary-500 truncate max-w-[160px]">{{ $displayPhone }}</div>
                                 </td>
-                                <td class="py-3 hidden xl:table-cell">
-                                    @if($payment->email_sent)<span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> Sent</span>@elseif($payment->email_error)<span class="badge badge-red text-[10px]">Failed</span>@elseif($isSettled)<span class="badge badge-yellow text-[10px]">Not Sent</span>@else<span class="text-[10px] text-primary-400">—</span>@endif
+                                <td class="whitespace-nowrap py-3.5 px-4">
+                                    <div class="font-bold text-green-600 dark:text-green-400 text-sm">+ {{ number_format((float)$payment->amount, 2) }}</div>
+                                    <div class="text-[10px] font-bold text-primary-500 uppercase">{{ $payment->currency ?? 'TZS' }}</div>
                                 </td>
-                                <td class="py-3">
-                                    <div class="flex gap-1.5 justify-center">
-                                        <button type="button" @click.stop="openDetails(@js($detailPayload))" class="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center hover:bg-primary-700 transition-all" title="Open drawer"><i class="fas fa-eye text-xs"></i></button>
-                                        <a href="{{ route('payments.status', ['reference' => $payment->order_reference]) }}" @click.stop class="hidden xl:flex w-8 h-8 rounded-lg bg-primary-50 border border-primary-100 text-primary-600 items-center justify-center hover:bg-primary-600 hover:text-white transition-all" title="Full page"><i class="fas fa-external-link-alt text-xs"></i></a>
-                                    </div>
-                                </td>
-                            </tr>
-                            <!-- Compact row for md-lg -->
-                            <tr @click="openDetails(@js($detailPayload))" class="lg:hidden hover:bg-primary-50/70 dark:hover:bg-primary-900/10 transition-colors cursor-pointer">
-                                <td class="py-3"><div class="font-bold text-xs text-primary-900 dark:text-white">{{ $createdAt?->format('M d') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i') ?? '' }}</div><div class="text-[9px] font-bold uppercase" :class="statusBadgeClass('{{ $status }}')">{{ $status }}</div></td>
-                                <td class="py-3"><div class="font-mono text-[11px] font-bold text-primary-900 dark:text-white truncate max-w-[110px]">{{ $payment->order_reference }}</div><div class="text-[11px] font-bold text-primary-700 truncate max-w-[110px]">{{ $memberName }}</div><div class="text-[10px] font-mono text-primary-500">{{ $displayPhone }}</div></td>
-                                <td class="py-3"><div class="font-bold text-green-600 text-xs">+{{ number_format((float)$payment->amount,2) }}</div><div class="text-[10px] font-bold uppercase text-primary-500">{{ $payment->currency ?? 'TZS' }}</div></td>
-                                <td class="py-3"><button type="button" @click.stop="openDetails(@js($detailPayload))" class="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center"><i class="fas fa-chevron-right text-xs"></i></button></td>
                             </tr>
                         @elseif($item['type'] === 'payout')
                             @php
@@ -312,37 +282,23 @@
                                     'receipt_url' => null,
                                 ];
                             @endphp
-                            <tr @click="openDetails(@js($detailPayload))" class="hidden lg:table-row hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors cursor-pointer">
-                                <td class="whitespace-nowrap py-3"><div class="font-bold text-primary-900 dark:text-white text-xs">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div></td>
-                                <td class="py-3"><div class="flex items-center gap-1.5 max-w-[190px]"><span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 text-red-700 truncate" title="{{ $payout->order_reference }}">{{ $payout->order_reference }}</span><button type="button" @click.stop="copyText(@js($payout->order_reference), 'ref-{{ $payout->id }}')" class="shrink-0 w-7 h-7 rounded-lg bg-white border border-red-100 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white" title="Copy"><i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payout->id }}' ? 'fa-check' : 'fa-copy'"></i></button></div></td>
-                                <td class="py-3"><div class="font-bold text-xs text-primary-900 dark:text-white truncate max-w-[140px]">{{ $payout->recipient_name ?? 'N/A' }}</div><div class="text-[10px] font-mono text-primary-500">{{ $payout->recipient_phone ?? $payout->beneficiary_mobile ?? 'N/A' }}</div></td>
-                                <td class="py-3 hidden xl:table-cell"><div class="text-xs max-w-[180px] truncate" title="{{ $payout->resolvedDescription() }}">{{ $payout->resolvedDescription() }}</div></td>
-                                <td class="whitespace-nowrap py-3"><div class="font-bold text-red-600 text-xs">- {{ number_format((float)$payout->amount, 2) }}</div><div class="text-[10px] font-bold uppercase text-primary-500">{{ $payout->currency ?? 'TZS' }}</div></td>
-                                <td class="py-3 hidden xl:table-cell text-center"><span class="text-[10px] text-primary-400">—</span></td>
-                                <td class="py-3 hidden xl:table-cell text-center"><span class="text-[10px] text-primary-400">—</span></td>
-                                <td class="py-3"><div class="flex justify-center"><button type="button" @click.stop="openDetails(@js($detailPayload))" class="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center hover:bg-red-700"><i class="fas fa-eye text-xs"></i></button></div></td>
-                            </tr>
-                            <tr @click="openDetails(@js($detailPayload))" class="lg:hidden hover:bg-red-50/50 dark:hover:bg-red-900/10 cursor-pointer">
-                                <td class="py-3"><div class="font-bold text-xs">{{ $createdAt?->format('M d') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i') }}</div></td>
-                                <td class="py-3"><div class="font-mono text-[11px] font-bold truncate max-w-[110px]">{{ $payout->order_reference }}</div><div class="text-[11px] truncate max-w-[110px]">{{ $payout->recipient_name ?? 'N/A' }}</div></td>
-                                <td class="py-3"><div class="font-bold text-red-600 text-xs">-{{ number_format((float)$payout->amount,2) }}</div></td>
-                                <td class="py-3"><button type="button" @click.stop="openDetails(@js($detailPayload))" class="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center"><i class="fas fa-chevron-right text-xs"></i></button></td>
+                            <tr @click="openDetails(@js($detailPayload))" class="hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors cursor-pointer">
+                                <td class="whitespace-nowrap py-3.5 px-4"><div class="font-bold text-primary-900 dark:text-white text-xs">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div><span class="inline-block mt-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-red-100 text-red-700">{{ $status }}</span></td>
+                                <td class="py-3.5 px-3"><div class="flex items-center gap-1.5 max-w-[180px]"><span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 text-red-700 truncate" title="{{ $payout->order_reference }}">{{ Str::limit($payout->order_reference, 18) }}</span><button type="button" @click.stop="copyText(@js($payout->order_reference), 'ref-{{ $payout->id }}')" class="shrink-0 w-7 h-7 rounded-lg bg-white border border-red-100 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white" title="Copy"><i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payout->id }}' ? 'fa-check' : 'fa-copy'"></i></button></div></td>
+                                <td class="py-3.5 px-3"><div class="font-bold text-xs text-primary-900 dark:text-white truncate max-w-[160px]">{{ $payout->recipient_name ?? 'N/A' }}</div><div class="text-[10px] font-mono text-primary-500 truncate max-w-[160px]">{{ $payout->recipient_phone ?? $payout->beneficiary_mobile ?? 'N/A' }}</div></td>
+                                <td class="whitespace-nowrap py-3.5 px-4"><div class="font-bold text-red-600 text-sm">- {{ number_format((float)$payout->amount, 2) }}</div><div class="text-[10px] font-bold uppercase text-primary-500">{{ $payout->currency ?? 'TZS' }}</div></td>
                             </tr>
                         @elseif($item['type'] === 'payout-fee')
                             @php $payout = $item['record']; $fee = $item['fee']; $status = strtoupper($payout->status ?? 'UNKNOWN'); $createdAt = $payout->created_at ? \Illuminate\Support\Carbon::parse($payout->created_at) : null; @endphp
                             <tr class="hover:bg-red-50/30 dark:hover:bg-red-900/10">
-                                <td class="whitespace-nowrap py-3 hidden lg:table-cell"><div class="font-bold text-xs">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div></td>
-                                <td class="py-3 hidden lg:table-cell"><span class="font-mono text-[11px] bg-red-50 px-2 py-1 rounded border border-red-100 text-red-700">{{ $payout->order_reference }}-FEE</span></td>
-                                <td class="py-3 hidden lg:table-cell"><span class="font-bold text-xs">Payout Fee</span></td>
-                                <td class="py-3 hidden lg:table-cell"><span class="text-xs max-w-[180px] truncate">Fee for payout {{ $payout->order_reference }}</span></td>
-                                <td class="whitespace-nowrap py-3"><div class="font-bold text-red-600 text-xs">- {{ number_format((float)$fee, 2) }}</div></td>
-                                <td class="py-3 hidden lg:table-cell text-center"><span class="text-[10px] text-primary-400">—</span></td>
-                                <td class="py-3 hidden lg:table-cell text-center"><span class="text-[10px] text-primary-400">—</span></td>
-                                <td class="py-3"><a href="{{ route('payouts.status', $payout->order_reference) }}" class="w-8 h-8 rounded-lg bg-red-50 border border-red-100 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white mx-auto flex"><i class="fas fa-external-link-alt text-xs"></i></a></td>
+                                <td class="whitespace-nowrap py-3.5 px-4"><div class="font-bold text-xs">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div></td>
+                                <td class="py-3.5 px-3"><span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 text-red-700">{{ Str::limit($payout->order_reference, 18) }}-FEE</span></td>
+                                <td class="py-3.5 px-3"><span class="font-bold text-xs">Payout Fee</span><div class="text-[10px] text-primary-500">Fee</div></td>
+                                <td class="whitespace-nowrap py-3.5 px-4"><div class="font-bold text-red-600 text-sm">- {{ number_format((float)$fee, 2) }}</div><div class="text-[10px] font-bold uppercase text-primary-500">TZS</div></td>
                             </tr>
                         @endif
                     @empty
-                        <tr><td colspan="8" class="text-center py-20"><div class="flex flex-col items-center"><div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4"><i class="fas fa-folder-open text-2xl text-primary-200"></i></div><h4 class="font-bold text-primary-900 dark:text-white">No Transactions Found</h4><p class="text-xs text-primary-500">@if(($activeStatus ?? 'SETTLED') === 'FAILED') No failed payments/payouts match your filters. @else No settled payments/payouts match your filters. @endif</p></div></td></tr>
+                        <tr><td colspan="4" class="text-center py-20"><div class="flex flex-col items-center"><div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4"><i class="fas fa-folder-open text-2xl text-primary-200"></i></div><h4 class="font-bold text-primary-900 dark:text-white">No Transactions Found</h4><p class="text-xs text-primary-500">@if(($activeStatus ?? 'SETTLED') === 'FAILED') No failed payments/payouts match your filters. @else No settled payments/payouts match your filters. @endif</p></div></td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -466,9 +422,26 @@
                             <template x-if="!selected.email_message && !selected.email_error && !selected.email_sent"><p class="text-xs text-primary-500 italic">No email sent yet.</p></template>
                         </div>
 
+                        <!-- Receipt Preview (inline, no download) -->
+                        <template x-if="selected?.isSettled && selected?.receipt_url">
+                            <div class="space-y-2">
+                                <button type="button" @click="showReceipt = !showReceipt" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed transition-all text-xs font-bold" :class="showReceipt ? 'bg-primary-600 border-primary-600 text-white' : 'bg-white dark:bg-dark-800 border-primary-200 hover:bg-primary-50 text-primary-700'">
+                                    <i class="fas" :class="showReceipt ? 'fa-eye-slash' : 'fa-file-pdf'"></i>
+                                    <span x-text="showReceipt ? 'Hide Receipt Preview' : 'Preview Receipt (in-drawer)'"></span>
+                                </button>
+                                <div x-show="showReceipt" x-transition class="rounded-xl border border-primary-200 dark:border-dark-border overflow-hidden bg-white">
+                                    <div class="px-3 py-2 bg-primary-50 dark:bg-dark-800 border-b border-primary-100 flex items-center justify-between">
+                                        <span class="text-[10px] font-bold uppercase tracking-widest text-primary-600">Receipt Preview — no download</span>
+                                        <span class="text-[10px] font-mono text-primary-500 truncate max-w-[160px]" x-text="selected.reference"></span>
+                                    </div>
+                                    <iframe :src="selected.receipt_url + (selected.receipt_url.includes('?') ? '&' : '?') + 'preview=1#toolbar=0&navpanes=0&scrollbar=0'" class="w-full h-[520px] bg-white" loading="lazy" title="Receipt preview"></iframe>
+                                    <div class="p-2 bg-amber-50 border-t border-amber-100 text-[10px] text-amber-700 text-center">Preview only — printing allowed, download disabled by policy.</div>
+                                </div>
+                            </div>
+                        </template>
+
                         <div class="flex flex-wrap gap-2 pt-2">
                             <a :href="selected.status_url" class="flex-1 min-w-[120px] px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold text-center transition-all"><i class="fas fa-external-link-alt me-1"></i> Full Page</a>
-                            <template x-if="selected.isSettled"><a :href="selected.receipt_url" target="_blank" class="flex-1 min-w-[120px] px-4 py-2.5 rounded-xl bg-white border border-primary-100 text-primary-700 text-xs font-bold text-center hover:bg-primary-50">Receipt PDF</a></template>
                             <button type="button" @click="closeDetails()" class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-dark-border text-xs font-bold hover:bg-gray-200">Close</button>
                         </div>
                     </div>
@@ -490,6 +463,7 @@ function paymentHistoryDetails() {
         selected: null,
         copiedField: null,
         copyTimeout: null,
+        showReceipt: false,
         init() {
             const searchInput = document.getElementById('searchInput');
             const startDate = document.getElementById('startDate');
@@ -507,11 +481,13 @@ function paymentHistoryDetails() {
         },
         openDetails(payload) {
             this.selected = payload;
+            this.showReceipt = false;
             this.open = true;
             document.body.style.overflow = 'hidden';
         },
         closeDetails() {
             this.open = false;
+            this.showReceipt = false;
             setTimeout(()=>{ this.selected=null; }, 300);
             document.body.style.overflow = '';
         },

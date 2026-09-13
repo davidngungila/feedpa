@@ -14,7 +14,7 @@
     </div>
 
     <div class="card p-4">
-        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
             <input type="text" name="search" value="{{ request('search') }}" placeholder="Search MPX827362, phone, amount, comment..." class="sm:col-span-2 px-3 py-2 rounded-lg border border-primary-200 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
             <select name="device_id" class="px-3 py-2 rounded-lg border border-primary-200 text-sm">
                 <option value="">All Devices</option>
@@ -26,6 +26,12 @@
                 <option value="">All Providers</option>
                 @foreach($providers as $p)
                 <option value="{{ $p->id }}" @selected(request('provider_id')==$p->id)>{{ $p->name }}</option>
+                @endforeach
+            </select>
+            <select name="sender" class="px-3 py-2 rounded-lg border border-primary-200 text-sm">
+                <option value="">All Senders</option>
+                @foreach($senders as $s)
+                <option value="{{ $s }}" @selected(request('sender')==$s)>{{ $s }}</option>
                 @endforeach
             </select>
             <select name="recorded" class="px-3 py-2 rounded-lg border border-primary-200 text-sm">

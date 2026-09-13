@@ -15,6 +15,10 @@ class SmsInboxController extends Controller
 
         if ($request->filled('device_id')) $q->where('device_id',$request->device_id);
         if ($request->filled('provider_id')) $q->where('provider_id',$request->provider_id);
+        if ($request->filled('sender')) {
+            $sender = trim($request->sender);
+            $q->where('sender','like',"%$sender%");
+        }
         if ($request->filled('status')) $q->where('processing_status',$request->status);
         if ($request->filled('recorded')) {
             $q->where('is_recorded', $request->recorded === '1' || $request->recorded === 'recorded');
@@ -35,13 +39,14 @@ class SmsInboxController extends Controller
         $messages = $q->paginate(20)->withQueryString();
         $devices = SmsDevice::select('id','device_code','name')->get();
         $providers = SmsProvider::all();
+        $senders = SmsMessage::select('sender')->distinct()->orderBy('sender')->pluck('sender')->filter()->take(50);
         $stats = [
             'today' => SmsMessage::whereDate('sms_timestamp', today())->count(),
             'recorded' => SmsMessage::where('is_recorded', true)->count(),
             'not_recorded' => SmsMessage::where('is_recorded', false)->count(),
             'pending' => SmsMessage::where('sync_status','PENDING')->count(),
         ];
-        return view('sms-gateway.inbox.index', compact('messages','devices','providers','stats'));
+        return view('sms-gateway.inbox.index', compact('messages','devices','providers','senders','stats'));
     }
 
     public function show(SmsMessage $sms)

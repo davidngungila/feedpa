@@ -39,12 +39,17 @@
                 <option value="1" @selected(request('recorded')=='1')>Recorded ✓</option>
                 <option value="0" @selected(request('recorded')=='0')>Not Recorded</option>
             </select>
-            <div class="flex items-center gap-2">
-                <input type="date" name="date_from" value="{{ request('date_from') ?? request('start_date') }}" class="flex-1 px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white" placeholder="From">
-                <span class="text-xs text-primary-500">to</span>
-                <input type="date" name="date_to" value="{{ request('date_to') ?? request('end_date') }}" class="flex-1 px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white" placeholder="To">
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500">From</label>
+                <input type="date" name="date_from" value="{{ request('date_from') ?? request('start_date') }}" class="w-full px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none">
             </div>
-            <button class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-bold hover:bg-primary-700">Filter</button>
+            <div class="space-y-1">
+                <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500">To</label>
+                <input type="date" name="date_to" value="{{ request('date_to') ?? request('end_date') }}" class="w-full px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white focus:ring-2 focus:ring-primary-500 outline-none">
+            </div>
+            <div class="flex items-end">
+                <button class="w-full px-4 py-2.5 rounded-lg bg-primary-600 text-white text-sm font-bold hover:bg-primary-700 shadow-sm">Filter</button>
+            </div>
         </form>
         <div class="mt-3 flex flex-wrap gap-2 text-xs items-center">
             <a href="{{ route('sms-gateway.sms', ['filter'=>'today']) }}" class="px-3 py-1.5 rounded-full border border-primary-200 hover:bg-primary-50">Today</a>

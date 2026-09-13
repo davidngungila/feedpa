@@ -12,6 +12,7 @@ Route::middleware('auth')->prefix('sms-gateway')->name('sms-gateway.')->group(fu
     Route::get('/dashboard', [SmsDashboardController::class, 'index'])->name('dashboard.index');
 
     Route::resource('devices', SmsDeviceController::class);
+    Route::get('devices/{device}/details', [SmsDeviceController::class, 'details'])->name('devices.details');
     Route::post('devices/{device}/generate-code', [SmsDeviceController::class, 'generateCode'])->name('devices.generate-code');
     Route::post('devices/{device}/revoke', [SmsDeviceController::class, 'revoke'])->name('devices.revoke');
     Route::post('devices/{device}/suspend', [SmsDeviceController::class, 'suspend'])->name('devices.suspend');

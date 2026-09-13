@@ -67,6 +67,48 @@ class SmsDeviceController extends Controller
         return view('sms-gateway.devices.show', compact('device','recentSms','isOnline'));
     }
 
+    public function details(SmsDevice $device)
+    {
+        $device->load([
+            'location',
+            'creator',
+            'tokens',
+            'heartbeats' => fn($q) => $q->latest()->limit(1),
+        ]);
+        $activeToken = $device->activeToken();
+        $isOnline = $device->isOnline();
+        return response()->json([
+            'id' => $device->id,
+            'device_code' => $device->device_code,
+            'name' => $device->name,
+            'status' => $device->status,
+            'is_online' => $isOnline,
+            'location' => $device->location?->name,
+            'phone_number' => $device->phone_number,
+            'sim_slot' => $device->sim_slot,
+            'sim_operator' => $device->sim_operator,
+            'android_version' => $device->android_version,
+            'app_version' => $device->app_version,
+            'battery_level' => $device->battery_level,
+            'network_type' => $device->network_type,
+            'signal_strength' => $device->signal_strength,
+            'last_heartbeat_at' => optional($device->last_heartbeat_at)->toDateTimeString(),
+            'last_sync_at' => optional($device->last_sync_at)->toDateTimeString(),
+            'last_sms_at' => optional($device->last_sms_at)->toDateTimeString(),
+            'created_at' => optional($device->created_at)->toDateTimeString(),
+            'created_by' => $device->creator?->name,
+            'sms_count' => $device->smsMessages()->count(),
+            'whatsapp_count' => $device->whatsappMessages()->count(),
+            'active_token' => $activeToken ? [
+                'plain_hint' => $activeToken->plain_hint,
+                'created_at' => optional($activeToken->created_at)->toDateTimeString(),
+                'expires_at' => optional($activeToken->expires_at)->toDateTimeString(),
+                'last_used_at' => optional($activeToken->last_used_at)->toDateTimeString(),
+            ] : null,
+            'config' => $device->config,
+        ]);
+    }
+
     public function generateCode(SmsDevice $device)
     {
         abort_unless(auth()->user()->is_admin, 403, 'Admin only.');

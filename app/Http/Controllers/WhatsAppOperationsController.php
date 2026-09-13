@@ -1094,6 +1094,7 @@ class WhatsAppOperationsController extends Controller implements HasMiddleware
 
         return response()->json([
             'success' => true,
+            'message' => 'Message info fetched.',
             'data'    => $result['data'] ?? null,
         ]);
     }

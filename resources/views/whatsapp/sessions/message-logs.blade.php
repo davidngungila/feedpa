@@ -293,21 +293,36 @@ function logDrawer(){
         function runFetch(url, options, onSuccess, onFail) {
             return fetch(url, options)
                 .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { ok: response.ok, data: data };
+                    return response.text().then(function (text) {
+                        var data = null;
+                        try { data = text ? JSON.parse(text) : null; }
+                        catch (e) { throw { status: response.status, raw: text }; }
+                        return { ok: response.ok, status: response.status, data: data };
                     });
                 })
                 .then(function (result) {
-                    if (result.data.success) {
+                    if (!result.ok) { throw { status: result.status, data: result.data }; }
+                    if (result.data && result.data.success) {
                         showToast(result.data.message || 'Done.', true);
                         onSuccess && onSuccess(result);
-                    } else {
-                        showToast(result.data.message || 'Request failed.', false);
+                    } else if (result.data) {
+                        showToast(result.data.message || 'Request failed (status ' + result.status + ').', false);
                         onFail && onFail(result);
+                    } else {
+                        throw { status: result.status, data: result.data };
                     }
                 })
-                .catch(function () {
-                    showToast('Network error. Please try again.', false);
+                .catch(function (err) {
+                    if (err && err.data && err.data.redirect) {
+                        showToast(err.data.message || 'Session expired. Redirecting...', false);
+                        setTimeout(function () { window.location.href = err.data.redirect; }, 1200);
+                    } else if (err && err.data && err.data.message) {
+                        showToast(err.data.message, false);
+                    } else if (err && typeof err.status !== 'undefined' && err.raw) {
+                        showToast('Error ' + err.status + ': server returned a non-JSON response.', false);
+                    } else {
+                        showToast('Network error. Please try again.', false);
+                    }
                     onFail && onFail();
                 });
         }
@@ -372,42 +387,28 @@ function logDrawer(){
             if (infoBtn) {
                 const msgId = infoBtn.dataset.msgId;
                 if (!msgId) return;
-                infoBtn.disabled = true;
-                fetch(routes.info.replace('__ID__', msgId), { method: 'GET', headers: { 'Accept': 'application/json' } })
-                    .then(function (response) {
-                        return response.json().then(function (data) {
-                            return { ok: response.ok, data: data };
-                        });
-                    })
-                    .then(function (result) {
-                        if (result.data.success) {
-                            const info = result.data.data || {};
-                            if (window.__logDrawer) {
-                                let content = info.message || info.msg || info.content || info;
-                                if (content && typeof content === 'object') {
-                                    content = JSON.stringify(content);
-                                }
-                                window.__logDrawer.openFromInfo({
-                                    id: info.msgId || info.id || '—',
-                                    to: info.jid || info.to || '—',
-                                    status: info.status ?? 'sent',
-                                    content: content,
-                                    created_at: info.createdAt || info.created_at || '—',
-                                    updated_at: info.updatedAt || info.updated_at || null,
-                                    failed_reason: info.failedReason || info.failed_reason || null,
-                                });
+                withSpinner(infoBtn, runFetch(
+                    routes.info.replace('__ID__', msgId),
+                    { method: 'GET', headers: { 'Accept': 'application/json' } },
+                    function (result) {
+                        const info = result.data.data || {};
+                        if (window.__logDrawer) {
+                            let content = info.message || info.msg || info.content || info;
+                            if (content && typeof content === 'object') {
+                                content = JSON.stringify(content);
                             }
-                            showToast(result.data.message || 'Message info fetched.', true);
-                        } else {
-                            showToast(result.data.message || 'Failed to fetch message info.', false);
+                            window.__logDrawer.openFromInfo({
+                                id: info.msgId || info.id || '—',
+                                to: info.jid || info.to || '—',
+                                status: info.status ?? 'sent',
+                                content: content,
+                                created_at: info.createdAt || info.created_at || '—',
+                                updated_at: info.updatedAt || info.updated_at || null,
+                                failed_reason: info.failedReason || info.failed_reason || null,
+                            });
                         }
-                    })
-                    .catch(function () {
-                        showToast('Network error. Please try again.', false);
-                    })
-                    .finally(function () {
-                        infoBtn.disabled = false;
-                    });
+                    }
+                ));
             }
         });
     });

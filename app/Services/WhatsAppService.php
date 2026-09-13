@@ -792,9 +792,19 @@ class WhatsAppService
         return $this->request('POST', '/messages/' . $msgId . '/resend');
     }
 
-    public function getMessageInfo(int $msgId): array
+    public function getMessageInfo(int|string $msgId): array
     {
-        return $this->request('GET', '/messages/' . $msgId . '/info');
+        $result = $this->request('GET', '/messages/' . rawurlencode((string) $msgId) . '/info', [], true);
+
+        if (!($result['success'] ?? false)) {
+            $message = $result['message'] ?? 'Failed to load message info.';
+            if (is_string($message) && str_contains($message, '<')) {
+                $message = 'Message info unavailable (code ' . ($result['status'] ?? 'unknown') . ').';
+            }
+            $result['message'] = $message;
+        }
+
+        return $result;
     }
 
     public function markMessageRead(array $key): array

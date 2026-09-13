@@ -129,9 +129,11 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Beneficiary Management Routes
+    Route::get('beneficiaries/{beneficiary}/details', [BeneficiaryController::class, 'details'])->name('beneficiaries.details');
     Route::resource('beneficiaries', BeneficiaryController::class);
     
     // User Management Routes
+    Route::get('users/{user}/details', [UserController::class, 'details'])->name('users.details');
     Route::resource('users', UserController::class);
     Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
     

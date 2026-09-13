@@ -3,7 +3,7 @@
 @section('title', 'All Contacts')
 
 @section('content')
-<div class="max-w-6xl mx-auto space-y-6 animate-fade-in">
+<div class="max-w-6xl mx-auto space-y-6 animate-fade-in" x-data="contactDrawer()" @keydown.escape.window="closeDrawer()">
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -40,10 +40,10 @@
         <div class="flex flex-col md:flex-row gap-3">
             <div class="relative flex-1">
                 <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-primary-300 text-xs"></i>
-                <input type="text" id="contactSearch" placeholder="Search by name, phone or display name..."
+                <input type="text" id="contactSearch" x-model="search" placeholder="Search by name, phone or display name..."
                     class="w-full pl-10 pr-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
             </div>
-            <select id="contactTypeFilter" class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+            <select id="contactTypeFilter" x-model="type" class="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark-card text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                 <option value="all">All types</option>
                 <option value="business">Business (verified)</option>
                 <option value="personal">Personal</option>
@@ -65,17 +65,10 @@
                 </thead>
                 <tbody class="divide-y divide-primary-100 dark:divide-primary-800">
                     @forelse($contacts as $contact)
-                        @php
-                            $contactId = $contact['id'] ?? $contact['jid'] ?? '';
-                            $isBusiness = !empty($contact['verifiedName']);
-                        @endphp
-                        <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors cursor-pointer contact-row"
-                            data-contact="{{ $contactId }}"
-                            data-type="{{ $isBusiness ? 'business' : 'personal' }}"
-                            data-search="{{ strtolower(trim(($contact['name'] ?? '') . ' ' . ($contact['notify'] ?? '') . ' ' . ($contact['verifiedName'] ?? '') . ' ' . $contactId)) }}">
+                        <tr @click="openDrawer(@js($contact))" x-show="matchesFilter(contact)" class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors cursor-pointer">
                             <td class="px-6 py-4">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center overflow-hidden">
+                                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center overflow-hidden shrink-0">
                                         @if(!empty($contact['imgUrl']))
                                             <img src="{{ $contact['imgUrl'] }}" alt="" class="w-full h-full object-cover">
                                         @else
@@ -84,7 +77,7 @@
                                     </div>
                                     <div class="min-w-0">
                                         <p class="text-sm font-bold text-primary-900 dark:text-white truncate">{{ $contact['name'] ?? ($contact['notify'] ?? 'Unknown') }}</p>
-                                        @if($isBusiness)
+                                        @if(!empty($contact['verifiedName']))
                                             <p class="text-[10px] text-primary-400">
                                                 <i class="fas fa-check-circle mr-0.5 text-blue-500"></i> {{ $contact['verifiedName'] }}
                                             </p>
@@ -100,7 +93,7 @@
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex justify-end">
-                                    <button type="button" class="view-contact-btn px-3 py-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 hover:bg-primary-600 hover:text-white transition-all text-[10px] font-bold" data-contact="{{ $contactId }}">
+                                    <button type="button" @click.stop="openDrawer(@js($contact))" class="px-3 py-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 hover:bg-primary-600 hover:text-white transition-all text-[10px] font-bold">
                                         <i class="fas fa-eye mr-1"></i> View
                                     </button>
                                 </div>
@@ -120,168 +113,149 @@
                             </td>
                         </tr>
                     @endforelse
+                    @if(count($contacts) > 0)
+                        <tr x-show="filtered().length === 0" x-cloak>
+                            <td colspan="4" class="px-6 py-16 text-center">
+                                <i class="fas fa-filter text-4xl text-primary-300 mb-3 block"></i>
+                                <p class="text-sm font-bold text-primary-500">No contacts match your filters</p>
+                                <p class="text-xs text-primary-400 mt-1">Try adjusting the search or type filter.</p>
+                            </td>
+                        </tr>
+                    @endif
                 </tbody>
             </table>
         </div>
         @if(!$error)
             <div class="px-6 py-4 border-t border-primary-100 dark:border-dark-border flex items-center justify-between">
-                <p class="text-[10px] text-primary-400 font-bold uppercase tracking-wider"><span id="contactCount">{{ count($contacts) }}</span> contact{{ count($contacts) === 1 ? '' : 's' }}</p>
+                <p class="text-[10px] text-primary-400 font-bold uppercase tracking-wider"><span x-text="filtered().length + ' contact' + (filtered().length === 1 ? '' : 's')">{{ count($contacts) }} contacts</span></p>
             </div>
         @endif
     </div>
-</div>
 
-<!-- Contact Details Modal -->
-<div id="contactModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-    <div class="card w-full max-w-md p-6 max-h-[85vh] overflow-y-auto">
-        <div class="flex items-start justify-between mb-4">
-            <h3 class="text-sm font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                <i class="fas fa-user-circle"></i> Contact Details
-            </h3>
-            <button type="button" id="closeContactModal" class="p-2 rounded-lg bg-gray-100 dark:bg-primary-900/20 text-primary-500 hover:text-red-500 transition-all">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div id="contactModalContent" class="space-y-4">
-            <div class="flex items-center justify-center">
-                <div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center overflow-hidden">
-                    <i class="fab fa-whatsapp text-4xl text-green-600 dark:text-green-400"></i>
+    <!-- Right Drawer -->
+    <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-[60] flex justify-end overflow-hidden" style="display:none;">
+        <div @click="closeDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="relative w-full sm:w-[480px] max-w-[100vw] h-full max-h-screen bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
+            <!-- Drawer Header -->
+            <div class="flex items-center justify-between px-5 pt-0 pb-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/60 dark:bg-dark-900/60">
+                <div class="min-w-0">
+                    <h3 class="text-sm font-bold text-primary-900 dark:text-white flex items-center gap-2"><i class="fa-brands fa-whatsapp text-green-600"></i> Contact Details</h3>
+                    <p class="text-[11px] text-primary-500 truncate" x-text="selected ? (selected.name || selected.notify || selected.jid || selected.id || '') : ''"></p>
                 </div>
+                <button @click="closeDrawer()" class="w-8 h-8 rounded-lg bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border flex items-center justify-center hover:bg-primary-50"><i class="fas fa-times text-primary-600"></i></button>
             </div>
-            <div class="text-center">
-                <p id="contactModalName" class="text-lg font-black text-primary-900 dark:text-white">—</p>
-                <p id="contactModalVerified" class="text-[11px] text-blue-500 hidden mt-0.5"></p>
+
+            <div x-show="loading" class="p-8 text-center">
+                <div class="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto"></div>
+                <p class="text-xs text-primary-500 mt-3">Loading details...</p>
             </div>
-            <div class="space-y-3 text-xs border-t border-primary-100 dark:border-primary-800 pt-4">
-                <div>
-                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Phone / JID</p>
-                    <p id="contactModalJid" class="text-primary-700 dark:text-primary-300 font-mono break-all">—</p>
+
+            <div x-show="!loading && selected" class="flex-1 min-h-0 overflow-y-auto p-5 space-y-5" style="display:none;" x-cloak>
+                <!-- Avatar + identity -->
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center overflow-hidden shrink-0">
+                        <template x-if="selected?.imgUrl || selected?.img_url">
+                            <img :src="selected?.imgUrl || selected?.img_url" class="w-full h-full object-cover">
+                        </template>
+                        <template x-if="!(selected?.imgUrl || selected?.img_url)">
+                            <i class="fa-brands fa-whatsapp text-2xl text-green-600 dark:text-green-400"></i>
+                        </template>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-lg font-black text-primary-900 dark:text-white truncate" x-text="selected?.name || selected?.notify || 'Unknown'"></p>
+                        <template x-if="selected?.verifiedName">
+                            <p class="text-[11px] text-blue-500"><i class="fas fa-check-circle mr-0.5"></i><span x-text="selected.verifiedName"></span></p>
+                        </template>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">LID</p>
-                    <p id="contactModalLid" class="text-primary-700 dark:text-primary-300 font-mono break-all">—</p>
+
+                <!-- Contact information -->
+                <div class="p-4 rounded-xl bg-primary-50 border border-primary-100 dark:bg-dark-800 dark:border-dark-border">
+                    <p class="text-[10px] font-bold tracking-widest text-primary-500 mb-2">CONTACT INFORMATION</p>
+                    <div class="space-y-3 text-xs">
+                        <div class="flex justify-between gap-2 border-b border-primary-100 dark:border-dark-border pb-2">
+                            <span class="text-primary-500 shrink-0">Phone / JID</span>
+                            <span class="flex items-center gap-2 min-w-0 pl-3">
+                                <span class="font-mono font-bold break-all text-right" x-text="selected?.id || selected?.jid || '—'"></span>
+                                <button @click="copyJid(selected?.jid || selected?.id)" class="w-6 h-6 rounded border bg-white dark:bg-dark-900 flex items-center justify-center shrink-0"><i class="fa-regular fa-copy text-[10px]"></i></button>
+                            </span>
+                        </div>
+                        <div class="flex justify-between gap-2 border-b border-primary-100 dark:border-dark-border pb-2">
+                            <span class="text-primary-500 shrink-0">LID</span>
+                            <span class="font-mono font-bold break-all text-right" x-text="selected?.lid || '—'"></span>
+                        </div>
+                        <div class="flex justify-between gap-2 border-b border-primary-100 dark:border-dark-border pb-2">
+                            <span class="text-primary-500 shrink-0">Display Name</span>
+                            <span class="font-bold break-all text-right" x-text="selected?.notify || '—'"></span>
+                        </div>
+                        <div class="flex justify-between gap-2 border-b border-primary-100 dark:border-dark-border pb-2">
+                            <span class="text-primary-500 shrink-0">Type</span>
+                            <span class="font-bold inline-flex items-center gap-1" :class="selected?.verifiedName ? 'text-blue-600' : 'text-primary-900 dark:text-white'">
+                                <template x-if="selected?.verifiedName"><i class="fas fa-check-circle"></i></template>
+                                <span x-text="selected?.verifiedName ? 'Business (verified)' : 'Personal'"></span>
+                            </span>
+                        </div>
+                        <div class="flex justify-between gap-2">
+                            <span class="text-primary-500 shrink-0">Status</span>
+                            <span class="font-bold italic break-all text-right" x-text="selected?.status || '—'"></span>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Display Name</p>
-                    <p id="contactModalNotify" class="text-primary-700 dark:text-primary-300">—</p>
-                </div>
-                <div>
-                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Type</p>
-                    <p id="contactModalType" class="text-primary-700 dark:text-primary-300">—</p>
-                </div>
-                <div>
-                    <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Status</p>
-                    <p id="contactModalStatus" class="text-primary-700 dark:text-primary-300 italic">—</p>
-                </div>
+
+                <!-- Close -->
+                <button @click="closeDrawer()" class="w-full px-3 py-2 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold"><i class="fas fa-times mr-1"></i> Close</button>
             </div>
         </div>
     </div>
+
+    <!-- Copy toast -->
+    <div x-show="toast" x-transition class="fixed bottom-6 right-6 z-[70] px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold flex items-center gap-2" style="display:none;"><i class="fa-solid fa-check text-green-400"></i><span x-text="toastMsg"></span></div>
 </div>
+
+<style>[x-cloak] { display: none !important; }</style>
 @endsection
 
 @push('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const searchInput = document.getElementById('contactSearch');
-        const typeFilter = document.getElementById('contactTypeFilter');
-        const rows = Array.from(document.querySelectorAll('.contact-row'));
-        const countEl = document.getElementById('contactCount');
-
-        function applyFilters() {
-            const query = (searchInput.value || '').toLowerCase().trim();
-            const type = typeFilter.value;
-            let visible = 0;
-
-            rows.forEach(function (row) {
-                const matchesQuery = !query || row.dataset.search.includes(query);
-                const matchesType = type === 'all' || row.dataset.type === type;
-                const show = matchesQuery && matchesType;
-                row.style.display = show ? '' : 'none';
-                if (show) visible++;
-            });
-
-            if (countEl) countEl.textContent = visible;
-        }
-
-        if (searchInput) searchInput.addEventListener('input', applyFilters);
-        if (typeFilter) typeFilter.addEventListener('change', applyFilters);
-
-        const modal = document.getElementById('contactModal');
-        const modalContent = document.getElementById('contactModalContent');
-        const closeBtn = document.getElementById('closeContactModal');
-        const baseUrl = '{{ url('whatsapp/contacts') }}/';
-
-        function openContact(contactId) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            modalContent.innerHTML = '<div class="text-center py-10"><i class="fas fa-spinner fa-spin text-2xl text-primary-400"></i><p class="text-xs text-primary-500 mt-3">Loading contact...</p></div>';
-
-            fetch(baseUrl + encodeURIComponent(contactId), {
-                headers: { 'Accept': 'application/json' },
-            })
-            .then(function (response) { return response.json(); })
-            .then(function (data) {
-                if (!data.success) throw new Error(data.message || 'Failed to load contact details.');
-
-                const c = data.data;
-                const avatar = c.picture || c.imgUrl;
-                const isBusiness = !!(c.verifiedName);
-
-                modalContent.innerHTML =
-                    '<div class="flex items-center justify-center">' +
-                        (avatar
-                            ? '<img src="' + avatar + '" alt="" class="w-24 h-24 rounded-full object-cover">'
-                            : '<div class="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 flex items-center justify-center"><i class="fab fa-whatsapp text-4xl text-green-600 dark:text-green-400"></i></div>') +
-                    '</div>' +
-                    '<div class="text-center">' +
-                        '<p class="text-lg font-black text-primary-900 dark:text-white break-all">' + (c.name || c.notify || 'Unknown') + '</p>' +
-                        (isBusiness ? '<p class="text-[11px] text-blue-500 mt-0.5"><i class="fas fa-check-circle mr-0.5"></i>' + (c.verifiedName || 'Verified Business') + '</p>' : '') +
-                    '</div>' +
-                    '<div class="space-y-3 text-xs border-t border-primary-100 dark:border-primary-800 pt-4">' +
-                        '<div><p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Phone / JID</p><p class="text-primary-700 dark:text-primary-300 font-mono break-all">' + (c.id || '—') + '</p></div>' +
-                        '<div><p class="text-[10px] text-gray-400 uppercase font-bold mb-1">LID</p><p class="text-primary-700 dark:text-primary-300 font-mono break-all">' + (c.lid || '—') + '</p></div>' +
-                        '<div><p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Display Name</p><p class="text-primary-700 dark:text-primary-300">' + (c.notify || '—') + '</p></div>' +
-                        '<div><p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Type</p><p class="text-primary-700 dark:text-primary-300">' + (isBusiness ? 'Business (verified)' : 'Personal') + '</p></div>' +
-                        '<div><p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Status</p><p class="text-primary-700 dark:text-primary-300 italic">' + (c.status || '—') + '</p></div>' +
-                    '</div>';
-            })
-            .catch(function (err) {
-                modalContent.innerHTML = '<div class="p-3 rounded-xl bg-red-50/60 dark:bg-red-900/10 border border-red-200 dark:border-red-800 text-xs font-bold text-red-700 dark:text-red-300"><i class="fas fa-exclamation-circle mr-1"></i>' + (err.message || 'Failed to load contact.') + '</div>';
+function contactDrawer(){
+    return {
+        drawerOpen:false,
+        selected:null,
+        loading:false,
+        search:'',
+        type:'all',
+        toast:false,
+        toastMsg:'Copied!',
+        contacts: @js($contacts),
+        searchable(c){
+            return ((c.name||'') + ' ' + (c.notify||'') + ' ' + (c.verifiedName||'') + ' ' + (c.id||'') + ' ' + (c.jid||'')).toLowerCase();
+        },
+        matchesFilter(c){
+            const q = (this.search||'').toLowerCase().trim();
+            const qOk = !q || this.searchable(c).includes(q);
+            const isBiz = !!(c.verifiedName);
+            const typeOk = this.type === 'all' || (this.type === 'business' ? isBiz : !isBiz);
+            return qOk && typeOk;
+        },
+        filtered(){
+            return (this.contacts || []).filter(c => this.matchesFilter(c));
+        },
+        openDrawer(contact){
+            this.drawerOpen=true;
+            this.loading=true;
+            this.selected=null;
+            setTimeout(()=>{ this.selected=contact; this.loading=false; }, 250);
+        },
+        closeDrawer(){ this.drawerOpen=false; setTimeout(()=>{ this.selected=null; }, 300); },
+        copyJid(t){
+            if(!t) return;
+            navigator.clipboard.writeText(String(t)).then(()=>{
+                this.toastMsg='Copied: ' + t;
+                this.toast=true;
+                setTimeout(()=>{ this.toast=false; }, 1500);
             });
         }
-
-        document.querySelectorAll('.contact-row').forEach(function (row) {
-            row.addEventListener('click', function (e) {
-                if (e.target.closest('.view-contact-btn')) return;
-                openContact(row.dataset.contact);
-            });
-        });
-
-        document.querySelectorAll('.view-contact-btn').forEach(function (btn) {
-            btn.addEventListener('click', function (e) {
-                e.stopPropagation();
-                openContact(btn.dataset.contact);
-            });
-        });
-
-        if (closeBtn) closeBtn.addEventListener('click', function () {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        });
-
-        modal.addEventListener('click', function (e) {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        });
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-            }
-        });
-    });
+    }
+}
 </script>
 @endpush

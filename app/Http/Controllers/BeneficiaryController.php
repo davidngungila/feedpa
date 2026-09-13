@@ -59,6 +59,27 @@ class BeneficiaryController extends Controller
         return redirect()->route('beneficiaries.index')->with('success', 'Beneficiary created successfully');
     }
 
+    public function details(Beneficiary $beneficiary)
+    {
+        if ($beneficiary->user_id !== auth()->id()) {
+            abort(403);
+        }
+        return response()->json([
+            'id' => $beneficiary->id,
+            'name' => $beneficiary->name,
+            'type' => $beneficiary->type,
+            'phone' => $beneficiary->phone,
+            'email' => $beneficiary->email,
+            'bank_name' => $beneficiary->bank_name,
+            'account_number' => $beneficiary->account_number,
+            'bic' => $beneficiary->bic,
+            'transfer_type' => $beneficiary->transfer_type,
+            'is_active' => (bool) $beneficiary->is_active,
+            'created_at' => optional($beneficiary->created_at)->toDateTimeString(),
+            'updated_at' => optional($beneficiary->updated_at)->toDateTimeString(),
+        ]);
+    }
+
     public function show(Beneficiary $beneficiary)
     {
         if ($beneficiary->user_id !== auth()->id()) {

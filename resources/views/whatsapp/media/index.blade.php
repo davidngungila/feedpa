@@ -3,7 +3,7 @@
 @section('title', 'Media & Files')
 
 @section('content')
-<div class="max-w-6xl mx-auto space-y-6 animate-fade-in">
+<div class="max-w-6xl mx-auto space-y-6 animate-fade-in" x-data="mediaDrawer()" @keydown.escape.window="closeDrawer()">
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -58,7 +58,7 @@
     <!-- Media Grid -->
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         @forelse($mediaFiles as $media)
-            <div class="card overflow-hidden group">
+            <div class="card overflow-hidden group cursor-pointer" @click="openDrawer(@js($media))">
                 <div class="h-32 bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center">
                     @if($media->type === 'image' && $media->url)
                         <img src="{{ $media->url }}" alt="{{ $media->name }}" class="w-full h-full object-cover" loading="lazy">
@@ -73,11 +73,11 @@
                         <span class="text-[10px] text-primary-400">{{ $media->created_at->format('M d, Y') }}</span>
                         <div class="flex gap-1">
                             @if($media->url)
-                                <a href="{{ $media->url }}" target="_blank" class="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-600 hover:text-white transition-all" title="Open">
+                                <a href="{{ $media->url }}" target="_blank" @click.stop class="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-600 hover:bg-blue-600 hover:text-white transition-all" title="Open">
                                     <i class="fas fa-external-link-alt text-[10px]"></i>
                                 </a>
                             @endif
-                            <form action="{{ route('whatsapp.media.destroy', $media->id) }}" method="POST" data-ajax-delete onsubmit="return confirm('Are you sure you want to delete this file?')">
+                            <form action="{{ route('whatsapp.media.destroy', $media->id) }}" method="POST" @click.stop data-ajax-delete onsubmit="return confirm('Are you sure you want to delete this file?')">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="p-1.5 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 hover:bg-red-600 hover:text-white transition-all" title="Delete">
@@ -102,11 +102,136 @@
             {{ $mediaFiles->appends(request()->query())->links() }}
         </div>
     @endif
+
+    <!-- Media Details Drawer -->
+    <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-[60] flex justify-end overflow-hidden" style="display:none;">
+        <div @click="closeDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="relative w-full sm:w-[480px] max-w-[100vw] h-full max-h-screen bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
+            <!-- Drawer Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-2 min-w-0">
+                    <i class="fas fa-info-circle text-primary-500 text-sm"></i>
+                    <div class="min-w-0">
+                        <p class="text-xs font-black text-primary-900 dark:text-white uppercase tracking-wider">Media Details</p>
+                        <p x-text="media?.name" class="text-[10px] text-primary-500 truncate"></p>
+                    </div>
+                </div>
+                <button type="button" @click="closeDrawer()" class="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all" title="Close">
+                    <i class="fas fa-times text-[10px]"></i>
+                </button>
+            </div>
+
+            <!-- Drawer Body -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Loading Spinner -->
+                <div x-show="loading" class="flex items-center justify-center py-16">
+                    <i class="fas fa-spinner fa-spin text-3xl text-primary-500"></i>
+                </div>
+
+                <template x-if="!loading && media">
+                    <div class="space-y-5">
+                        <!-- Large Preview -->
+                        <div class="rounded-2xl overflow-hidden bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900 dark:to-primary-800 flex items-center justify-center h-64">
+                            <template x-if="media.type === 'image' && media.url">
+                                <img :src="media.url" :alt="media.name" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!(media.type === 'image' && media.url)">
+                                <i :class="'fas ' + (media.type === 'document' ? 'fa-file-pdf' : (media.type === 'video' ? 'fa-video' : (media.type === 'audio' ? 'fa-music' : 'fa-image'))) + ' text-6xl text-primary-500'"></i>
+                            </template>
+                        </div>
+
+                        <!-- File Name -->
+                        <div>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">File Name</p>
+                            <p x-text="media.name" class="text-sm font-bold text-primary-900 dark:text-white break-all"></p>
+                        </div>
+
+                        <!-- Type Badge -->
+                        <div>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Type</p>
+                            <span class="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300">
+                                <span x-text="media.type"></span>
+                            </span>
+                        </div>
+
+                        <!-- File Size -->
+                        <div>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">File Size</p>
+                            <p class="text-sm font-bold text-primary-900 dark:text-white" x-text="formatSize(media.size)"></p>
+                        </div>
+
+                        <!-- Created Date -->
+                        <div>
+                            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Created</p>
+                            <p class="text-sm font-bold text-primary-900 dark:text-white" x-text="formatDate(media.created_at)"></p>
+                        </div>
+
+                        <!-- Open in New Tab -->
+                        <a x-show="media.url" :href="media.url" target="_blank" class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-300 hover:bg-blue-600 hover:text-white transition-all text-xs font-bold">
+                            <i class="fas fa-external-link-alt"></i> Open in New Tab
+                        </a>
+
+                        <!-- Delete -->
+                        <form :action="mediaDeleteUrl(media.id)" method="POST" data-ajax-delete onsubmit="return confirm('Are you sure you want to delete this file?')" class="!mb-0">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 hover:bg-red-600 hover:text-white transition-all text-xs font-bold">
+                                <i class="fas fa-trash"></i> Delete File
+                            </button>
+                        </form>
+
+                        <!-- Close -->
+                        <button type="button" @click="closeDrawer()" class="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all text-xs font-bold">
+                            <i class="fas fa-times"></i> Close
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
 </div>
+<style>[x-cloak] { display: none !important; }</style>
 @endsection
 
 @push('scripts')
 <script>
+    function mediaDrawer() {
+        return {
+            drawerOpen: false,
+            loading: true,
+            media: null,
+            deleteBaseUrl: '{{ route('whatsapp.media.destroy', ['media' => '']) }}',
+            openDrawer(item) {
+                this.loading = true;
+                this.media = item;
+                this.drawerOpen = true;
+                setTimeout(() => {
+                    this.loading = false;
+                }, 250);
+            },
+            closeDrawer() {
+                this.drawerOpen = false;
+                this.media = null;
+            },
+            mediaDeleteUrl(id) {
+                return this.deleteBaseUrl + id;
+            },
+            formatSize(size) {
+                if (!size) return '—';
+                const bytes = Number(size);
+                if (bytes >= 1048576) {
+                    return (bytes / 1048576).toFixed(2) + ' MB';
+                }
+                return Math.round(bytes / 1024) + ' KB';
+            },
+            formatDate(dateStr) {
+                if (!dateStr) return '—';
+                const date = new Date(dateStr);
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            },
+        };
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         const uploadForm = document.getElementById('uploadForm');
         const openBtn = document.getElementById('openUploadBtn');

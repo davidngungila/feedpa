@@ -32,6 +32,32 @@ class UserController extends Controller
     }
 
     /**
+     * Get user details as JSON for the right drawer.
+     */
+    public function details(string $id)
+    {
+        if (!auth()->user()->is_admin) {
+            abort(403, 'Unauthorized');
+        }
+        
+        $user = User::findOrFail($id);
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'position' => $user->position,
+            'is_admin' => (bool) $user->is_admin,
+            'is_locked' => (bool) $user->is_locked,
+            'can_create_payouts' => (bool) $user->can_create_payouts,
+            'two_factor_enabled' => (bool) $user->two_factor_enabled,
+            'avatar' => $user->avatar ? asset('storage/' . $user->avatar) : null,
+            'created_at' => optional($user->created_at)->toDateTimeString(),
+            'updated_at' => optional($user->updated_at)->toDateTimeString(),
+        ]);
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create()

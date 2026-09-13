@@ -414,7 +414,7 @@
         <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeDetails()"></div>
         <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="relative w-full sm:w-[520px] max-w-[100vw] h-full max-h-screen bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
             <!-- Drawer Header -->
-            <div class="shrink-0 flex items-start justify-between gap-4 px-5 py-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/50 dark:bg-dark-800/50">
+            <div class="shrink-0 flex items-start justify-between gap-4 px-5 pt-0 pb-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/50 dark:bg-dark-800/50">
                 <div class="min-w-0 flex-1">
                     <h3 class="text-sm font-black text-primary-900 dark:text-white flex items-center gap-2"><i class="fas fa-wallet text-primary-600"></i> Payout Details</h3>
                     <p class="text-[10px] text-primary-500 uppercase tracking-widest">Full system view • Right drawer</p>

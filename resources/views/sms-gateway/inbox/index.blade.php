@@ -109,7 +109,7 @@
         <div @click="closeDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
         <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="relative w-full sm:w-[480px] max-w-[100vw] h-full max-h-screen bg-white shadow-2xl flex flex-col overflow-hidden">
             <!-- Drawer Header -->
-            <div class="flex items-center justify-between px-5 py-4 border-b border-primary-100 bg-primary-50">
+            <div class="flex items-center justify-between px-5 pt-0 pb-4 border-b border-primary-100 bg-primary-50">
                 <div>
                     <h3 class="text-sm font-bold text-primary-900 flex items-center gap-2"><i class="fa-solid fa-inbox text-primary-600"></i> SMS Details</h3>
                     <p class="text-[11px] text-primary-500" x-text="selected ? 'ID #' + selected.id + ' • ' + selected.uuid.substring(0,8) + '…' : ''"></p>

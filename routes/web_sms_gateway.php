@@ -26,6 +26,8 @@ Route::middleware('auth')->prefix('sms-gateway')->name('sms-gateway.')->group(fu
     Route::post('inbox/{sms}/recorded', [SmsInboxController::class, 'toggleRecorded'])->name('inbox.recorded');
     Route::post('inbox/{sms}/comment', [SmsInboxController::class, 'comment'])->name('inbox.comment');
     Route::post('inbox/{sms}/reparse', [SmsInboxController::class, 'reparse'])->name('inbox.reparse');
+    Route::get('sms/export/pdf', [SmsInboxController::class, 'exportPdf'])->name('sms.export.pdf');
+    Route::get('sms/export/excel', [SmsInboxController::class, 'exportExcel'])->name('sms.export.excel');
     Route::get('sms', [SmsInboxController::class, 'index'])->name('sms');
     Route::get('sms/{sms}', [SmsInboxController::class, 'show'])->name('sms.show');
     Route::get('sms/{sms}/details', [SmsInboxController::class, 'details'])->name('sms.details');

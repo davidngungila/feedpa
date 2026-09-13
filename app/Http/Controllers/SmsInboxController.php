@@ -193,4 +193,52 @@ class SmsInboxController extends Controller
         }
         return back()->with('success', "Re-parsed $count messages with new Swahili/English parser.");
     }
+
+    private function filteredQuery(\Illuminate\Http\Request $request)
+    {
+        $q = SmsMessage::with(['device','provider','smsTransaction','recordedBy','commentBy'])->latest('sms_timestamp');
+        if ($request->filled('device_id')) $q->where('device_id',$request->device_id);
+        if ($request->filled('provider_id')) $q->where('provider_id',$request->provider_id);
+        if ($request->filled('sender')) {
+            $sender = trim($request->sender);
+            $q->where('sender','like',"%$sender%");
+        }
+        if ($request->filled('status')) $q->where('processing_status',$request->status);
+        if ($request->filled('recorded')) {
+            $q->where('is_recorded', $request->recorded === '1' || $request->recorded === 'recorded');
+        }
+        if ($request->filled('search')) {
+            $s=$request->search;
+            $q->where(fn($qq)=>$qq->where('sender','like',"%$s%")->orWhere('body','like',"%$s%")->orWhere('hash','like',"%$s%")->orWhere('admin_comment','like',"%$s%"));
+        }
+        if ($request->filled('date_from')) $q->whereDate('sms_timestamp','>=',$request->date_from);
+        if ($request->filled('date_to')) $q->whereDate('sms_timestamp','<=',$request->date_to);
+        // Also support start_date/end_date aliases (used by export forms and payment history)
+        if ($request->filled('start_date') && !$request->filled('date_from')) $q->whereDate('sms_timestamp','>=',$request->start_date);
+        if ($request->filled('end_date') && !$request->filled('date_to')) $q->whereDate('sms_timestamp','<=',$request->end_date);
+        if ($request->filled('filter') ){
+            if ($request->filter==='today') $q->whereDate('sms_timestamp', today());
+            if ($request->filter==='recorded') $q->where('is_recorded', true);
+            if ($request->filter==='not_recorded') $q->where('is_recorded', false);
+        }
+        return $q;
+    }
+
+    public function exportPdf(\Illuminate\Http\Request $request)
+    {
+        $q = $this->filteredQuery($request);
+        $messages = $q->orderBy('sms_timestamp')->get();
+        $filters = $request->only(['search','device_id','provider_id','sender','recorded','date_from','date_to','start_date','end_date','filter']);
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('sms-gateway.exports.pdf', compact('messages','filters'))
+            ->setPaper('a4', 'landscape')
+            ->setOption('margin-bottom', 10);
+        return $pdf->download('sms-report-'.now()->format('Y-m-d').'.pdf');
+    }
+
+    public function exportExcel(\Illuminate\Http\Request $request)
+    {
+        $q = $this->filteredQuery($request);
+        $messages = $q->orderBy('sms_timestamp')->get();
+        return \Maatwebsite\Excel\Facades\Excel::download(new \App\Exports\SmsExport($messages), 'sms-report-'.now()->format('Y-m-d').'.xlsx');
+    }
 }

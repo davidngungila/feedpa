@@ -13,32 +13,37 @@
         </div>
     </div>
 
-    <div class="card p-4">
-        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
-            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search MPX827362, phone, amount, comment..." class="sm:col-span-2 px-3 py-2 rounded-lg border border-primary-200 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
-            <select name="device_id" class="px-3 py-2 rounded-lg border border-primary-200 text-sm">
+    <div class="card p-4 space-y-4">
+        <form method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search MPX827362, phone, amount, comment..." class="sm:col-span-2 lg:col-span-2 px-3 py-2 rounded-lg border border-primary-200 text-sm focus:ring-2 focus:ring-primary-500 outline-none">
+            <select name="device_id" class="px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white">
                 <option value="">All Devices</option>
                 @foreach($devices as $d)
                 <option value="{{ $d->id }}" @selected(request('device_id')==$d->id)>{{ $d->device_code }} — {{ $d->name }}</option>
                 @endforeach
             </select>
-            <select name="provider_id" class="px-3 py-2 rounded-lg border border-primary-200 text-sm">
+            <select name="provider_id" class="px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white">
                 <option value="">All Providers</option>
                 @foreach($providers as $p)
                 <option value="{{ $p->id }}" @selected(request('provider_id')==$p->id)>{{ $p->name }}</option>
                 @endforeach
             </select>
-            <select name="sender" class="px-3 py-2 rounded-lg border border-primary-200 text-sm">
+            <select name="sender" class="px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white">
                 <option value="">All Senders</option>
                 @foreach($senders as $s)
                 <option value="{{ $s }}" @selected(request('sender')==$s)>{{ $s }}</option>
                 @endforeach
             </select>
-            <select name="recorded" class="px-3 py-2 rounded-lg border border-primary-200 text-sm">
+            <select name="recorded" class="px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white">
                 <option value="">All • Recorded</option>
                 <option value="1" @selected(request('recorded')=='1')>Recorded ✓</option>
                 <option value="0" @selected(request('recorded')=='0')>Not Recorded</option>
             </select>
+            <div class="flex items-center gap-2">
+                <input type="date" name="date_from" value="{{ request('date_from') ?? request('start_date') }}" class="flex-1 px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white" placeholder="From">
+                <span class="text-xs text-primary-500">to</span>
+                <input type="date" name="date_to" value="{{ request('date_to') ?? request('end_date') }}" class="flex-1 px-3 py-2 rounded-lg border border-primary-200 text-sm bg-white" placeholder="To">
+            </div>
             <button class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-bold hover:bg-primary-700">Filter</button>
         </form>
         <div class="mt-3 flex flex-wrap gap-2 text-xs items-center">
@@ -53,6 +58,21 @@
                 </form>
             @endif
             <span class="ml-auto text-primary-400 hidden sm:inline">Click any row → right drawer with full details • Add comment • Toggle recorded</span>
+        </div>
+        <!-- Export (full details, filtered, like payment history) -->
+        <div class="mt-4 pt-4 border-t border-primary-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+                <p class="text-[11px] font-bold tracking-widest text-primary-500">EXPORT REPORT — FULL DETAILS</p>
+                <p class="text-[10px] text-primary-400">Exports all filtered records (not just page {{ $messages->currentPage() }}) with Message Body, Amount, Ref, Comment, etc.</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ route('sms-gateway.sms.export.pdf', request()->query()) }}" class="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold flex items-center gap-2">
+                    <i class="fas fa-file-pdf"></i> Export PDF
+                </a>
+                <a href="{{ route('sms-gateway.sms.export.excel', request()->query()) }}" class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-bold flex items-center gap-2">
+                    <i class="fas fa-file-excel"></i> Export Excel
+                </a>
+            </div>
         </div>
     </div>
 

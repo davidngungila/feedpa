@@ -14,9 +14,9 @@
         </div>
         @if(auth()->user()->is_admin)
         <div class="flex gap-2">
-            <a href="{{ route('users.create') }}" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
+            <button type="button" @click="openCreateDrawer()" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
                 <i class="fas fa-plus mr-1"></i> Add New User
-            </a>
+            </button>
         </div>
         @endif
     </div>
@@ -176,6 +176,99 @@
             </div>
         </div>
     </div>
+
+    <!-- Create User Drawer -->
+    <div x-show="createOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-[60] flex justify-end overflow-hidden" style="display:none;">
+        <div @click="closeCreateDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div x-show="createOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="relative w-full sm:w-[520px] max-w-[100vw] h-full max-h-screen bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between px-5 pt-0 pb-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/60 dark:bg-dark-900/60">
+                <div>
+                    <h3 class="text-sm font-bold text-primary-900 dark:text-white flex items-center gap-2"><i class="fas fa-user-plus text-primary-600"></i> Create New User</h3>
+                    <p class="text-[11px] text-primary-500">Fill in the account details below</p>
+                </div>
+                <button @click="closeCreateDrawer()" class="w-8 h-8 rounded-lg bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border flex items-center justify-center hover:bg-primary-50"><i class="fas fa-times text-primary-600"></i></button>
+            </div>
+
+            @if($errors->any())
+            <div class="px-5 pt-4">
+                <div class="p-3 rounded-xl bg-red-50 border border-red-200 text-[10px] font-bold text-red-700 space-y-1">
+                    <p class="text-xs font-black text-red-800 mb-1"><i class="fas fa-exclamation-circle mr-1"></i> Please fix the errors below:</p>
+                    @foreach($errors->all() as $error)
+                        <p class="text-red-600">• {{ $error }}</p>
+                    @endforeach
+                </div>
+            </div>
+            @endif
+
+            <div class="flex-1 min-h-0 overflow-y-auto p-5">
+                <form action="{{ route('users.store') }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="space-y-5">
+                        <!-- Personal -->
+                        <div>
+                            <p class="text-[10px] font-bold tracking-widest text-primary-500 mb-3">PERSONAL DETAILS</p>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-primary-500 mb-1">Full Name *</label>
+                                    <input type="text" name="name" value="{{ old('name') }}" required class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-primary-500 mb-1">Position / Role</label>
+                                    <input type="text" name="position" value="{{ old('position') }}" placeholder="e.g. Secretary, Chairman" class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                </div>
+                                <div class="flex flex-wrap gap-4">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" name="is_admin" value="1" {{ old('is_admin') ? 'checked' : '' }} class="rounded border-primary-300 text-primary-600 focus:ring-primary-500">
+                                        <span class="text-[10px] font-bold text-primary-700 dark:text-primary-300">Admin</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" name="can_create_payouts" value="1" {{ old('can_create_payouts', true) ? 'checked' : '' }} class="rounded border-primary-300 text-primary-600 focus:ring-primary-500">
+                                        <span class="text-[10px] font-bold text-primary-700 dark:text-primary-300">Can Create Payouts</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact -->
+                        <div>
+                            <p class="text-[10px] font-bold tracking-widest text-primary-500 mb-3">CONTACT & SECURITY</p>
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-primary-500 mb-1">Email *</label>
+                                    <input type="email" name="email" value="{{ old('email') }}" required class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-primary-500 mb-1">Phone</label>
+                                    <input type="text" name="phone" value="{{ old('phone') }}" placeholder="e.g. 0712345678" class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-primary-500 mb-1">Password *</label>
+                                    <input type="password" name="password" required class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-primary-500 mb-1">Confirm Password *</label>
+                                    <input type="password" name="password_confirmation" required class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Avatar -->
+                        <div>
+                            <p class="text-[10px] font-bold tracking-widest text-primary-500 mb-3">PROFILE PHOTO</p>
+                            <input type="file" name="avatar" accept="image/*" class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                            <p class="text-[10px] text-primary-400 mt-1">Optional · Max 2MB</p>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="grid grid-cols-2 gap-2 pt-2">
+                            <button type="button" @click="closeCreateDrawer()" class="px-3 py-2.5 rounded-lg border border-primary-100 dark:border-dark-border text-xs font-bold text-primary-600 dark:text-primary-300 hover:bg-primary-50">Cancel</button>
+                            <button type="submit" class="px-3 py-2.5 rounded-lg bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold"><i class="fas fa-plus mr-1"></i> Create User</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>[x-cloak] { display: none !important; }</style>
@@ -188,7 +281,9 @@ function userDrawer(){
         drawerOpen:false,
         selected:null,
         loading:false,
+        createOpen:false,
         openDrawer(id){
+            this.createOpen=false;
             this.drawerOpen=true;
             this.loading=true;
             this.selected=null;
@@ -197,7 +292,9 @@ function userDrawer(){
                 .then(data=>{ this.selected=data; this.loading=false; })
                 .catch(()=>{ this.loading=false; alert('Failed to load details'); });
         },
-        closeDrawer(){ this.drawerOpen=false; setTimeout(()=>{ this.selected=null; }, 300); }
+        closeDrawer(){ this.drawerOpen=false; setTimeout(()=>{ this.selected=null; }, 300); },
+        openCreateDrawer(){ this.drawerOpen=false; this.createOpen=true; },
+        closeCreateDrawer(){ this.createOpen=false; }
     }
 }
 </script>

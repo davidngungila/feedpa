@@ -92,7 +92,10 @@
                                 <p class="text-xs text-primary-700 dark:text-primary-300 italic max-w-xs line-clamp-1">{{ $contact['status'] ?? '—' }}</p>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="flex justify-end">
+                                <div class="flex justify-end gap-2">
+                                    <button type="button" @click.stop="openMessageDrawer(@js($contact))" class="px-3 py-1.5 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 hover:bg-green-600 hover:text-white transition-all text-[10px] font-bold">
+                                        <i class="fab fa-whatsapp mr-1"></i> Message
+                                    </button>
                                     <button type="button" @click.stop="openDrawer(@js($contact))" class="px-3 py-1.5 rounded-lg bg-primary-100 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 hover:bg-primary-600 hover:text-white transition-all text-[10px] font-bold">
                                         <i class="fas fa-eye mr-1"></i> View
                                     </button>
@@ -208,6 +211,59 @@
         </div>
     </div>
 
+    <!-- Send Message Drawer -->
+    <div x-show="msgOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-[60] flex justify-end overflow-hidden" style="display:none;">
+        <div @click="closeMessageDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div x-show="msgOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="relative w-full sm:w-[480px] max-w-[100vw] h-full max-h-screen bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between px-5 pt-0 pb-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/60 dark:bg-dark-900/60">
+                <div class="min-w-0">
+                    <h3 class="text-sm font-bold text-primary-900 dark:text-white flex items-center gap-2"><i class="fab fa-whatsapp text-green-600"></i> Send Message</h3>
+                    <p class="text-[11px] text-primary-500 truncate" x-text="msgTo ? (msgTo.name || msgTo.notify || msgTo.id || '') : ''"></p>
+                </div>
+                <button @click="closeMessageDrawer()" class="w-8 h-8 rounded-lg bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border flex items-center justify-center hover:bg-primary-50"><i class="fas fa-times text-primary-600"></i></button>
+            </div>
+
+            <div class="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
+                <div class="p-4 rounded-xl bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800">
+                    <p class="text-[10px] font-bold tracking-widest text-green-600 uppercase mb-2">RECIPIENT</p>
+                    <div class="text-xs space-y-2">
+                        <div class="flex justify-between gap-2 border-b border-green-200 dark:border-green-800 pb-2"><span class="text-green-700 dark:text-green-300 shrink-0">Name</span><span class="font-bold text-green-900 dark:text-green-100 break-all text-right" x-text="msgTo?.name || msgTo?.notify || '—'"></span></div>
+                        <div class="flex justify-between gap-2"><span class="text-green-700 dark:text-green-300 shrink-0">Phone / JID</span><span class="font-mono font-bold break-all text-right" x-text="msgTo?.id || msgTo?.jid || '—'"></span></div>
+                    </div>
+                </div>
+
+                <form @submit.prevent="sendMessage($event)">
+                    @csrf
+                    <input type="hidden" name="message_type" value="text">
+                    <input type="hidden" name="recipient_type" value="phone">
+                    <input type="hidden" name="phone" :value="msgTo?.id || msgTo?.jid || ''">
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Message Text</label>
+                            <textarea name="text" rows="6" x-ref="msgText" class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Type your message..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Caption (optional)</label>
+                            <input type="text" name="caption" class="w-full bg-primary-50 dark:bg-dark-800 border border-primary-100 dark:border-dark-border rounded-xl px-3 py-2.5 text-xs text-primary-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Optional caption">
+                        </div>
+                    </div>
+
+                    <div x-show="msgSending || msgSent || msgError" x-cloak class="mt-4 p-3 rounded-xl border" :class="msgSending ? 'border-primary-100 bg-primary-50' : msgSent ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'">
+                        <p class="text-xs font-bold" :class="msgSending ? 'text-primary-600' : msgSent ? 'text-green-700' : 'text-red-700'" x-text="msgSending ? 'Sending...' : (msgSent ? ('Sent ✓ ' + msgSummary) : (msgError || 'Failed to send'))"></p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 pt-4">
+                        <button type="button" @click="closeMessageDrawer()" class="px-3 py-2.5 rounded-lg border border-primary-100 dark:border-dark-border text-xs font-bold text-primary-600 dark:text-primary-300 hover:bg-primary-50">Cancel</button>
+                        <button type="submit" :disabled="msgSending" class="px-3 py-2.5 rounded-lg bg-green-600 hover:bg-green-500 text-white text-xs font-bold" :class="msgSending ? 'opacity-60 cursor-not-allowed' : ''">
+                            <i class="fab fa-whatsapp mr-1"></i> Send Message
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Copy toast -->
     <div x-show="toast" x-transition class="fixed bottom-6 right-6 z-[70] px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-bold flex items-center gap-2" style="display:none;"><i class="fa-solid fa-check text-green-400"></i><span x-text="toastMsg"></span></div>
 </div>
@@ -247,6 +303,76 @@ function contactDrawer(){
             setTimeout(()=>{ this.selected=contact; this.loading=false; }, 250);
         },
         closeDrawer(){ this.drawerOpen=false; setTimeout(()=>{ this.selected=null; }, 300); },
+        msgOpen:false,
+        msgTo:null,
+        msgSending:false,
+        msgSent:false,
+        msgError:'',
+        msgSummary:'',
+        openMessageDrawer(contact){
+            this.closeDrawer();
+            this.msgTo=contact;
+            this.msgError='';
+            this.msgSent=false;
+            this.msgSummary='';
+            this.msgOpen=true;
+            setTimeout(()=>{ this.$refs.msgText && this.$refs.msgText.focus(); }, 400);
+        },
+        closeMessageDrawer(){ this.msgOpen=false; this.msgSending=false; setTimeout(()=>{ this.msgTo=null; }, 300); },
+        async sendMessage(e){
+            if(this.msgSending) return;
+            const form = e.target;
+            const text = (form.querySelector('textarea[name="text"]') || {}).value || '';
+            if(!text.trim()){ this.msgError='Please type a message.'; return; }
+            this.msgSending=true;
+            this.msgError='';
+            this.msgSent=false;
+            try{
+                const csrf = document.querySelector('meta[name="csrf-token"]').content;
+                const fd = new FormData(form);
+                const start = await fetch('{{ route('whatsapp.messages.send.post') }}', {
+                    method:'POST',
+                    headers:{ 'X-CSRF-TOKEN': csrf, 'Accept':'application/json' },
+                    body: fd,
+                }).then(r=>r.json());
+                if(!(start && start.success && start.batch_id)){
+                    this.msgError=(start && start.message) || 'Failed to start sending.';
+                    return;
+                }
+                let done=false, results=[], sleep = (ms)=>new Promise(r=>setTimeout(r, ms));
+                while(!done){
+                    const params = new URLSearchParams();
+                    params.append('batch_id', start.batch_id);
+                    const pr = await fetch('{{ route('whatsapp.messages.send-process') }}', {
+                        method:'POST',
+                        headers:{ 'X-CSRF-TOKEN': csrf, 'Accept':'application/json', 'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8' },
+                        body: params.toString(),
+                    }).then(r=>r.json());
+                    if(!(pr && pr.success)){
+                        this.msgError=(pr && pr.message) || 'Failed to process send.';
+                        done=true; break;
+                    }
+                    if(pr.current){ results.push(pr.current); }
+                    done = !!pr.done;
+                    if(!done) await sleep(5200);
+                }
+                this.msgSent = results.some(r => r.success === true) || (results.length === 0 && !this.msgError);
+                this.msgSummary = results.some(r => r.success === true) ? 'message delivered' : '';
+                if(results.length && results[results.length-1] && results[results.length-1].success === false){
+                    this.msgError = results[results.length-1].message || 'Message failed to send.';
+                    this.msgSent = false;
+                }
+                if(this.msgSent){
+                    form.querySelector('textarea[name="text"]').value='';
+                    form.querySelector('input[name="caption"]').value='';
+                    setTimeout(()=>{ this.closeMessageDrawer(); }, 1800);
+                }
+            }catch(err){
+                this.msgError='Network error. Please try again.';
+            }finally{
+                this.msgSending=false;
+            }
+        },
         copyJid(t){
             if(!t) return;
             navigator.clipboard.writeText(String(t)).then(()=>{

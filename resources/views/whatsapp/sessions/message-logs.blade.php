@@ -3,7 +3,7 @@
 @section('title', 'Message Logs - Session ' . $id)
 
 @section('content')
-<div class="max-w-6xl mx-auto space-y-6 animate-fade-in">
+<div class="max-w-6xl mx-auto space-y-6 animate-fade-in" x-data="logDrawer()" x-init="window.__logDrawer = this" @keydown.escape.window="closeDrawer()">
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -89,7 +89,7 @@
                                 default => 'bg-gray-100 text-primary-500 dark:bg-gray-800',
                             };
                         @endphp
-                        <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
+                        <tr @click="onRowClick($event, @js($log))" class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors cursor-pointer">
                             <td class="px-6 py-4">
                                 <p class="text-xs text-primary-700 dark:text-primary-300 font-mono">{{ $log['id'] ?? '—' }}</p>
                             </td>
@@ -126,7 +126,7 @@
                                             <i class="fas fa-server mr-1"></i> Info
                                         </button>
                                     @endif
-                                    <button type="button" class="view-message-btn px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 text-[10px] font-bold hover:bg-primary-100 transition-all"
+                                    <button type="button" @click.stop="openLogFromRow(@js($log))" class="view-message-btn px-3 py-1.5 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-300 text-[10px] font-bold hover:bg-primary-100 transition-all"
                                             data-log='@json($log)'>
                                         <i class="fas fa-eye mr-1"></i> Details
                                     </button>
@@ -159,33 +159,115 @@
     </div>
 </div>
 
-<!-- Message Details Modal -->
-<div id="messageModal" class="fixed inset-0 z-[100] hidden items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-    <div class="card w-full max-w-2xl p-6 max-h-[85vh] overflow-y-auto">
-        <div class="flex items-start justify-between mb-4">
-            <h3 class="text-sm font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                <i class="fas fa-info-circle"></i> Message Details
-            </h3>
-            <button type="button" id="closeMessageModal" class="p-2 rounded-lg bg-gray-100 dark:bg-primary-900/20 text-primary-500 hover:text-red-500 transition-all">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="flex gap-1 bg-gray-100 dark:bg-primary-900/20 p-1 rounded-xl w-fit mb-3">
-            <button type="button" data-tab="content" class="msg-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-comment-dots mr-1"></i>Message</button>
-            <button type="button" data-tab="codes" class="msg-tab-btn px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all"><i class="fas fa-code mr-1"></i>Codes</button>
-        </div>
-        <div id="msg-tab-content" class="msg-tab-panel">
-            <div id="messageModalDetails" class="rounded-xl bg-gray-50 dark:bg-primary-900/20 divide-y divide-primary-100 dark:divide-primary-800 overflow-hidden"></div>
-        </div>
-        <div id="msg-tab-codes" class="msg-tab-panel hidden">
-            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Full Payload (JSON)</p>
-            <pre id="messageModalPayload" class="p-3 rounded-xl bg-gray-900 text-green-300 text-[10px] leading-relaxed overflow-x-auto max-h-[50vh]"></pre>
+<!-- Right Drawer -->
+    <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-[60] flex justify-end overflow-hidden" style="display:none;">
+        <div @click="closeDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="relative w-full sm:w-[520px] max-w-[100vw] h-full max-h-screen bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
+            <!-- Drawer Header -->
+            <div class="flex items-center justify-between px-5 pt-0 pb-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/60 dark:bg-dark-900/60">
+                <div class="min-w-0">
+                    <h3 class="text-sm font-bold text-primary-900 dark:text-white flex items-center gap-2"><i class="fas fa-scroll text-primary-500"></i> Message Details</h3>
+                    <p class="text-[11px] text-primary-500 truncate" x-text="selected ? '# ' + (selected.id ?? '') + ' → ' + (selected.to ?? '') : ''"></p>
+                </div>
+                <button @click="closeDrawer()" class="w-8 h-8 rounded-lg bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border flex items-center justify-center hover:bg-primary-50"><i class="fas fa-times text-primary-600"></i></button>
+            </div>
+
+            <div x-show="!drawerLoading" class="flex-1 min-h-0 overflow-y-auto" x-cloak>
+                <div class="space-y-5 p-5">
+                    <!-- Status -->
+                    <div class="p-4 rounded-xl" :class="statusClass">
+                        <div class="flex items-center justify-between gap-2">
+                            <p class="text-[10px] font-bold tracking-widest text-primary-500 uppercase">Status</p>
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold" :class="statusClass"><span x-text="selectedStatus"></span></span>
+                        </div>
+                        <template x-if="selected?.failed_reason">
+                            <p class="text-[11px] font-bold mt-2 flex items-center gap-1"><i class="fas fa-exclamation-circle"></i> <span x-text="selected.failed_reason"></span></p>
+                        </template>
+                    </div>
+
+                    <!-- Details -->
+                    <div class="p-4 rounded-xl bg-primary-50 border border-primary-100 dark:bg-dark-800 dark:border-dark-border">
+                        <p class="text-[10px] font-bold tracking-widest text-primary-500 mb-2">MESSAGE</p>
+                        <div class="space-y-3 text-xs">
+                            <div class="flex justify-between gap-2 border-b border-primary-100 dark:border-dark-border pb-2"><span class="text-primary-500 shrink-0">Message ID</span><span class="font-mono font-bold break-all text-right" x-text="selected?.id ?? '—'"></span></div>
+                            <div class="flex justify-between gap-2 border-b border-primary-100 dark:border-dark-border pb-2"><span class="text-primary-500 shrink-0">To</span><span class="font-mono font-bold break-all text-right" x-text="selected?.to ?? '—'"></span></div>
+                            <div class="flex justify-between gap-2 border-b border-primary-100 dark:border-dark-border pb-2"><span class="text-primary-500 shrink-0">Content</span><span class="font-bold break-all text-right" x-text="selectedText"></span></div>
+                            <div class="flex justify-between gap-2 border-b border-primary-100 dark:border-dark-border pb-2"><span class="text-primary-500 shrink-0">Sent At</span><span class="font-bold break-all text-right" x-text="(selected?.created_at ?? '—').toString().substring(0,19)"></span></div>
+                            <div class="flex justify-between gap-2"><span class="text-primary-500 shrink-0">Updated At</span><span class="font-bold break-all text-right" x-text="selected?.updated_at ? (String(selected.updated_at).substring(0,19)) : '—'"></span></div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <template x-if="selected?.id">
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <template x-if="selectedStatus.toLowerCase() === 'failed'">
+                                <button type="button" class="resend-message-btn flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white text-xs font-bold" :data-msg-id="selected.id"><i class="fas fa-redo"></i> Resend</button>
+                            </template>
+                            <button type="button" class="edit-message-btn flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold" :data-msg-id="selected.id"><i class="fas fa-edit"></i> Edit</button>
+                            <button type="button" class="info-message-btn flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold" :data-msg-id="selected.id"><i class="fas fa-server"></i> Info</button>
+                            <button type="button" class="delete-message-btn flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold" :data-msg-id="selected.id"><i class="fas fa-trash-alt"></i> Delete</button>
+                            <button @click="closeDrawer()" class="col-span-2 px-3 py-2 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold"><i class="fas fa-times mr-1"></i> Close</button>
+                        </div>
+                    </template>
+                    <template x-if="!selected?.id">
+                        <button @click="closeDrawer()" class="w-full px-3 py-2 rounded-lg bg-gray-900 dark:bg-white dark:text-gray-900 text-white text-xs font-bold"><i class="fas fa-times mr-1"></i> Close</button>
+                    </template>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
+<style>[x-cloak] { display: none !important; }</style>
 @endsection
 
 @push('scripts')
+<script>
+function logDrawer(){
+    return {
+        drawerOpen:false,
+        drawerLoading:true,
+        selected:null,
+        onRowClick(event, log){
+            if (event.target.closest('button')) return;
+            this.openLogFromRow(log);
+        },
+        openLogFromRow(log){
+            this.selected = log || null;
+            this.drawerLoading = false;
+            this.drawerOpen = true;
+        },
+        openFromInfo(info){
+            this.selected = info || { id: '—' };
+            this.drawerLoading = false;
+            this.drawerOpen = true;
+        },
+        closeDrawer(){ this.drawerOpen=false; setTimeout(()=>{ this.selected=null; }, 300); },
+        get selectedStatus(){ return (this.selected?.status ?? 'unknown').replace(/_/g, ' '); },
+        get selectedText(){
+            const raw = this.selected?.content ?? '';
+            let decoded;
+            try { decoded = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch(e){ decoded = null; }
+            const walk = (v,d)=>{ if(v==null||d>5) return null; if(typeof v==='string') return v; if(typeof v!=='object') return null; if(Array.isArray(v)){ for(const it of v){ const t=walk(it,d+1); if(t) return t; } return null; } for(const k of ['text','message','body','caption','description','name']){ if(v[k]!==undefined){ const t=walk(v[k],d+1); if(t) return t; } } return null; };
+            if(decoded && typeof decoded==='object'){
+                const t = walk(decoded,0);
+                if(t) return t;
+                const m = decoded.imageUrl||decoded.videoUrl||decoded.audioUrl||decoded.documentUrl||decoded.stickerUrl;
+                if(m) return 'Media message';
+                if(Object.keys(decoded).length) return 'Media message (' + Object.keys(decoded).join(', ') + ')';
+            }
+            return typeof decoded==='string' ? decoded : String(raw ?? '');
+        },
+        get statusClass(){
+            const s = String(this.selected?.status ?? '').toLowerCase();
+            if(s==='sent') return 'bg-green-50 border border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300';
+            if(s==='failed') return 'bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300';
+            if(s==='in_progress'||s==='pending') return 'bg-yellow-50 border border-yellow-200 text-yellow-700 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300';
+            return 'bg-gray-50 border border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300';
+        }
+    }
+}
+</script>
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         function showToast(message, ok) {
@@ -341,27 +423,21 @@
                 .then(function (result) {
                     if (result.data.success) {
                         const info = result.data.data || {};
-                        const detailsEl = document.getElementById('messageModalDetails');
-                        if (detailsEl) {
-                            const rows = [];
-                            function addRow(label, value) {
-                                rows.push('<div class="px-4 py-3 flex items-start gap-4">' +
-                                    '<p class="w-32 shrink-0 text-[10px] text-gray-400 uppercase font-bold pt-0.5">' + escapeHtml(label) + '</p>' +
-                                    '<p class="text-xs text-primary-900 dark:text-white break-all">' + (value === null || value === undefined || value === '' ? '—' : escapeHtml(value)) + '</p>' +
-                                '</div>');
+                        if (window.__logDrawer) {
+                            let content = info.message || info.msg || info.content || info;
+                            if (content && typeof content === 'object') {
+                                content = JSON.stringify(content);
                             }
-                            const contentInfo = decodeContent(info.message || info.msg || info.content || info);
-                            if (info.msgId) addRow('Message ID', info.msgId);
-                            if (info.jid || info.to) addRow('To', info.jid || info.to);
-                            if (info.status !== undefined) addRow('Status', info.status);
-                            if (contentInfo.text) addRow('Content', contentInfo.text);
-                            if (info.createdAt) addRow('Created At', info.createdAt);
-                            if (info.updatedAt) addRow('Updated At', info.updatedAt);
-                            detailsEl.innerHTML = rows.join('');
+                            window.__logDrawer.openFromInfo({
+                                id: info.msgId || info.id || '—',
+                                to: info.jid || info.to || '—',
+                                status: info.status ?? 'sent',
+                                content: content,
+                                created_at: info.createdAt || info.created_at || '—',
+                                updated_at: info.updatedAt || info.updated_at || null,
+                                failed_reason: info.failedReason || info.failed_reason || null,
+                            });
                         }
-                        document.getElementById('messageModalPayload').textContent = JSON.stringify(result.data.data, null, 2);
-                        showMsgTab('content');
-                        openMessageModal();
                         showToast(result.data.message || 'Message info fetched.', true);
                     } else {
                         showToast(result.data.message || 'Failed to fetch message info.', false);
@@ -374,132 +450,6 @@
                     btn.disabled = false;
                     btn.innerHTML = original;
                 });
-            });
-        });
-
-        function escapeHtml(value) {
-            return String(value)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
-        }
-
-        function extractContentText(v, depth) {
-            if (v === null || v === undefined || depth > 5) return null;
-            if (typeof v === 'string') return v;
-            if (typeof v !== 'object') return null;
-            if (Array.isArray(v)) {
-                for (const item of v) {
-                    const t = extractContentText(item, depth + 1);
-                    if (t) return t;
-                }
-                return null;
-            }
-            for (const key of ['text', 'message', 'body', 'caption', 'description', 'name']) {
-                if (v[key] !== undefined) {
-                    const t = extractContentText(v[key], depth + 1);
-                    if (t) return t;
-                }
-            }
-            return null;
-        }
-
-        function mediaUrlText(obj) {
-            if (!obj || typeof obj !== 'object') return '';
-            return (obj.imageUrl || obj.videoUrl || obj.audioUrl || obj.documentUrl || obj.stickerUrl) || '';
-        }
-
-        function decodeContent(contentRaw) {
-            let parsed = contentRaw;
-            if (typeof contentRaw === 'string' && contentRaw.trim() !== '') {
-                try { parsed = JSON.parse(contentRaw); } catch (e) { parsed = contentRaw; }
-            }
-            let text = '';
-            if (Array.isArray(parsed) || (parsed && typeof parsed === 'object')) {
-                text = extractContentText(parsed, 0) || mediaUrlText(parsed);
-            } else if (parsed !== null && parsed !== undefined) {
-                text = String(parsed);
-            }
-            return { text: text, decoded: parsed };
-        }
-
-        const messageModal = document.getElementById('messageModal');
-        const closeMessageModalBtn = document.getElementById('closeMessageModal');
-
-        function openMessageModal() {
-            if (!messageModal) return;
-            messageModal.classList.remove('hidden');
-            messageModal.classList.add('flex');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeMessageModal() {
-            if (!messageModal) return;
-            messageModal.classList.add('hidden');
-            messageModal.classList.remove('flex');
-            document.body.style.overflow = '';
-        }
-
-        if (closeMessageModalBtn) {
-            closeMessageModalBtn.addEventListener('click', closeMessageModal);
-            messageModal.addEventListener('click', function (e) {
-                if (e.target === messageModal) closeMessageModal();
-            });
-        }
-
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closeMessageModal();
-        });
-
-        function showMsgTab(name) {
-            document.querySelectorAll('.msg-tab-panel').forEach(function (p) { p.classList.add('hidden'); });
-            document.querySelectorAll('.msg-tab-btn').forEach(function (b) {
-                const active = b.dataset.tab === name;
-                b.classList.toggle('bg-primary-600', active);
-                b.classList.toggle('text-white', active);
-                b.classList.toggle('bg-transparent', !active);
-                b.classList.toggle('text-primary-500', !active);
-            });
-            const panel = document.getElementById('msg-tab-' + name);
-            if (panel) panel.classList.remove('hidden');
-        }
-
-        document.querySelectorAll('.msg-tab-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                showMsgTab(btn.dataset.tab);
-            });
-        });
-
-        document.querySelectorAll('.view-message-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                const log = btn.dataset.log ? JSON.parse(btn.dataset.log) : {};
-                const detailsEl = document.getElementById('messageModalDetails');
-                if (!detailsEl) return;
-
-                const contentInfo = decodeContent(log.content);
-
-                const rows = [];
-                function addRow(label, value) {
-                    rows.push('<div class="px-4 py-3 flex items-start gap-4">' +
-                        '<p class="w-32 shrink-0 text-[10px] text-gray-400 uppercase font-bold pt-0.5">' + escapeHtml(label) + '</p>' +
-                        '<p class="text-xs text-primary-900 dark:text-white break-all">' + (value === null || value === undefined || value === '' ? '—' : escapeHtml(value)) + '</p>' +
-                    '</div>');
-                }
-
-                addRow('Message ID', log.id);
-                addRow('To', log.to);
-                addRow('Status', log.status);
-                addRow('Content', contentInfo.text);
-                if (log.failed_reason) addRow('Failure reason', log.failed_reason);
-                addRow('Created At', log.created_at);
-                if (log.updated_at) addRow('Updated At', log.updated_at);
-
-                detailsEl.innerHTML = rows.join('');
-                document.getElementById('messageModalPayload').textContent = JSON.stringify(log, null, 2);
-                showMsgTab('content');
-                openMessageModal();
             });
         });
     });

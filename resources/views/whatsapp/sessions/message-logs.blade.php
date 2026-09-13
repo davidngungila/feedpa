@@ -3,7 +3,7 @@
 @section('title', 'Message Logs - Session ' . $id)
 
 @section('content')
-<div class="max-w-6xl mx-auto space-y-6 animate-fade-in" x-data="logDrawer()" x-init="window.__logDrawer = this" @keydown.escape.window="closeDrawer()">
+<div class="max-w-6xl mx-auto space-y-6 animate-fade-in" x-data="logDrawer(@js($items))" x-init="window.__logDrawer = this" @keydown.escape.window="closeDrawer()">
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
@@ -157,9 +157,8 @@
             </div>
         @endif
     </div>
-</div>
 
-<!-- Right Drawer -->
+    <!-- Right Drawer -->
     <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 z-[60] flex justify-end overflow-hidden" style="display:none;">
         <div @click="closeDrawer()" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
         <div x-show="drawerOpen" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="relative w-full sm:w-[520px] max-w-[100vw] h-full max-h-screen bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
@@ -283,22 +282,16 @@ function logDrawer(){
             toast._timer = setTimeout(function () { toast.remove(); }, 4000);
         }
 
-        const deleteUrl = '{{ route('whatsapp.messages.delete', '__ID__') }}';
-        document.querySelectorAll('.delete-message-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                const msgId = btn.dataset.msgId;
-                if (!confirm('Delete message ' + msgId + ' for everyone? This usually only works shortly after the message was sent.')) return;
-                const original = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        const routes = {
+            delete: '{{ route('whatsapp.messages.delete', '__ID__') }}',
+            edit: '{{ route('whatsapp.messages.edit', '__ID__') }}',
+            resend: '{{ route('whatsapp.messages.resend', '__ID__') }}',
+            info: '{{ route('whatsapp.messages.info', '__ID__') }}',
+        };
+        const csrf = '{{ csrf_token() }}';
 
-                fetch(deleteUrl.replace('__ID__', msgId), {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                })
+        function runFetch(url, options, onSuccess, onFail) {
+            return fetch(url, options)
                 .then(function (response) {
                     return response.json().then(function (data) {
                         return { ok: response.ok, data: data };
@@ -306,151 +299,116 @@ function logDrawer(){
                 })
                 .then(function (result) {
                     if (result.data.success) {
-                        showToast(result.data.message || 'Message deleted successfully.', true);
-                        const row = btn.closest('tr');
-                        if (row) row.remove();
+                        showToast(result.data.message || 'Done.', true);
+                        onSuccess && onSuccess(result);
                     } else {
-                        showToast(result.data.message || 'Failed to delete the message.', false);
-                        btn.disabled = false;
-                        btn.innerHTML = original;
+                        showToast(result.data.message || 'Request failed.', false);
+                        onFail && onFail(result);
                     }
                 })
                 .catch(function () {
                     showToast('Network error. Please try again.', false);
+                    onFail && onFail();
+                });
+        }
+
+        function withSpinner(btn, promise) {
+            btn.disabled = true;
+            const original = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            if (promise && promise.finally) {
+                promise.finally(function () {
                     btn.disabled = false;
                     btn.innerHTML = original;
                 });
-            });
-        });
+            }
+        }
 
-        const editUrl = '{{ route('whatsapp.messages.edit', '__ID__') }}';
-        document.querySelectorAll('.edit-message-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                const msgId = btn.dataset.msgId;
-                const current = btn.dataset.current || '';
+        document.addEventListener('click', function (event) {
+            const deleteBtn = event.target.closest('.delete-message-btn');
+            if (deleteBtn) {
+                const msgId = deleteBtn.dataset.msgId;
+                if (!msgId) return;
+                if (!confirm('Delete message ' + msgId + ' for everyone? This usually only works shortly after the message was sent.')) return;
+                withSpinner(deleteBtn, runFetch(
+                    routes.delete.replace('__ID__', msgId),
+                    { method: 'DELETE', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' } },
+                    function () { const row = deleteBtn.closest('tr'); if (row) row.remove(); }
+                ));
+                return;
+            }
+
+            const editBtn = event.target.closest('.edit-message-btn');
+            if (editBtn) {
+                const msgId = editBtn.dataset.msgId;
+                if (!msgId) return;
+                const current = editBtn.dataset.current || '';
                 const newText = prompt('Edit message ' + msgId + ':', current);
                 if (newText === null) return;
-                const original = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-                fetch(editUrl.replace('__ID__', msgId), {
-                    method: 'PUT',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
+                withSpinner(editBtn, runFetch(
+                    routes.edit.replace('__ID__', msgId),
+                    {
+                        method: 'PUT',
+                        headers: { 'X-CSRF-TOKEN': csrf, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({ text: newText }),
                     },
-                    body: JSON.stringify({ text: newText }),
-                })
-                .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { ok: response.ok, data: data };
-                    });
-                })
-                .then(function (result) {
-                    if (result.data.success) {
-                        showToast(result.data.message || 'Message edited successfully.', true);
-                        btn.dataset.current = newText;
-                    } else {
-                        showToast(result.data.message || 'Failed to edit the message.', false);
-                    }
-                })
-                .catch(function () {
-                    showToast('Network error. Please try again.', false);
-                })
-                .finally(function () {
-                    btn.disabled = false;
-                    btn.innerHTML = original;
-                });
-            });
-        });
+                    function () { editBtn.dataset.current = newText; }
+                ));
+                return;
+            }
 
-        const resendUrl = '{{ route('whatsapp.messages.resend', '__ID__') }}';
-        document.querySelectorAll('.resend-message-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                const msgId = btn.dataset.msgId;
-                const original = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            const resendBtn = event.target.closest('.resend-message-btn');
+            if (resendBtn) {
+                const msgId = resendBtn.dataset.msgId;
+                if (!msgId) return;
+                withSpinner(resendBtn, runFetch(
+                    routes.resend.replace('__ID__', msgId),
+                    { method: 'POST', headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json' } }
+                ));
+                return;
+            }
 
-                fetch(resendUrl.replace('__ID__', msgId), {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                })
-                .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { ok: response.ok, data: data };
-                    });
-                })
-                .then(function (result) {
-                    if (result.data.success) {
-                        showToast(result.data.message || 'Message resent successfully.', true);
-                    } else {
-                        showToast(result.data.message || 'Failed to resend the message.', false);
-                    }
-                })
-                .catch(function () {
-                    showToast('Network error. Please try again.', false);
-                })
-                .finally(function () {
-                    btn.disabled = false;
-                    btn.innerHTML = original;
-                });
-            });
-        });
-
-        const infoUrl = '{{ route('whatsapp.messages.info', '__ID__') }}';
-        document.querySelectorAll('.info-message-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                const msgId = btn.dataset.msgId;
-                const original = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
-                fetch(infoUrl.replace('__ID__', msgId), {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json' },
-                })
-                .then(function (response) {
-                    return response.json().then(function (data) {
-                        return { ok: response.ok, data: data };
-                    });
-                })
-                .then(function (result) {
-                    if (result.data.success) {
-                        const info = result.data.data || {};
-                        if (window.__logDrawer) {
-                            let content = info.message || info.msg || info.content || info;
-                            if (content && typeof content === 'object') {
-                                content = JSON.stringify(content);
+            const infoBtn = event.target.closest('.info-message-btn');
+            if (infoBtn) {
+                const msgId = infoBtn.dataset.msgId;
+                if (!msgId) return;
+                infoBtn.disabled = true;
+                fetch(routes.info.replace('__ID__', msgId), { method: 'GET', headers: { 'Accept': 'application/json' } })
+                    .then(function (response) {
+                        return response.json().then(function (data) {
+                            return { ok: response.ok, data: data };
+                        });
+                    })
+                    .then(function (result) {
+                        if (result.data.success) {
+                            const info = result.data.data || {};
+                            if (window.__logDrawer) {
+                                let content = info.message || info.msg || info.content || info;
+                                if (content && typeof content === 'object') {
+                                    content = JSON.stringify(content);
+                                }
+                                window.__logDrawer.openFromInfo({
+                                    id: info.msgId || info.id || '—',
+                                    to: info.jid || info.to || '—',
+                                    status: info.status ?? 'sent',
+                                    content: content,
+                                    created_at: info.createdAt || info.created_at || '—',
+                                    updated_at: info.updatedAt || info.updated_at || null,
+                                    failed_reason: info.failedReason || info.failed_reason || null,
+                                });
                             }
-                            window.__logDrawer.openFromInfo({
-                                id: info.msgId || info.id || '—',
-                                to: info.jid || info.to || '—',
-                                status: info.status ?? 'sent',
-                                content: content,
-                                created_at: info.createdAt || info.created_at || '—',
-                                updated_at: info.updatedAt || info.updated_at || null,
-                                failed_reason: info.failedReason || info.failed_reason || null,
-                            });
+                            showToast(result.data.message || 'Message info fetched.', true);
+                        } else {
+                            showToast(result.data.message || 'Failed to fetch message info.', false);
                         }
-                        showToast(result.data.message || 'Message info fetched.', true);
-                    } else {
-                        showToast(result.data.message || 'Failed to fetch message info.', false);
-                    }
-                })
-                .catch(function () {
-                    showToast('Network error. Please try again.', false);
-                })
-                .finally(function () {
-                    btn.disabled = false;
-                    btn.innerHTML = original;
-                });
-            });
+                    })
+                    .catch(function () {
+                        showToast('Network error. Please try again.', false);
+                    })
+                    .finally(function () {
+                        infoBtn.disabled = false;
+                    });
+            }
         });
     });
 </script>

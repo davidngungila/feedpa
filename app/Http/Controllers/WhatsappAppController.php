@@ -72,13 +72,32 @@ class WhatsappAppController extends Controller
 
     public function store(Request $request)
     {
-        // Pre-check file upload errors (before validation) for better message
-        if($request->hasFile('attachment')){
+        // Robust pre-check for any upload issue (covers php.ini, nginx client_max_body_size, tmp missing etc)
+        $hasFile = $request->hasFile('attachment');
+        $rawHasAttachment = $request->has('attachment') || isset($_FILES['attachment']);
+        $phpError = $_FILES['attachment']['error'] ?? null;
+        if($rawHasAttachment && !$hasFile){
+            // File was sent but Laravel doesn't see it as valid file (likely post_max_size / client_max_body_size exceeded or no tmp)
+            $code = is_int($phpError) ? $phpError : 0;
+            $map = [
+                UPLOAD_ERR_INI_SIZE => 'File too large for server (upload_max_filesize='.ini_get('upload_max_filesize').').',
+                UPLOAD_ERR_FORM_SIZE => 'File too large (form limit).',
+                UPLOAD_ERR_PARTIAL => 'File only partially uploaded, try again.',
+                UPLOAD_ERR_NO_FILE => 'No file uploaded.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Server temp folder missing.',
+                UPLOAD_ERR_CANT_WRITE => 'Failed to write file to disk (permission).',
+                UPLOAD_ERR_EXTENSION => 'Upload blocked by extension.',
+            ];
+            $msg = $map[$code] ?? 'Upload failed before reaching app (php error '.$code.', post_max_size='.ini_get('post_max_size').'). Try smaller file (<5MB) or check nginx client_max_body_size.';
+            \Illuminate\Support\Facades\Log::error('WhatsApp attachment hasFile false but raw present', ['code'=>$code, 'phpError'=>$phpError, '_FILES'=>$_FILES['attachment'] ?? null, 'contentLength'=>$_SERVER['CONTENT_LENGTH'] ?? null]);
+            return back()->withErrors(['attachment'=>$msg])->withInput();
+        }
+        if($hasFile){
             $f = $request->file('attachment');
             if(!$f->isValid()){
                 $code = $f->getError();
                 $map = [
-                    UPLOAD_ERR_INI_SIZE => 'File too large for server (upload_max_filesize).',
+                    UPLOAD_ERR_INI_SIZE => 'File too large for server (upload_max_filesize='.ini_get('upload_max_filesize').').',
                     UPLOAD_ERR_FORM_SIZE => 'File too large (form limit).',
                     UPLOAD_ERR_PARTIAL => 'File only partially uploaded, try again.',
                     UPLOAD_ERR_NO_FILE => 'No file uploaded.',
@@ -87,8 +106,15 @@ class WhatsappAppController extends Controller
                     UPLOAD_ERR_EXTENSION => 'Upload blocked by extension.',
                 ];
                 $msg = $map[$code] ?? 'Upload failed (code '.$code.').';
-                \Illuminate\Support\Facades\Log::error('WhatsApp attachment upload invalid', ['code'=>$code, 'name'=>$f->getClientOriginalName(), 'size'=>$f->getSize()]);
+                \Illuminate\Support\Facades\Log::error('WhatsApp attachment upload invalid', ['code'=>$code, 'name'=>$f->getClientOriginalName(), 'size'=>$f->getSize(), 'mime'=>$f->getMimeType()]);
                 return back()->withErrors(['attachment'=>$msg.' Please try a smaller file or different format.'])->withInput();
+            }
+            // Also check mime/extension early for clearer message
+            $ext = strtolower($f->getClientOriginalExtension());
+            $allowedExt = ['pdf','doc','docx','xls','xlsx','jpg','jpeg','png','txt','csv','zip'];
+            if($ext && !in_array($ext, $allowedExt)){
+                // Let validator handle, but give early hint
+                \Illuminate\Support\Facades\Log::warning('WhatsApp attachment extension not allowed', ['ext'=>$ext, 'name'=>$f->getClientOriginalName()]);
             }
         }
 

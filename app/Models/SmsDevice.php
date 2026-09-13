@@ -52,6 +52,11 @@ class SmsDevice extends Model
         return $this->hasMany(SmsMessage::class, 'device_id');
     }
 
+    public function whatsappMessages(): HasMany
+    {
+        return $this->hasMany(WhatsappMessage::class, 'device_id');
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

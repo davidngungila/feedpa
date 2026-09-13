@@ -21,6 +21,8 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // SMS Gateway - Flutter Device APIs
 require __DIR__ . '/api_sms_gateway.php';
+// WhatsApp Phone-Assisted Gateway - Device APIs
+require __DIR__ . '/api_whatsapp_gateway.php';
 
 // E-commerce Payment API Routes
 Route::prefix('ecommerce')->group(function () {

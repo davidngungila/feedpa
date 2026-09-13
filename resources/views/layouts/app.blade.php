@@ -414,6 +414,61 @@
                     </div>
                 </div>
 
+                <!-- WhatsApp App — Phone-Assisted Gateway (spec: Module must call as WhatsApp App) -->
+                <div class="space-y-0.5">
+                    <button @click="openDropdowns.includes('whatsappApp') ? openDropdowns = openDropdowns.filter(d => d !== 'whatsappApp') : openDropdowns.push('whatsappApp')"
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all {{ request()->routeIs('whatsapp-app.*') ? 'bg-green-600 text-white' : 'text-primary-200 hover:bg-primary-800/50 hover:text-white' }}">
+                        <div class="flex items-center gap-3">
+                            <i class="fa-brands fa-whatsapp w-4 text-center"></i>
+                            <span>WhatsApp App</span>
+                            <span class="ml-1 px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-400 text-primary-900">Phone</span>
+                        </div>
+                        <i :class="openDropdowns.includes('whatsappApp') ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down'" class="text-[10px] text-primary-400"></i>
+                    </button>
+                    <div :class="openDropdowns.includes('whatsappApp') ? 'sidebar-dropdown open' : 'sidebar-dropdown'" class="ml-3 space-y-0.5">
+                        <a href="{{ route('whatsapp-app.dashboard') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp-app.dashboard') ? 'bg-green-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-gauge-high text-[10px] ml-1"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="{{ route('whatsapp-app.create') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp-app.create') ? 'bg-green-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-paper-plane text-[10px] ml-1"></i>
+                            <span>New Message</span>
+                        </a>
+                        <a href="{{ route('whatsapp-app.outbox') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp-app.outbox') || request()->routeIs('whatsapp-app.inbox') ? 'bg-green-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-inbox text-[10px] ml-1"></i>
+                            <span>Outbox</span>
+                        </a>
+                        <a href="{{ route('whatsapp-app.sent') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp-app.sent') ? 'bg-green-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-check text-[10px] ml-1"></i>
+                            <span>Sent</span>
+                        </a>
+                        <a href="{{ route('whatsapp-app.pending') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp-app.pending') ? 'bg-green-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-clock text-[10px] ml-1"></i>
+                            <span>Pending</span>
+                        </a>
+                        <a href="{{ route('whatsapp-app.failed') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp-app.failed') ? 'bg-green-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-times text-[10px] ml-1"></i>
+                            <span>Failed</span>
+                        </a>
+                        <a href="{{ route('whatsapp-app.devices') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp-app.devices') ? 'bg-green-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-mobile-screen text-[10px] ml-1"></i>
+                            <span>Devices</span>
+                        </a>
+                        <a href="{{ route('whatsapp-app.templates') }}" 
+                           class="flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all {{ request()->routeIs('whatsapp-app.templates*') ? 'bg-green-600 text-white' : 'text-primary-300 hover:bg-primary-800/30 hover:text-white' }}">
+                            <i class="fa-solid fa-file-lines text-[10px] ml-1"></i>
+                            <span>Templates</span>
+                        </a>
+                    </div>
+                </div>
+
                 @if(auth()->check() && auth()->user()->is_admin)
                 <!-- Users Management -->
                 <div class="space-y-0.5">

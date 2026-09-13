@@ -429,6 +429,8 @@ Route::prefix('payments')->name('payments.')->group(function () {
 
 // SMS Gateway Web Routes (SMS-only sidebar)
 require __DIR__ . '/web_sms_gateway.php';
+// WhatsApp Phone-Assisted Gateway (WhatsApp App)
+require __DIR__ . '/web_whatsapp_app.php';
 
 // Callback/Webhook Routes
 Route::prefix('webhooks')->name('webhooks.')->group(function () {

@@ -61,7 +61,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Time</th><th>Device</th><th>Provider</th><th>Sender</th><th>Message</th><th>Amount</th><th>Ref</th><th>Recorded</th><th>Comment</th>
+                        <th>Time</th><th>Device</th><th>Provider</th><th>Sender</th><th>Message</th><th>Amount</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-primary-50">
@@ -71,38 +71,11 @@
                         <td class="text-xs font-bold">{{ $sms->device->device_code ?? '-' }}</td>
                         <td><span class="badge badge-green text-[10px]">{{ $sms->provider->code ?? ($sms->parsed_data['provider_code'] ?? '—') }}</span></td>
                         <td class="font-mono text-xs">{{ $sms->sender }}</td>
-                        <td class="max-w-[260px] truncate text-xs" title="{{ $sms->body }}">{{ Str::limit($sms->body, 64) }}</td>
+                        <td class="max-w-[320px] truncate text-xs" title="{{ $sms->body }}">{{ Str::limit($sms->body, 64) }}</td>
                         <td class="whitespace-nowrap text-xs font-bold">{{ optional($sms->smsTransaction)->amount ? 'TZS '.number_format($sms->smsTransaction->amount,0) : '—' }}</td>
-                        <td class="font-mono text-xs">
-                            @php $ref = optional($sms->smsTransaction)->reference; @endphp
-                            @if($ref)
-                                <span class="inline-flex items-center gap-1.5">
-                                    <span>{{ $ref }}</span>
-                                    <button @click.stop="copyRef('{{ $ref }}', $event)" title="Copy reference" class="w-6 h-6 rounded-md bg-white border border-primary-200 hover:bg-primary-50 flex items-center justify-center text-primary-600 hover:text-primary-800 transition-colors">
-                                        <i class="fa-regular fa-copy text-[10px]"></i>
-                                    </button>
-                                </span>
-                            @else
-                                —
-                            @endif
-                        </td>
-                        <td>
-                            @if($sms->is_recorded)
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold"><i class="fa-solid fa-check text-[9px]"></i> Recorded</span>
-                            @else
-                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold"><i class="fa-solid fa-clock text-[9px]"></i> Not recorded</span>
-                            @endif
-                        </td>
-                        <td class="max-w-[140px] truncate text-xs text-primary-600">
-                            @if($sms->admin_comment)
-                                <span title="{{ $sms->admin_comment }}"><i class="fa-solid fa-comment-dots text-primary-400"></i> {{ Str::limit($sms->admin_comment, 28) }}</span>
-                            @else
-                                <span class="text-primary-300">—</span>
-                            @endif
-                        </td>
                     </tr>
                     @empty
-                    <tr><td colspan="9" class="text-center py-10 text-primary-400">No SMS found. Flutter gateways will populate this inbox.</td></tr>
+                    <tr><td colspan="6" class="text-center py-10 text-primary-400">No SMS found. Flutter gateways will populate this inbox.</td></tr>
                     @endforelse
                 </tbody>
             </table>

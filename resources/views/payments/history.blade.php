@@ -3,7 +3,7 @@
 @section('title', 'Payment History')
 
 @section('content')
-<div class="space-y-6" x-data="paymentHistoryDetails()">
+<div class="space-y-6" x-data="paymentHistoryDetails()" @keydown.escape.window="closeDetails()">
     <!-- Current Account Balances -->
     <div class="grid grid-cols-1 gap-4">
         <div class="card p-5 bg-gradient-to-br from-primary-500 to-primary-700">
@@ -27,9 +27,9 @@
 
     <!-- Status Tabs -->
     <div class="card p-1">
-        <div class="flex gap-1">
+        <div class="flex gap-1 overflow-x-auto scrollbar-hide">
             <a href="{{ request()->fullUrlWithQuery(['status' => 'SETTLED', 'page' => 1]) }}"
-               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'SETTLED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
+               class="flex-1 min-w-[110px] flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'SETTLED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
                 <i class="fas fa-check-circle"></i>
                 SETTLED
                 <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status')) === 'SETTLED' ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/40' }}">
@@ -37,7 +37,7 @@
                 </span>
             </a>
             <a href="{{ request()->fullUrlWithQuery(['status' => 'PROCESSING', 'page' => 1]) }}"
-               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'PROCESSING' ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20' : 'text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/30' }}">
+               class="flex-1 min-w-[110px] flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'PROCESSING' ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/20' : 'text-amber-600 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/30' }}">
                 <i class="fas fa-clock"></i>
                 PROCESSING
                 <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status')) === 'PROCESSING' ? 'bg-white/20' : 'bg-amber-100 dark:bg-amber-900/40' }}">
@@ -45,7 +45,7 @@
                 </span>
             </a>
             <a href="{{ request()->fullUrlWithQuery(['status' => 'FAILED', 'page' => 1]) }}"
-               class="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'FAILED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
+               class="flex-1 min-w-[110px] flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all {{ ($activeStatus ?? request('status')) === 'FAILED' ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20' : 'text-primary-600 hover:bg-primary-50 dark:text-primary-400 dark:hover:bg-primary-900/30' }}">
                 <i class="fas fa-times-circle"></i>
                 FAILED
                 <span class="text-[10px] px-2 py-0.5 rounded-full {{ ($activeStatus ?? request('status')) === 'FAILED' ? 'bg-white/20' : 'bg-primary-100 dark:bg-primary-900/40' }}">
@@ -56,7 +56,7 @@
     </div>
 
     <!-- Filters Card -->
-    <div x-data="{ showFilters: true }" class="card p-5">
+    <div x-data="{ showFilters: false }" class="card p-5">
         <div class="flex items-center justify-between mb-4">
             <h3 class="font-bold text-sm text-primary-900 dark:text-white flex items-center gap-2">
                 <i class="fas fa-filter text-primary-500"></i> Advanced Filters
@@ -66,9 +66,9 @@
             </button>
         </div>
         
-        <form x-show="showFilters" x-transition method="GET" action="{{ route('payments.history') }}" class="grid grid-cols-1 md:grid-cols-6 gap-4" id="filterForm">
+        <form x-show="showFilters" x-transition method="GET" action="{{ route('payments.history') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4" id="filterForm">
             <input type="hidden" name="status" value="{{ $activeStatus ?? request('status', 'SETTLED') }}">
-            <div>
+            <div class="sm:col-span-2 lg:col-span-1">
                 <label class="block text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-1">Search</label>
                 <input type="text" name="search" id="searchInput" value="{{ request('search') }}" class="w-full bg-primary-50 dark:bg-dark-900 border border-primary-100 dark:border-dark-border rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-primary-500 outline-none" placeholder="Reference, name, phone...">
             </div>
@@ -98,7 +98,7 @@
                     <option value="100" {{ ($perPage ?? request('per_page', 20)) == 100 ? 'selected' : '' }}>100</option>
                 </select>
             </div>
-            <div class="flex items-end gap-2">
+            <div class="flex items-end gap-2 sm:col-span-2 lg:col-span-1">
                 <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-500 text-white py-2 rounded-lg text-xs font-bold transition-all">
                     Apply Filter
                 </button>
@@ -129,7 +129,7 @@
 
             <div>
                 <p class="text-[10px] font-bold uppercase tracking-wider text-primary-500 mb-2">Choose columns to include</p>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     @foreach($availableColumns as $columnKey => $columnLabel)
                         <label class="flex items-center gap-2 text-xs bg-primary-50 dark:bg-dark-900 px-3 py-2 rounded-lg border border-primary-100 dark:border-dark-border">
                             <input type="checkbox" name="columns[]" value="{{ $columnKey }}"
@@ -154,9 +154,9 @@
 
     <!-- Reconciliation Card -->
     <div class="card p-5 bg-gradient-to-br from-primary-500/10 to-cyan-500/10 border border-primary-200 dark:border-dark-border">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div class="flex items-start gap-3">
-                <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300">
+                <div class="w-10 h-10 rounded-full bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center text-primary-600 dark:text-primary-300 shrink-0">
                     <i class="fas fa-scale-balanced"></i>
                 </div>
                 <div>
@@ -164,29 +164,41 @@
                     <p class="text-[11px] text-primary-500 mt-0.5">Compare live ClickPesa API payments against the records stored in this system, and spot missing or mismatched transactions.</p>
                 </div>
             </div>
-            <a href="{{ route('payments.reconcile') }}" class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap">
+            <a href="{{ route('payments.reconcile') }}" class="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-xs font-bold transition-all whitespace-nowrap">
                 <i class="fas fa-rotate-right"></i> Run Reconciliation
             </a>
         </div>
     </div>
 
-    <!-- Transactions Table -->
+    <!-- Transactions Table - Full system, fully responsive -->
     <div class="card overflow-hidden">
-        <div class="p-4 border-b border-primary-50 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30">
-            <p class="text-[10px] text-primary-500">Click <i class="fas fa-eye"></i> on any row to preview full details</p>
+        <div class="p-4 border-b border-primary-50 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <p class="text-[11px] font-semibold text-primary-700 dark:text-primary-300 flex items-center gap-1.5"><i class="fas fa-hand-pointer text-primary-500"></i> Click any row to open right drawer — full details, copy IDs, SMS/Email status</p>
+            <span class="text-[10px] text-primary-500 hidden lg:inline">Tip: Horizontal scroll on desktop • Cards on mobile</span>
         </div>
-        <div class="overflow-x-auto">
-            <table class="data-table">
-                <thead>
+
+        <!-- Desktop / Tablet Table -->
+        <div class="hidden md:block overflow-x-auto">
+            <table class="data-table min-w-[760px]">
+                <thead class="hidden lg:table-header-group">
                     <tr>
-                        <th>Date & Time</th>
+                        <th class="whitespace-nowrap">Date & Time</th>
                         <th>Reference</th>
                         <th>Member Name</th>
-                        <th>Purpose / Description</th>
-                        <th>Amount</th>
-                        <th>SMS Status</th>
-                        <th>Email Status</th>
+                        <th class="hidden xl:table-cell">Purpose / Description</th>
+                        <th class="whitespace-nowrap">Amount</th>
+                        <th class="hidden xl:table-cell">SMS Status</th>
+                        <th class="hidden xl:table-cell">Email Status</th>
                         <th class="text-center">Actions</th>
+                    </tr>
+                </thead>
+                <!-- Compact header for md-lg -->
+                <thead class="lg:hidden">
+                    <tr>
+                        <th>Date</th>
+                        <th>Reference & Member</th>
+                        <th>Amount</th>
+                        <th class="text-center">View</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-primary-50 dark:divide-dark-border">
@@ -196,33 +208,16 @@
                                 $payment = $item['record'];
                                 $callbackData = is_array($payment->callback_data ?? null) ? $payment->callback_data : [];
                                 $callbackCustomer = is_array($callbackData['customer'] ?? null) ? $callbackData['customer'] : [];
-
-                                $memberName = $payment->customer_name
-                                    ?? $callbackCustomer['customerName']
-                                    ?? $callbackData['customerName']
-                                    ?? $payment->payer_name
-                                    ?? 'N/A';
-
-                                $actualPayer = $payment->payer_name
-                                    ?? $callbackData['payer_name']
-                                    ?? $callbackCustomer['customerName']
-                                    ?? $memberName;
-
-                                $displayPhone = $payment->phone
-                                    ?? $callbackData['paymentPhoneNumber']
-                                    ?? $callbackCustomer['customerPhoneNumber']
-                                    ?? 'N/A';
-
+                                $memberName = $payment->customer_name ?? $callbackCustomer['customerName'] ?? $callbackData['customerName'] ?? $payment->payer_name ?? 'N/A';
+                                $actualPayer = $payment->payer_name ?? $callbackData['payer_name'] ?? $callbackCustomer['customerName'] ?? $memberName;
+                                $displayPhone = $payment->phone ?? $callbackData['paymentPhoneNumber'] ?? $callbackCustomer['customerPhoneNumber'] ?? 'N/A';
                                 $displayDescription = $payment->resolvedDescription();
-
                                 $status = strtoupper($payment->status ?? 'UNKNOWN');
                                 $isSettled = in_array($status, ['SETTLED', 'SUCCESS']);
-
                                 $createdAt = $payment->created_at ? \Illuminate\Support\Carbon::parse($payment->created_at) : null;
                                 $updatedAt = $payment->updated_at ? \Illuminate\Support\Carbon::parse($payment->updated_at) : null;
                                 $smsSentAt = $payment->sms_sent_at ? \Illuminate\Support\Carbon::parse($payment->sms_sent_at) : null;
                                 $emailSentAt = $payment->email_sent_at ? \Illuminate\Support\Carbon::parse($payment->email_sent_at) : null;
-
                                 $detailPayload = [
                                     'reference' => $payment->order_reference,
                                     'transaction_id' => $payment->transaction_id ?? 'N/A',
@@ -251,117 +246,51 @@
                                     'receipt_url' => route('payments.receipt', $payment->order_reference),
                                 ];
                             @endphp
-                            <tr class="hover:bg-primary-50/50 dark:hover:bg-primary-900/10 transition-colors">
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
+                            <!-- Full row for lg+ -->
+                            <tr @click="openDetails(@js($detailPayload))" class="hidden lg:table-row hover:bg-primary-50/70 dark:hover:bg-primary-900/10 transition-colors cursor-pointer group">
+                                <td class="whitespace-nowrap py-3">
+                                    <div class="font-bold text-primary-900 dark:text-white text-xs">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
                                     <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
                                 </td>
-                                <td>
-                                    <div class="flex items-center gap-1.5 max-w-[200px]">
-                                        <span class="font-mono text-[11px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded border border-primary-100 dark:border-dark-border text-primary-700 dark:text-primary-300 truncate" title="{{ $payment->order_reference }}">
-                                            {{ $payment->order_reference }}
-                                        </span>
-                                        <button type="button"
-                                                @click.stop="copyText(@js($payment->order_reference), 'ref-{{ $payment->id }}')"
-                                                class="shrink-0 w-7 h-7 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                                title="Copy reference">
-                                            <i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i>
-                                        </button>
+                                <td class="py-3">
+                                    <div class="flex items-center gap-1.5 max-w-[190px]">
+                                        <span class="font-mono text-[11px] bg-primary-50 dark:bg-dark-900 px-2 py-1 rounded border border-primary-100 dark:border-dark-border text-primary-700 dark:text-primary-300 truncate" title="{{ $payment->order_reference }}">{{ $payment->order_reference }}</span>
+                                        <button type="button" @click.stop="copyText(@js($payment->order_reference), 'ref-{{ $payment->id }}')" class="shrink-0 w-7 h-7 rounded-lg bg-white border border-primary-100 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all" title="Copy reference"><i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i></button>
                                     </div>
                                     @if($payment->transaction_id)
-                                        <div class="flex items-center gap-1.5 mt-1 max-w-[200px]">
-                                            <span class="font-mono text-[9px] text-primary-500 truncate" title="{{ $payment->transaction_id }}">TX: {{ $payment->transaction_id }}</span>
-                                            <button type="button"
-                                                    @click.stop="copyText(@js($payment->transaction_id), 'tx-{{ $payment->id }}')"
-                                                    class="shrink-0 w-6 h-6 rounded-md bg-primary-50 dark:bg-primary-900/20 text-primary-500 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                                    title="Copy transaction ID">
-                                                <i class="fas text-[9px]" :class="copiedField === 'tx-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i>
-                                            </button>
-                                        </div>
+                                        <div class="flex items-center gap-1 mt-1 max-w-[190px]"><span class="font-mono text-[9px] text-primary-500 truncate" title="{{ $payment->transaction_id }}">TX: {{ Str::limit($payment->transaction_id, 22) }}</span><button type="button" @click.stop="copyText(@js($payment->transaction_id), 'tx-{{ $payment->id }}')" class="shrink-0 w-6 h-6 rounded border border-primary-100 flex items-center justify-center hover:bg-primary-600 hover:text-white text-primary-500" title="Copy TX"><i class="fas text-[9px]" :class="copiedField === 'tx-{{ $payment->id }}' ? 'fa-check' : 'fa-copy'"></i></button></div>
                                     @endif
                                 </td>
-                                <td>
-                                    <div class="font-bold text-primary-900 dark:text-white">{{ $memberName }}</div>
-                                    <div class="text-[10px] text-primary-500">Payer: {{ $actualPayer }}</div>
-                                    <div class="text-[10px] text-primary-500 font-mono">{{ $displayPhone }}</div>
+                                <td class="py-3"><div class="font-bold text-primary-900 dark:text-white text-xs truncate max-w-[140px]">{{ $memberName }}</div><div class="text-[10px] text-primary-500">Payer: {{ Str::limit($actualPayer,18) }}</div><div class="text-[10px] font-mono text-primary-400">{{ $displayPhone }}</div></td>
+                                <td class="py-3 hidden xl:table-cell"><div class="text-xs text-primary-700 dark:text-primary-400 max-w-[180px] truncate" title="{{ $displayDescription }}">{{ $displayDescription }}</div></td>
+                                <td class="whitespace-nowrap py-3"><div class="font-bold text-green-600 dark:text-green-400 text-xs">+ {{ number_format((float)$payment->amount, 2) }}</div><div class="text-[10px] font-bold text-primary-500 uppercase">{{ $payment->currency ?? 'TZS' }}</div></td>
+                                <td class="py-3 hidden xl:table-cell">
+                                    @if($payment->sms_sent)<span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> Sent</span>@elseif($payment->sms_error)<span class="badge badge-red text-[10px]">Failed</span>@elseif($isSettled)<span class="badge badge-yellow text-[10px]">Not Sent</span>@else<span class="text-[10px] text-primary-400">—</span>@endif
                                 </td>
-                                <td>
-                                    <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate" title="{{ $displayDescription }}">
-                                        {{ $displayDescription }}
+                                <td class="py-3 hidden xl:table-cell">
+                                    @if($payment->email_sent)<span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> Sent</span>@elseif($payment->email_error)<span class="badge badge-red text-[10px]">Failed</span>@elseif($isSettled)<span class="badge badge-yellow text-[10px]">Not Sent</span>@else<span class="text-[10px] text-primary-400">—</span>@endif
+                                </td>
+                                <td class="py-3">
+                                    <div class="flex gap-1.5 justify-center">
+                                        <button type="button" @click.stop="openDetails(@js($detailPayload))" class="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center hover:bg-primary-700 transition-all" title="Open drawer"><i class="fas fa-eye text-xs"></i></button>
+                                        <a href="{{ route('payments.status', ['reference' => $payment->order_reference]) }}" @click.stop class="hidden xl:flex w-8 h-8 rounded-lg bg-primary-50 border border-primary-100 text-primary-600 items-center justify-center hover:bg-primary-600 hover:text-white transition-all" title="Full page"><i class="fas fa-external-link-alt text-xs"></i></a>
                                     </div>
                                 </td>
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-green-600 dark:text-green-400">
-                                        + {{ number_format((float)$payment->amount, 2) }}
-                                    </div>
-                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payment->currency ?? 'TZS' }}</div>
-                                </td>
-                                <td class="whitespace-nowrap">
-                                    @if($payment->sms_sent)
-                                        <span class="badge badge-green text-[10px]">
-                                            <i class="fas fa-check me-1"></i> Sent
-                                        </span>
-                                        @if($payment->sms_sent_at)
-                                            <div class="text-[9px] text-primary-500 mt-1">{{ \Illuminate\Support\Carbon::parse($payment->sms_sent_at)->format('d M, H:i') }}</div>
-                                        @endif
-                                    @elseif($payment->sms_error)
-                                        <span class="badge badge-red text-[10px]">
-                                            <i class="fas fa-times me-1"></i> Failed
-                                        </span>
-                                    @elseif($isSettled)
-                                        <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                                    @else
-                                        <span class="text-[10px] text-primary-400">—</span>
-                                    @endif
-                                </td>
-                                <td class="whitespace-nowrap">
-                                    @if($payment->email_sent)
-                                        <span class="badge badge-green text-[10px]">
-                                            <i class="fas fa-check me-1"></i> Sent
-                                        </span>
-                                        @if($payment->email_sent_at)
-                                            <div class="text-[9px] text-primary-500 mt-1">{{ \Illuminate\Support\Carbon::parse($payment->email_sent_at)->format('d M, H:i') }}</div>
-                                        @endif
-                                    @elseif($payment->email_error)
-                                        <span class="badge badge-red text-[10px]">
-                                            <i class="fas fa-times me-1"></i> Failed
-                                        </span>
-                                    @elseif($isSettled)
-                                        <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                                    @else
-                                        <span class="text-[10px] text-primary-400">—</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="flex gap-2 justify-center">
-                                        <button type="button"
-                                                @click="openDetails(@js($detailPayload))"
-                                                class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                                title="Preview details">
-                                            <i class="fas fa-eye text-xs"></i>
-                                        </button>
-                                        <a href="{{ route('payments.status', ['reference' => $payment->order_reference]) }}"
-                                           class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                           title="Full payment page">
-                                            <i class="fas fa-external-link-alt text-xs"></i>
-                                        </a>
-                                        <a href="{{ route('payments.receipt', $payment->order_reference) }}"
-                                           class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all"
-                                           title="Download receipt">
-                                            <i class="fas fa-file-download text-xs"></i>
-                                        </a>
-                                    </div>
-                                </td>
+                            </tr>
+                            <!-- Compact row for md-lg -->
+                            <tr @click="openDetails(@js($detailPayload))" class="lg:hidden hover:bg-primary-50/70 dark:hover:bg-primary-900/10 transition-colors cursor-pointer">
+                                <td class="py-3"><div class="font-bold text-xs text-primary-900 dark:text-white">{{ $createdAt?->format('M d') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i') ?? '' }}</div><div class="text-[9px] font-bold uppercase" :class="statusBadgeClass('{{ $status }}')">{{ $status }}</div></td>
+                                <td class="py-3"><div class="font-mono text-[11px] font-bold text-primary-900 dark:text-white truncate max-w-[110px]">{{ $payment->order_reference }}</div><div class="text-[11px] font-bold text-primary-700 truncate max-w-[110px]">{{ $memberName }}</div><div class="text-[10px] font-mono text-primary-500">{{ $displayPhone }}</div></td>
+                                <td class="py-3"><div class="font-bold text-green-600 text-xs">+{{ number_format((float)$payment->amount,2) }}</div><div class="text-[10px] font-bold uppercase text-primary-500">{{ $payment->currency ?? 'TZS' }}</div></td>
+                                <td class="py-3"><button type="button" @click.stop="openDetails(@js($detailPayload))" class="w-8 h-8 rounded-lg bg-primary-600 text-white flex items-center justify-center"><i class="fas fa-chevron-right text-xs"></i></button></td>
                             </tr>
                         @elseif($item['type'] === 'payout')
                             @php
                                 $payout = $item['record'];
                                 $status = strtoupper($payout->status ?? 'UNKNOWN');
                                 $isSettled = in_array($status, ['SUCCESS', 'SETTLED', 'COMPLETED']);
-
                                 $createdAt = $payout->created_at ? \Illuminate\Support\Carbon::parse($payout->created_at) : null;
                                 $updatedAt = $payout->updated_at ? \Illuminate\Support\Carbon::parse($payout->updated_at) : null;
-
                                 $detailPayload = [
                                     'reference' => $payout->order_reference,
                                     'transaction_id' => $payout->clickpesa_payout_id ?? 'N/A',
@@ -383,134 +312,83 @@
                                     'receipt_url' => null,
                                 ];
                             @endphp
-                            <tr class="hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
-                                    <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
-                                </td>
-                                <td>
-                                    <div class="flex items-center gap-1.5 max-w-[200px]">
-                                        <span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300 truncate" title="{{ $payout->order_reference }}">
-                                            {{ $payout->order_reference }}
-                                        </span>
-                                        <button type="button"
-                                                @click.stop="copyText(@js($payout->order_reference), 'ref-{{ $payout->id }}')"
-                                                class="shrink-0 w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                                                title="Copy reference">
-                                            <i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payout->id }}' ? 'fa-check' : 'fa-copy'"></i>
-                                        </button>
-                                    </div>
-                                    @if($payout->clickpesa_payout_id)
-                                        <div class="flex items-center gap-1.5 mt-1 max-w-[200px]">
-                                            <span class="font-mono text-[9px] text-red-500 truncate" title="{{ $payout->clickpesa_payout_id }}">PAYOUT: {{ $payout->clickpesa_payout_id }}</span>
-                                        </div>
-                                    @endif
-                                </td>
-                                <td>
-                                    <div class="font-bold text-primary-900 dark:text-white">{{ $payout->recipient_name ?? 'N/A' }}</div>
-                                    <div class="text-[10px] text-primary-500">Recipient: {{ $payout->recipient_name ?? 'N/A' }}</div>
-                                    <div class="text-[10px] text-primary-500 font-mono">{{ $payout->recipient_phone ?? $payout->beneficiary_mobile ?? 'N/A' }}</div>
-                                </td>
-                                <td>
-                                    <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate" title="{{ $payout->resolvedDescription() }}">
-                                        {{ $payout->resolvedDescription() }}
-                                    </div>
-                                </td>
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-red-600 dark:text-red-400">
-                                        - {{ number_format((float)$payout->amount, 2) }}
-                                    </div>
-                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payout->currency ?? 'TZS' }}</div>
-                                </td>
-                                <td class="whitespace-nowrap text-center">
-                                    <span class="text-[10px] text-primary-400">—</span>
-                                </td>
-                                <td class="whitespace-nowrap text-center">
-                                    <span class="text-[10px] text-primary-400">—</span>
-                                </td>
-                                <td>
-                                    <div class="flex gap-2 justify-center">
-                                        <button type="button"
-                                                @click="openDetails(@js($detailPayload))"
-                                                class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                                                title="Preview details">
-                                            <i class="fas fa-eye text-xs"></i>
-                                        </button>
-                                    </div>
-                                </td>
+                            <tr @click="openDetails(@js($detailPayload))" class="hidden lg:table-row hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors cursor-pointer">
+                                <td class="whitespace-nowrap py-3"><div class="font-bold text-primary-900 dark:text-white text-xs">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div></td>
+                                <td class="py-3"><div class="flex items-center gap-1.5 max-w-[190px]"><span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 text-red-700 truncate" title="{{ $payout->order_reference }}">{{ $payout->order_reference }}</span><button type="button" @click.stop="copyText(@js($payout->order_reference), 'ref-{{ $payout->id }}')" class="shrink-0 w-7 h-7 rounded-lg bg-white border border-red-100 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white" title="Copy"><i class="fas text-[10px]" :class="copiedField === 'ref-{{ $payout->id }}' ? 'fa-check' : 'fa-copy'"></i></button></div></td>
+                                <td class="py-3"><div class="font-bold text-xs text-primary-900 dark:text-white truncate max-w-[140px]">{{ $payout->recipient_name ?? 'N/A' }}</div><div class="text-[10px] font-mono text-primary-500">{{ $payout->recipient_phone ?? $payout->beneficiary_mobile ?? 'N/A' }}</div></td>
+                                <td class="py-3 hidden xl:table-cell"><div class="text-xs max-w-[180px] truncate" title="{{ $payout->resolvedDescription() }}">{{ $payout->resolvedDescription() }}</div></td>
+                                <td class="whitespace-nowrap py-3"><div class="font-bold text-red-600 text-xs">- {{ number_format((float)$payout->amount, 2) }}</div><div class="text-[10px] font-bold uppercase text-primary-500">{{ $payout->currency ?? 'TZS' }}</div></td>
+                                <td class="py-3 hidden xl:table-cell text-center"><span class="text-[10px] text-primary-400">—</span></td>
+                                <td class="py-3 hidden xl:table-cell text-center"><span class="text-[10px] text-primary-400">—</span></td>
+                                <td class="py-3"><div class="flex justify-center"><button type="button" @click.stop="openDetails(@js($detailPayload))" class="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center hover:bg-red-700"><i class="fas fa-eye text-xs"></i></button></div></td>
+                            </tr>
+                            <tr @click="openDetails(@js($detailPayload))" class="lg:hidden hover:bg-red-50/50 dark:hover:bg-red-900/10 cursor-pointer">
+                                <td class="py-3"><div class="font-bold text-xs">{{ $createdAt?->format('M d') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i') }}</div></td>
+                                <td class="py-3"><div class="font-mono text-[11px] font-bold truncate max-w-[110px]">{{ $payout->order_reference }}</div><div class="text-[11px] truncate max-w-[110px]">{{ $payout->recipient_name ?? 'N/A' }}</div></td>
+                                <td class="py-3"><div class="font-bold text-red-600 text-xs">-{{ number_format((float)$payout->amount,2) }}</div></td>
+                                <td class="py-3"><button type="button" @click.stop="openDetails(@js($detailPayload))" class="w-8 h-8 rounded-lg bg-red-600 text-white flex items-center justify-center"><i class="fas fa-chevron-right text-xs"></i></button></td>
                             </tr>
                         @elseif($item['type'] === 'payout-fee')
-                            @php
-                                $payout = $item['record'];
-                                $fee = $item['fee'];
-                                $status = strtoupper($payout->status ?? 'UNKNOWN');
-                                $isSettled = in_array($status, ['SUCCESS', 'SETTLED', 'COMPLETED']);
-                                $createdAt = $payout->created_at ? \Illuminate\Support\Carbon::parse($payout->created_at) : null;
-                            @endphp
-                            <tr class="hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors">
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-primary-900 dark:text-white">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div>
-                                    <div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div>
-                                </td>
-                                <td>
-                                    <div class="flex items-center gap-1.5 max-w-[200px]">
-                                        <span class="font-mono text-[11px] bg-red-50 dark:bg-dark-900 px-2 py-1 rounded border border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300 truncate" title="{{ $payout->order_reference }}-FEE">
-                                            {{ $payout->order_reference }}-FEE
-                                        </span>
-                                    </div>
-                                </td>
-                                <td>
-                                    <div class="font-bold text-primary-900 dark:text-white">Payout Fee</div>
-                                </td>
-                                <td>
-                                    <div class="text-xs text-primary-700 dark:text-primary-400 max-w-[220px] truncate">
-                                        Fee for payout {{ $payout->order_reference }}
-                                    </div>
-                                </td>
-                                <td class="whitespace-nowrap">
-                                    <div class="font-bold text-red-600 dark:text-red-400">
-                                        - {{ number_format((float)$fee, 2) }}
-                                    </div>
-                                    <div class="text-[10px] text-primary-500 uppercase font-bold">{{ $payout->currency ?? 'TZS' }}</div>
-                                </td>
-                                <td class="whitespace-nowrap text-center">
-                                    <span class="text-[10px] text-primary-400">—</span>
-                                </td>
-                                <td class="whitespace-nowrap text-center">
-                                    <span class="text-[10px] text-primary-400">—</span>
-                                </td>
-                                <td>
-                                    <div class="flex gap-2 justify-center">
-                                        <a href="{{ route('payouts.status', $payout->order_reference) }}"
-                                           class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white transition-all"
-                                           title="View payout">
-                                            <i class="fas fa-external-link-alt text-xs"></i>
-                                        </a>
-                                    </div>
-                                </td>
+                            @php $payout = $item['record']; $fee = $item['fee']; $status = strtoupper($payout->status ?? 'UNKNOWN'); $createdAt = $payout->created_at ? \Illuminate\Support\Carbon::parse($payout->created_at) : null; @endphp
+                            <tr class="hover:bg-red-50/30 dark:hover:bg-red-900/10">
+                                <td class="whitespace-nowrap py-3 hidden lg:table-cell"><div class="font-bold text-xs">{{ $createdAt?->format('M d, Y') ?? 'N/A' }}</div><div class="text-[10px] text-primary-500">{{ $createdAt?->format('H:i:s') ?? '' }}</div></td>
+                                <td class="py-3 hidden lg:table-cell"><span class="font-mono text-[11px] bg-red-50 px-2 py-1 rounded border border-red-100 text-red-700">{{ $payout->order_reference }}-FEE</span></td>
+                                <td class="py-3 hidden lg:table-cell"><span class="font-bold text-xs">Payout Fee</span></td>
+                                <td class="py-3 hidden lg:table-cell"><span class="text-xs max-w-[180px] truncate">Fee for payout {{ $payout->order_reference }}</span></td>
+                                <td class="whitespace-nowrap py-3"><div class="font-bold text-red-600 text-xs">- {{ number_format((float)$fee, 2) }}</div></td>
+                                <td class="py-3 hidden lg:table-cell text-center"><span class="text-[10px] text-primary-400">—</span></td>
+                                <td class="py-3 hidden lg:table-cell text-center"><span class="text-[10px] text-primary-400">—</span></td>
+                                <td class="py-3"><a href="{{ route('payouts.status', $payout->order_reference) }}" class="w-8 h-8 rounded-lg bg-red-50 border border-red-100 text-red-600 flex items-center justify-center hover:bg-red-600 hover:text-white mx-auto flex"><i class="fas fa-external-link-alt text-xs"></i></a></td>
                             </tr>
                         @endif
                     @empty
-                        <tr>
-                            <td colspan="8" class="text-center py-20">
-                                <div class="flex flex-col items-center">
-                                    <div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4">
-                                        <i class="fas fa-folder-open text-2xl text-primary-200"></i>
-                                    </div>
-                                    <h4 class="font-bold text-primary-900 dark:text-white">No Transactions Found</h4>
-                                    <p class="text-xs text-primary-500">
-                                        @if(($activeStatus ?? 'SETTLED') === 'FAILED')
-                                            No failed payments/payouts match your filters.
-                                        @else
-                                            No settled payments/payouts match your filters.
-                                        @endif
-                                    </p>
-                                </div>
-                            </td>
-                        </tr>
+                        <tr><td colspan="8" class="text-center py-20"><div class="flex flex-col items-center"><div class="w-16 h-16 rounded-2xl bg-primary-50 dark:bg-dark-900 flex items-center justify-center mb-4"><i class="fas fa-folder-open text-2xl text-primary-200"></i></div><h4 class="font-bold text-primary-900 dark:text-white">No Transactions Found</h4><p class="text-xs text-primary-500">@if(($activeStatus ?? 'SETTLED') === 'FAILED') No failed payments/payouts match your filters. @else No settled payments/payouts match your filters. @endif</p></div></td></tr>
                     @endforelse
                 </tbody>
             </table>
+        </div>
+
+        <!-- Mobile Cards - fully responsive fallback -->
+        <div class="md:hidden divide-y divide-primary-50 dark:divide-dark-border">
+            @forelse($displayItems as $item)
+                @php
+                    if(in_array($item['type'], ['payment','billpay','ecommerce_payment'])) {
+                        $r=$item['record'];
+                        $cb=is_array($r->callback_data ?? null)?$r->callback_data:[];
+                        $cbc=is_array($cb['customer'] ?? null)?$cb['customer']:[];
+                        $mn=$r->customer_name ?? $cbc['customerName'] ?? $cb['customerName'] ?? $r->payer_name ?? 'N/A';
+                        $st=strtoupper($r->status ?? 'UNKNOWN');
+                        $ca=$r->created_at? \Illuminate\Support\Carbon::parse($r->created_at):null;
+                        $amt=(float)$r->amount;
+                        $cur=$r->currency ?? 'TZS';
+                        $ref=$r->order_reference;
+                        $desc=$r->resolvedDescription();
+                        $payload=['reference'=>$ref,'transaction_id'=>$r->transaction_id??'N/A','status'=>$st,'isSettled'=>in_array($st,['SETTLED','SUCCESS']),'amount'=>$amt,'currency'=>$cur,'member_name'=>$mn,'payer_name'=>$r->payer_name??$mn,'phone'=>$r->phone??'N/A','email'=>$r->email,'payment_method'=>$r->payment_method??'N/A','description'=>$desc,'date'=>$ca?->format('d M, Y'),'time'=>$ca?->format('H:i:s'),'status_url'=>route('payments.status',['reference'=>$ref]),'receipt_url'=>route('payments.receipt',$ref),'sms_sent'=>(bool)$r->sms_sent,'sms_sent_at'=>$r->sms_sent_at? \Illuminate\Support\Carbon::parse($r->sms_sent_at)->format('d M, H:i') : null,'email_sent'=>(bool)$r->email_sent];
+                    } elseif($item['type']==='payout'){
+                        $r=$item['record']; $st=strtoupper($r->status??'UNKNOWN'); $ca=$r->created_at? \Illuminate\Support\Carbon::parse($r->created_at):null;
+                        $payload=['reference'=>$r->order_reference,'transaction_id'=>$r->clickpesa_payout_id??'N/A','status'=>$st,'isSettled'=>in_array($st,['SUCCESS','SETTLED','COMPLETED']),'amount'=>(float)$r->amount,'currency'=>$r->currency??'TZS','member_name'=>$r->recipient_name??'N/A','payer_name'=>$r->recipient_name??'N/A','phone'=>$r->recipient_phone??'N/A','email'=>null,'payment_method'=>$r->channel??'N/A','description'=>$r->resolvedDescription(),'date'=>$ca?->format('d M, Y'),'time'=>$ca?->format('H:i:s'),'status_url'=>null,'receipt_url'=>null,'sms_sent'=>false,'email_sent'=>false];
+                        $mn=$r->recipient_name; $ref=$r->order_reference; $amt=(float)$r->amount; $cur=$r->currency??'TZS'; $desc=$r->resolvedDescription();
+                    } else { continue; }
+                @endphp
+                <div @click="openDetails(@js($payload))" class="p-4 flex items-center gap-3 hover:bg-primary-50/50 dark:hover:bg-primary-900/10 cursor-pointer active:bg-primary-50">
+                    <div class="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold text-xs {{ str_starts_with($st,'FAILED')?'bg-red-500':(in_array($st,['SETTLED','SUCCESS'])?'bg-green-500':'bg-amber-500') }}">{{ substr($cur,0,1) }}</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs font-bold text-primary-900 dark:text-white truncate">{{ $ref }}</span>
+                            <span class="shrink-0 px-1.5 py-0.5 rounded-full text-[8px] font-bold {{ in_array($st,['SETTLED','SUCCESS'])?'bg-green-100 text-green-700':(str_starts_with($st,'FAILED')?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700') }}">{{ $st }}</span>
+                        </div>
+                        <div class="text-xs font-semibold text-primary-700 dark:text-primary-300 truncate">{{ $mn }}</div>
+                        <div class="text-[11px] text-primary-500 truncate">{{ $desc }}</div>
+                        <div class="text-[10px] text-primary-400">{{ $ca?->format('M d, H:i') ?? '' }} • {{ $payload['phone'] }}</div>
+                    </div>
+                    <div class="shrink-0 text-right">
+                        <div class="font-bold text-xs {{ $item['type']==='payout'?'text-red-600':'text-green-600' }}">{{ $item['type']==='payout' ? '-' : '+' }}{{ number_format($amt,2) }} <span class="text-[9px]">{{ $cur }}</span></div>
+                        <i class="fas fa-chevron-right text-[10px] text-primary-300 mt-1"></i>
+                    </div>
+                </div>
+            @empty
+                <div class="p-10 text-center"><i class="fas fa-folder-open text-2xl text-primary-200"></i><p class="text-sm font-bold text-primary-900 dark:text-white mt-3">No Transactions</p></div>
+            @endforelse
         </div>
         
         @if($displayItems->hasPages())
@@ -520,186 +398,87 @@
         @endif
     </div>
 
-    <!-- Payment detail modal -->
-    <div x-show="open" x-cloak class="fixed inset-0 z-50 flex items-center justify-center p-4" @keydown.escape.window="closeDetails()">
-        <div class="absolute inset-0 bg-black/50" @click="closeDetails()"></div>
-        <div class="relative w-full max-w-2xl card p-6 max-h-[90vh] overflow-y-auto animate-fade-in" @click.stop>
-            <div class="flex items-start justify-between gap-4 mb-5">
-                <div>
-                    <h3 class="text-lg font-black text-primary-900 dark:text-white">Payment Details</h3>
-                    <p class="text-[10px] text-primary-500 uppercase tracking-widest mt-1">Payment History Preview</p>
+    <!-- Right Drawer - replaces center modal, fully responsive -->
+    <div x-show="open" x-cloak class="fixed inset-0 z-50" @keydown.escape.window="closeDetails()">
+        <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeDetails()"></div>
+        <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="absolute inset-y-0 right-0 w-full sm:w-[520px] max-w-[100vw] bg-white dark:bg-dark-900 shadow-2xl flex flex-col overflow-hidden">
+            <!-- Drawer Header -->
+            <div class="shrink-0 flex items-start justify-between gap-4 px-5 py-4 border-b border-primary-100 dark:border-dark-border bg-primary-50/50 dark:bg-dark-900/50">
+                <div class="min-w-0 flex-1">
+                    <h3 class="text-sm font-black text-primary-900 dark:text-white flex items-center gap-2"><i class="fas fa-receipt text-primary-600"></i> Payment Details</h3>
+                    <p class="text-[10px] text-primary-500 uppercase tracking-widest">Full system view • Right drawer</p>
+                    <p x-show="selected" class="font-mono text-xs font-bold text-primary-700 dark:text-primary-300 mt-1 truncate" x-text="selected?.reference"></p>
                 </div>
-                <button type="button" @click="closeDetails()" class="w-8 h-8 rounded-lg bg-primary-50 dark:bg-dark-900 text-primary-600 hover:bg-primary-100 transition-all">
-                    <i class="fas fa-times"></i>
-                </button>
+                <button type="button" @click="closeDetails()" class="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-dark-800 border border-primary-100 dark:border-dark-border text-primary-600 hover:bg-primary-50 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
             </div>
 
-            <template x-if="selected">
-                <div class="space-y-5">
-                    <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-primary-50/50 dark:bg-dark-900/50 border border-primary-100 dark:border-dark-border">
-                        <div class="min-w-0 flex-1">
-                            <p class="text-[10px] font-bold uppercase text-primary-500">Reference</p>
-                            <div class="flex items-center gap-2 mt-0.5">
-                                <p class="font-mono font-bold text-primary-900 dark:text-white break-all" x-text="selected.reference"></p>
-                                <button type="button"
-                                        @click="copyText(selected.reference, 'reference')"
-                                        class="shrink-0 w-8 h-8 rounded-lg bg-white dark:bg-dark-900 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white border border-primary-100 dark:border-dark-border transition-all"
-                                        title="Copy reference">
-                                    <i class="fas text-xs" :class="copiedField === 'reference' ? 'fa-check' : 'fa-copy'"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-[10px] font-bold uppercase text-primary-500">Amount</p>
-                            <p class="text-xl font-black text-primary-600 dark:text-primary-400">
-                                <span x-text="selected.currency"></span>
-                                <span x-text="formatAmount(selected.amount)"></span>
-                            </p>
-                            <span class="badge text-[10px] mt-1" :class="statusBadgeClass(selected.status)" x-text="selected.status"></span>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="space-y-3">
-                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                                <i class="fas fa-user-circle"></i> Member Information
-                            </h4>
-                            <div>
-                                <p class="text-[10px] text-primary-500 uppercase font-bold">Member Name</p>
-                                <p class="font-bold text-primary-900 dark:text-white" x-text="selected.member_name"></p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-primary-500 uppercase font-bold">Actual Payer</p>
-                                <p class="font-semibold text-sm text-primary-800 dark:text-primary-200" x-text="selected.payer_name"></p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-primary-500 uppercase font-bold">Phone</p>
-                                <p class="font-mono text-sm" x-text="selected.phone"></p>
-                            </div>
-                            <template x-if="selected.email">
-                                <div>
-                                    <p class="text-[10px] text-primary-500 uppercase font-bold">Email</p>
-                                    <p class="text-sm" x-text="selected.email"></p>
-                                </div>
-                            </template>
-                        </div>
-
-                        <div class="space-y-3">
-                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                                <i class="fas fa-receipt"></i> Transaction Details
-                            </h4>
-                            <div class="flex justify-between items-start gap-2 border-b border-primary-50 dark:border-dark-border pb-2">
-                                <span class="text-xs text-primary-500 shrink-0">Transaction ID</span>
-                                <div class="flex items-center gap-2 min-w-0 justify-end">
-                                    <span class="font-mono text-xs font-bold break-all text-right" x-text="selected.transaction_id"></span>
-                                    <button type="button"
-                                            @click="copyText(selected.transaction_id, 'transaction_id')"
-                                            :disabled="!selected.transaction_id || selected.transaction_id === 'N/A'"
-                                            class="shrink-0 w-7 h-7 rounded-lg bg-primary-50 dark:bg-dark-900 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-all disabled:opacity-40 disabled:pointer-events-none"
-                                            title="Copy transaction ID">
-                                        <i class="fas text-[10px]" :class="copiedField === 'transaction_id' ? 'fa-check' : 'fa-copy'"></i>
-                                    </button>
+            <!-- Drawer Body scroll -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-5 overscroll-contain" x-show="selected">
+                <template x-if="selected">
+                    <div class="space-y-5">
+                        <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl bg-primary-50/70 dark:bg-dark-800 border border-primary-100 dark:border-dark-border">
+                            <div class="min-w-0 flex-1">
+                                <p class="text-[10px] font-bold uppercase text-primary-500">Reference</p>
+                                <div class="flex items-center gap-2 mt-0.5">
+                                    <p class="font-mono font-bold text-primary-900 dark:text-white break-all text-sm" x-text="selected.reference"></p>
+                                    <button type="button" @click="copyText(selected.reference, 'reference')" class="shrink-0 w-7 h-7 rounded-lg bg-white dark:bg-dark-900 border border-primary-100 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white" title="Copy"><i class="fas text-[10px]" :class="copiedField === 'reference' ? 'fa-check' : 'fa-copy'"></i></button>
                                 </div>
                             </div>
-                            <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
-                                <span class="text-xs text-primary-500">Payment Method</span>
-                                <span class="text-xs font-bold" x-text="selected.payment_method"></span>
-                            </div>
-                            <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2">
-                                <span class="text-xs text-primary-500">Date & Time</span>
-                                <span class="text-xs font-bold"><span x-text="selected.date"></span> <span x-text="selected.time"></span></span>
+                            <div class="text-right shrink-0">
+                                <p class="text-[10px] font-bold uppercase text-primary-500">Amount</p>
+                                <p class="text-lg font-black text-primary-600 dark:text-primary-400"><span x-text="selected.currency"></span> <span x-text="formatAmount(selected.amount)"></span></p>
+                                <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold" :class="statusBadgeClass(selected.status)" x-text="selected.status"></span>
                             </div>
                         </div>
-                    </div>
 
-                    <div>
-                        <p class="text-[10px] text-primary-500 uppercase font-bold mb-1">Purpose / Description</p>
-                        <p class="text-sm text-primary-800 dark:text-primary-200 bg-primary-50/50 dark:bg-dark-900/50 rounded-xl p-3 border border-primary-100 dark:border-dark-border" x-text="selected.description"></p>
-                    </div>
-
-                    <div class="p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 space-y-3">
-                        <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                            <i class="fas fa-sms"></i> SMS Notification
-                        </h4>
-                        <div class="flex items-center gap-2">
-                            <template x-if="selected.sms_sent">
-                                <span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> SMS Sent</span>
-                            </template>
-                            <template x-if="!selected.sms_sent && selected.sms_error">
-                                <span class="badge badge-red text-[10px]"><i class="fas fa-times me-1"></i> SMS Failed</span>
-                            </template>
-                            <template x-if="!selected.sms_sent && !selected.sms_error">
-                                <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                            </template>
-                            <template x-if="selected.sms_sent_at">
-                                <span class="text-[10px] text-primary-500" x-text="'at ' + selected.sms_sent_at"></span>
-                            </template>
-                        </div>
-                        <template x-if="selected.sms_error">
-                            <p class="text-xs text-red-600 dark:text-red-400 font-bold" x-text="'Error: ' + selected.sms_error"></p>
-                        </template>
-                        <template x-if="selected.sms_message">
-                            <div>
-                                <p class="text-[10px] text-primary-500 uppercase font-bold mb-1">Message Sent</p>
-                                <p class="text-xs text-primary-800 dark:text-primary-200 bg-white dark:bg-dark-900 rounded-lg p-3 border border-primary-100 dark:border-dark-border whitespace-pre-wrap max-h-40 overflow-y-auto" x-text="selected.sms_message"></p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="space-y-3 p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-800">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2"><i class="fas fa-user-circle"></i> Member</h4>
+                                <div><p class="text-[10px] font-bold uppercase text-primary-400">Member Name</p><p class="font-bold text-sm text-primary-900 dark:text-white" x-text="selected.member_name"></p></div>
+                                <div><p class="text-[10px] font-bold uppercase text-primary-400">Payer</p><p class="font-semibold text-sm" x-text="selected.payer_name"></p></div>
+                                <div><p class="text-[10px] font-bold uppercase text-primary-400">Phone</p><p class="font-mono text-sm flex items-center gap-2"><span x-text="selected.phone"></span><button type="button" @click="copyText(selected.phone,'phone')" class="w-6 h-6 rounded border border-primary-100 flex items-center justify-center hover:bg-primary-50"><i class="fas fa-copy text-[9px]"></i></button></p></div>
+                                <template x-if="selected.email"><div><p class="text-[10px] font-bold uppercase text-primary-400">Email</p><p class="text-sm break-all" x-text="selected.email"></p></div></template>
                             </div>
-                        </template>
-                        <template x-if="!selected.sms_message && !selected.sms_error && !selected.sms_sent">
-                            <p class="text-xs text-primary-500 italic">No SMS has been sent for this payment yet.</p>
-                        </template>
-                    </div>
-
-                    <div class="p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-primary-50/30 dark:bg-dark-900/30 space-y-3">
-                        <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2">
-                            <i class="fas fa-envelope"></i> Email Notification
-                        </h4>
-                        <div class="flex items-center gap-2">
-                            <template x-if="selected.email_sent">
-                                <span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> Email Sent</span>
-                            </template>
-                            <template x-if="!selected.email_sent && selected.email_error">
-                                <span class="badge badge-red text-[10px]"><i class="fas fa-times me-1"></i> Email Failed</span>
-                            </template>
-                            <template x-if="!selected.email_sent && !selected.email_error">
-                                <span class="badge badge-yellow text-[10px]">Not Sent</span>
-                            </template>
-                            <template x-if="selected.email_sent_at">
-                                <span class="text-[10px] text-primary-500" x-text="'at ' + selected.email_sent_at"></span>
-                            </template>
+                            <div class="space-y-3 p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-white dark:bg-dark-800">
+                                <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2"><i class="fas fa-receipt"></i> Transaction</h4>
+                                <div class="flex justify-between items-start gap-2 border-b border-primary-50 dark:border-dark-border pb-2"><span class="text-xs text-primary-500 shrink-0">Transaction ID</span><div class="flex items-center gap-1.5 min-w-0 justify-end"><span class="font-mono text-xs font-bold break-all text-right" x-text="selected.transaction_id"></span><button type="button" @click="copyText(selected.transaction_id,'transaction_id')" :disabled="!selected.transaction_id || selected.transaction_id==='N/A'" class="shrink-0 w-7 h-7 rounded-lg bg-primary-50 border border-primary-100 flex items-center justify-center hover:bg-primary-600 hover:text-white disabled:opacity-40"><i class="fas text-[10px]" :class="copiedField==='transaction_id'?'fa-check':'fa-copy'"></i></button></div></div>
+                                <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2"><span class="text-xs text-primary-500">Method</span><span class="text-xs font-bold" x-text="selected.payment_method"></span></div>
+                                <div class="flex justify-between border-b border-primary-50 dark:border-dark-border pb-2"><span class="text-xs text-primary-500">Date & Time</span><span class="text-xs font-bold"><span x-text="selected.date"></span> <span x-text="selected.time"></span></span></div>
+                                <div class="flex justify-between"><span class="text-xs text-primary-500">Created</span><span class="text-[11px] font-mono" x-text="selected.created_at ? new Date(selected.created_at).toLocaleString() : ''"></span></div>
+                            </div>
                         </div>
-                        <template x-if="selected.email_error">
-                            <p class="text-xs text-red-600 dark:text-red-400 font-bold" x-text="'Error: ' + selected.email_error"></p>
-                        </template>
-                        <template x-if="selected.email_message">
-                            <p class="text-xs text-primary-800 dark:text-primary-300 bg-white dark:bg-dark-900 rounded-lg p-3 border border-primary-100 dark:border-dark-border">
-                                <strong>Recipients:</strong> <span x-text="selected.email_message"></span>
-                            </p>
-                        </template>
-                        <template x-if="!selected.email_message && !selected.email_error && !selected.email_sent">
-                            <p class="text-xs text-primary-500 italic">No email has been sent for this payment yet.</p>
-                        </template>
-                    </div>
 
-                    <div class="flex flex-wrap gap-2 pt-2">
-                        <a :href="selected.status_url" class="px-4 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold transition-all">
-                            <i class="fas fa-external-link-alt me-1"></i> Full Payment Page
-                        </a>
-                        <template x-if="selected.isSettled">
-                            <a :href="selected.receipt_url" target="_blank" class="px-4 py-2 rounded-xl bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs font-bold border border-primary-100 dark:border-dark-border hover:bg-primary-100 transition-all">
-                                <i class="fas fa-file-pdf me-1"></i> Receipt PDF
-                            </a>
-                        </template>
-                        <button type="button" @click="closeDetails()" class="px-4 py-2 rounded-xl bg-gray-100 dark:bg-dark-border text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-200 transition-all">
-                            Close
-                        </button>
+                        <div><p class="text-[10px] font-bold uppercase text-primary-500 mb-1">Purpose / Description</p><p class="text-sm bg-primary-50/70 dark:bg-dark-800 rounded-xl p-3 border border-primary-100 dark:border-dark-border whitespace-pre-wrap" x-text="selected.description"></p></div>
+
+                        <div class="p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-primary-50/30 dark:bg-dark-800/50 space-y-3">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2"><i class="fas fa-sms"></i> SMS</h4>
+                            <div class="flex items-center gap-2"><template x-if="selected.sms_sent"><span class="badge badge-green text-[10px]"><i class="fas fa-check me-1"></i> Sent</span></template><template x-if="!selected.sms_sent && selected.sms_error"><span class="badge badge-red text-[10px]">Failed</span></template><template x-if="!selected.sms_sent && !selected.sms_error"><span class="badge badge-yellow text-[10px]">Not Sent</span></template><template x-if="selected.sms_sent_at"><span class="text-[10px] text-primary-500" x-text="'at ' + selected.sms_sent_at"></span></template></div>
+                            <template x-if="selected.sms_error"><p class="text-xs font-bold text-red-600" x-text="'Error: ' + selected.sms_error"></p></template>
+                            <template x-if="selected.sms_message"><p class="text-xs bg-white dark:bg-dark-900 rounded-lg p-3 border whitespace-pre-wrap max-h-40 overflow-y-auto" x-text="selected.sms_message"></p></template>
+                            <template x-if="!selected.sms_message && !selected.sms_error && !selected.sms_sent"><p class="text-xs text-primary-500 italic">No SMS sent yet.</p></template>
+                        </div>
+
+                        <div class="p-4 rounded-xl border border-primary-100 dark:border-dark-border bg-primary-50/30 dark:bg-dark-800/50 space-y-3">
+                            <h4 class="text-[10px] font-black uppercase tracking-widest text-primary-500 flex items-center gap-2"><i class="fas fa-envelope"></i> Email</h4>
+                            <div class="flex items-center gap-2"><template x-if="selected.email_sent"><span class="badge badge-green text-[10px]">Sent</span></template><template x-if="!selected.email_sent && selected.email_error"><span class="badge badge-red text-[10px]">Failed</span></template><template x-if="!selected.email_sent && !selected.email_error"><span class="badge badge-yellow text-[10px]">Not Sent</span></template><template x-if="selected.email_sent_at"><span class="text-[10px] text-primary-500" x-text="'at ' + selected.email_sent_at"></span></template></div>
+                            <template x-if="selected.email_error"><p class="text-xs font-bold text-red-600" x-text="'Error: ' + selected.email_error"></p></template>
+                            <template x-if="selected.email_message"><p class="text-xs bg-white dark:bg-dark-900 rounded-lg p-3 border" x-text="selected.email_message"></p></template>
+                            <template x-if="!selected.email_message && !selected.email_error && !selected.email_sent"><p class="text-xs text-primary-500 italic">No email sent yet.</p></template>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 pt-2">
+                            <a :href="selected.status_url" class="flex-1 min-w-[120px] px-4 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-bold text-center transition-all"><i class="fas fa-external-link-alt me-1"></i> Full Page</a>
+                            <template x-if="selected.isSettled"><a :href="selected.receipt_url" target="_blank" class="flex-1 min-w-[120px] px-4 py-2.5 rounded-xl bg-white border border-primary-100 text-primary-700 text-xs font-bold text-center hover:bg-primary-50">Receipt PDF</a></template>
+                            <button type="button" @click="closeDetails()" class="px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-dark-border text-xs font-bold hover:bg-gray-200">Close</button>
+                        </div>
                     </div>
-                </div>
-            </template>
+                </template>
+            </div>
         </div>
     </div>
 </div>
 
-<style>[x-cloak] { display: none !important; }</style>
+<style>[x-cloak] { display: none !important; } .scrollbar-hide::-webkit-scrollbar{display:none} .scrollbar-hide{-ms-overflow-style:none;scrollbar-width:none}</style>
 @endsection
 
 @push('scripts')
@@ -712,28 +491,19 @@ function paymentHistoryDetails() {
         copiedField: null,
         copyTimeout: null,
         init() {
-            // Add real-time search
             const searchInput = document.getElementById('searchInput');
             const startDate = document.getElementById('startDate');
             const endDate = document.getElementById('endDate');
             const filterForm = document.getElementById('filterForm');
-
             if (searchInput) {
                 searchInput.addEventListener('input', () => {
                     clearTimeout(debounceTimer);
-                    debounceTimer = setTimeout(() => {
-                        filterForm.submit();
-                    }, 500);
+                    debounceTimer = setTimeout(() => { filterForm.submit(); }, 500);
                 });
             }
-
-            if (startDate) {
-                startDate.addEventListener('change', () => filterForm.submit());
-            }
-
-            if (endDate) {
-                endDate.addEventListener('change', () => filterForm.submit());
-            }
+            if (startDate) startDate.addEventListener('change', () => filterForm.submit());
+            if (endDate) endDate.addEventListener('change', () => filterForm.submit());
+            // ESC already handled via @keydown.escape
         },
         openDetails(payload) {
             this.selected = payload;
@@ -742,27 +512,20 @@ function paymentHistoryDetails() {
         },
         closeDetails() {
             this.open = false;
-            this.selected = null;
+            setTimeout(()=>{ this.selected=null; }, 300);
             document.body.style.overflow = '';
         },
         async copyText(text, field) {
             const value = String(text ?? '').trim();
             if (!value || value === 'N/A') return;
-            try {
-                await navigator.clipboard.writeText(value);
-            } catch {
+            try { await navigator.clipboard.writeText(value); } catch {
                 const ta = document.createElement('textarea');
-                ta.value = value;
-                ta.style.position = 'fixed';
-                ta.style.left = '-9999px';
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
+                ta.value = value; ta.style.position='fixed'; ta.style.left='-9999px';
+                document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
             }
             this.copiedField = field;
             clearTimeout(this.copyTimeout);
-            this.copyTimeout = setTimeout(() => { this.copiedField = null; }, 2000);
+            this.copyTimeout = setTimeout(() => { this.copiedField = null; }, 1800);
         },
         formatAmount(value) {
             return new Intl.NumberFormat('en-TZ', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0));
